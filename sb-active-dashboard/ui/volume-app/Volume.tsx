@@ -1,16 +1,23 @@
-import { Typography, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, Switch, Slider, Box as MuiBox, Divider, List, ListItem, ListItemText } from "@mui/material";
-import { useState } from "react";
+import { Typography, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, Switch, Slider, Box as MuiBox, Divider, List, ListItem, ListItemText, CircularProgress } from "@mui/material";
+import { useState, useEffect, useRef } from "react";
 import MenuPanel from "../dashboard/Menu/MenuPanel";
 import { ArcgisMap } from "@arcgis/map-components-react";
+// ArcGIS imports for TimeSlider
+import TimeSlider from "@arcgis/core/widgets/TimeSlider";
+import TimeInterval from "@arcgis/core/time/TimeInterval";
 
 const Volume = () => {
   const [leftMenuOpen, setLeftMenuOpen] = useState(true);
-  const leftMenuWidth = 260;
+  const leftMenuWidth = 400;
   const handleLeftMenu = () => setLeftMenuOpen((prev) => !prev);
 
   const [rightMenuOpen, setRightMenuOpen] = useState(true);
   const rightMenuWidth = 300;
   const handleRightMenu = () => setRightMenuOpen((prev) => !prev);
+
+  const mapViewRef = useRef<any>(null);
+  const [timeSliderLoaded, setTimeSliderLoaded] = useState(false);
+  const [viewReady, setViewReady] = useState(false);
 
   // Handler to set map center/zoom when view is ready
   const handleArcgisViewReadyChange = (event: any) => {
@@ -19,8 +26,36 @@ const Volume = () => {
         center: [-120, 34.7],
         zoom: 9,
       });
+      mapViewRef.current = event.target.view;
+      setViewReady(true);
     }
   };
+
+  // Instantiate placeholder TimeSlider when map view is ready
+  useEffect(() => {
+    if (viewReady && mapViewRef.current && document.getElementById("volume-time-slider-container")) {
+      if (document.getElementById("volume-time-slider-container")?.children.length === 0) {
+        const timeSlider = new TimeSlider({
+          container: "volume-time-slider-container",
+          view: mapViewRef.current,
+          mode: "time-window",
+          timeZone: "system",
+          stops: {
+            interval: new TimeInterval({ value: 1, unit: "years" })
+          },
+          fullTimeExtent: {
+            start: new Date(2012, 1, 1),
+            end: new Date(2025, 5, 25),
+          },
+          timeExtent: {
+            start: new Date(2012, 1, 1),
+            end: new Date(2025, 5, 25),
+          },
+        });
+        setTimeSliderLoaded(true);
+      }
+    }
+  }, [viewReady]);
 
   return (
     <MuiBox id="app-container" sx={{ position: "relative", height: "100%" }}>
@@ -58,21 +93,26 @@ const Volume = () => {
                 <FormControlLabel value="aadt" control={<Radio />} label="Average Annual Daily Traffic (AADT)" />
               </RadioGroup>
             </FormControl>
-            <FormLabel component="legend" sx={{ mb: 1 }}>Select Timeframe</FormLabel>
-            <Slider
-              defaultValue={2019}
-              min={2017}
-              max={2022}
-              step={1}
-              marks={[{ value: 2017, label: '2017' }, { value: 2018, label: '2018' }, { value: 2019, label: '2019' }, { value: 2020, label: '2020' }, { value: 2021, label: '2021' }, { value: 2022, label: '2022' }]}
-              valueLabelDisplay="auto"
-              sx={{ mb: 2 }}
-            />
             <FormControlLabel
               control={<Switch defaultChecked />}
               label="Show Electric Bike Count Sites"
               sx={{ mb: 2 }}
             />
+            {/* ArcGIS TimeSlider placeholder */}
+            <div style={{ marginBottom: 24 }}>
+              {!timeSliderLoaded && (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, minHeight: 80 }}>
+                  <CircularProgress size={32} />
+                  <Typography variant="body2" color="textSecondary">
+                    Loading ArcGIS TimeSlider...
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    This is where the ArcGIS TimeSlider widget will go after the map loads.
+                  </Typography>
+                </div>
+              )}
+              <div id="volume-time-slider-container" />
+            </div>
           </MuiBox>
         </MenuPanel>{null}
       </MuiBox>
