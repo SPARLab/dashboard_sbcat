@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import MenuPanel from "../dashboard/Menu/MenuPanel";
 import { Box } from "@mui/material";
+import { ArcgisMap } from "@arcgis/map-components-react";
 
 const Volume = () => {
   const [leftMenuOpen, setLeftMenuOpen] = useState(true);
@@ -10,6 +11,16 @@ const Volume = () => {
   const [rightMenuOpen, setRightMenuOpen] = useState(true);
   const rightMenuWidth = 300;
   const handleRightMenu = () => setRightMenuOpen((prev) => !prev);
+
+  // Handler to set map center/zoom when view is ready
+  const handleArcgisViewReadyChange = (event: any) => {
+    if (event?.target?.view) {
+      event.target.view.goTo({
+        center: [-120, 34.7],
+        zoom: 9,
+      });
+    }
+  };
 
   return (
       <Box id="app-container" sx={{ position: "relative", height: "100%" }}>
@@ -27,9 +38,7 @@ const Volume = () => {
             flexDirection: "column",
             }}
         >
-          <MenuPanel drawerOpen={leftMenuOpen} drawerWidth={leftMenuWidth}>
-            {/* Empty for now */}
-          </MenuPanel>
+          <MenuPanel drawerOpen={leftMenuOpen} drawerWidth={leftMenuWidth}>{null}</MenuPanel>
         </Box>
 
         {/* Main Content */}
@@ -46,7 +55,10 @@ const Volume = () => {
             background: "#fff",
           }}
         >
-          {/* Main content goes here */}
+          <ArcgisMap
+            basemap="topo-vector"
+            onArcgisViewReadyChange={handleArcgisViewReadyChange}
+          />
         </Box>
 
         {/* Right Sidebar */}
@@ -63,9 +75,7 @@ const Volume = () => {
             flexDirection: "column",
           }}
         >
-          <MenuPanel drawerOpen={rightMenuOpen} drawerWidth={rightMenuWidth}>
-            {/* Empty for now */}
-          </MenuPanel>
+          <MenuPanel drawerOpen={rightMenuOpen} drawerWidth={rightMenuWidth}>{null}</MenuPanel>
         </Box>
       </Box>
   );
