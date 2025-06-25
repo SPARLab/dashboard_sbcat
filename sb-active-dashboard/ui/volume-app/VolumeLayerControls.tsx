@@ -71,7 +71,7 @@ const VolumeLayerControls = ({
 
   // Control hexagon layer visibility based on switches (only when hexagon layer is visible)
   useEffect(() => {
-    if (hexagonLayer && hexagonLayer.visible) {
+    if (hexagonLayer) {
       const bikeLayer = hexagonLayer.layers.find(layer => layer.title === "Modeled Biking Volumes");
       const pedLayer = hexagonLayer.layers.find(layer => layer.title === "Modeled Walking Volumes");
       

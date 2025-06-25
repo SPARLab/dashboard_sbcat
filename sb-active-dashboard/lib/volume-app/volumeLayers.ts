@@ -168,7 +168,7 @@ export function createHexagonLayer() {
       ],
     },
     title: "Modeled Biking Volumes",
-    visible: false,
+    visible: true,
     opacity: 0.5,
   });
 
@@ -207,7 +207,7 @@ export function createHexagonLayer() {
       ],
     },
     title: "Modeled Walking Volumes",
-    visible: false,
+    visible: true,
     opacity: 0.5,
   });
 
@@ -215,7 +215,7 @@ export function createHexagonLayer() {
   const hexagonGroupLayer = new GroupLayer({
     layers: [bikeHexagonTile, pedHexagonTile],
     title: "Modeled Volumes",
-    visibilityMode: "exclusive",
+    visibilityMode: "independent",
   });
 
   return hexagonGroupLayer;

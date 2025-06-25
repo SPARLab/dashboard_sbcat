@@ -23,7 +23,7 @@ const Volume = () => {
   const [viewReady, setViewReady] = useState(false);
 
   const [showBicyclist, setShowBicyclist] = useState(true);
-  const [showPedestrian, setShowPedestrian] = useState(false);
+  const [showPedestrian, setShowPedestrian] = useState(true);
 
   // Add state for model counts selection
   const [modelCountsBy, setModelCountsBy] = useState<string>("dillon"); // "strava", "dillon", "aadt"
