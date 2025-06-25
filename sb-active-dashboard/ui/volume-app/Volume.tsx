@@ -1,23 +1,22 @@
-import { Typography, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, Switch, Slider, Box as MuiBox, Divider, List, ListItem, ListItemText, CircularProgress } from "@mui/material";
+import { Box as MuiBox } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
-import MenuPanel from "../dashboard/Menu/MenuPanel";
 import { ArcgisMap } from "@arcgis/map-components-react";
 // ArcGIS imports for TimeSlider
 import TimeSlider from "@arcgis/core/widgets/TimeSlider";
 import TimeInterval from "@arcgis/core/time/TimeInterval";
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import VolumeLeftSidebar from "./VolumeLeftSidebar";
 import VolumeRightSidebar from "./VolumeRightSidebar";
+import VolumeLayerControls from "./VolumeLayerControls";
+import { createAADTLayer, createHexagonLayer } from "../../lib/volume-app/volumeLayers";
+import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import GroupLayer from "@arcgis/core/layers/GroupLayer";
 
 const Volume = () => {
   const [leftMenuOpen, setLeftMenuOpen] = useState(true);
   const leftMenuWidth = 408;
-  const handleLeftMenu = () => setLeftMenuOpen((prev) => !prev);
 
   const [rightMenuOpen, setRightMenuOpen] = useState(true);
   const rightMenuWidth = 300;
-  const handleRightMenu = () => setRightMenuOpen((prev) => !prev);
 
   const mapViewRef = useRef<any>(null);
   const [timeSliderLoaded, setTimeSliderLoaded] = useState(false);
@@ -25,6 +24,10 @@ const Volume = () => {
 
   const [showBicyclist, setShowBicyclist] = useState(true);
   const [showPedestrian, setShowPedestrian] = useState(false);
+
+  // Add state for layers
+  const [aadtLayer, setAadtLayer] = useState<FeatureLayer | null>(null);
+  const [hexagonLayer, setHexagonLayer] = useState<GroupLayer | null>(null);
 
   // Handler to set map center/zoom when view is ready
   const handleArcgisViewReadyChange = (event: any) => {
@@ -37,6 +40,67 @@ const Volume = () => {
       setViewReady(true);
     }
   };
+
+  // Load layers when map view is ready
+  useEffect(() => {
+    if (viewReady && mapViewRef.current) {
+      const loadLayers = async () => {
+        try {
+          const aadt = await createAADTLayer();
+          const hexagon = createHexagonLayer();
+          
+          // Add layers to map
+          mapViewRef.current.map.add(aadt);
+          mapViewRef.current.map.add(hexagon);
+          
+          // Store layer references
+          setAadtLayer(aadt);
+          setHexagonLayer(hexagon);
+          
+          // Debug: Log detailed layer information
+          console.log("=== LAYER DEBUG INFO ===");
+          console.log("AADT Layer:", aadt);
+          console.log("Hexagon Group Layer:", hexagon);
+          console.log("Hexagon sub-layers:", hexagon.layers);
+          
+          // Try to inspect VectorTileLayer properties
+          hexagon.layers.forEach((layer, index) => {
+            console.log(`Sub-layer ${index}:`, {
+              title: layer.title,
+              type: layer.type,
+              url: (layer as any).url,
+              style: (layer as any).style,
+              source: (layer as any).source,
+            });
+          });
+          
+          // Debug: Inspect AADT Feature Layer
+          console.log("=== AADT FEATURE LAYER DEBUG ===");
+          console.log("AADT Layer fields:", aadt.fields);
+          console.log("AADT Layer objectIdField:", aadt.objectIdField);
+          console.log("AADT Layer outFields:", aadt.outFields);
+          
+          // Query a few features to see the data
+          try {
+            const queryResult = await aadt.queryFeatures({
+              where: "1=1",
+              outFields: ["*"],
+              returnGeometry: false,
+              num: 5
+            });
+            console.log("AADT Sample Features:", queryResult.features.map(f => f.attributes));
+          } catch (error) {
+            console.error("Error querying AADT layer:", error);
+          }
+          
+        } catch (error) {
+          console.error("Error loading layers:", error);
+        }
+      };
+      
+      loadLayers();
+    }
+  }, [viewReady]);
 
   // Instantiate placeholder TimeSlider when map view is ready
   useEffect(() => {
@@ -66,6 +130,12 @@ const Volume = () => {
 
   return (
     <MuiBox id="app-container" sx={{ position: "relative", height: "100%" }}>
+      <VolumeLayerControls
+        aadtLayer={aadtLayer}
+        hexagonLayer={hexagonLayer}
+        showBicyclist={showBicyclist}
+        showPedestrian={showPedestrian}
+      />
       <VolumeLeftSidebar
         leftMenuOpen={leftMenuOpen}
         leftMenuWidth={leftMenuWidth}
