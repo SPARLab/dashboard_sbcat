@@ -182,7 +182,7 @@ const Volume = () => {
         }}
       >
         <MenuPanel drawerOpen={rightMenuOpen} drawerWidth={rightMenuWidth}>
-          <MuiBox p={2}>
+          <MuiBox px={2}>
             <Typography mb={2} variant="h6" sx={{ fontWeight: "bold" }}>
               STATISTICS
             </Typography>
@@ -197,12 +197,22 @@ const Volume = () => {
             <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
               Highest Volume Areas
             </Typography>
-            <List dense>
-              <ListItem><ListItemText primary="1. State Street" /></ListItem>
-              <ListItem><ListItemText primary="2. Castillo Street" /></ListItem>
-              <ListItem><ListItemText primary="3. Etc" /></ListItem>
-              <ListItem><ListItemText primary="4. etc" /></ListItem>
-              <ListItem><ListItemText primary="5. etc" /></ListItem>
+            <List dense sx={{ py: 0.00 }}>
+              <ListItem sx={{ py: 0.00, minHeight: 13 }}>
+                <ListItemText primary="1. State Street" sx={{ fontSize: 13 }} />
+              </ListItem>
+              <ListItem sx={{ py: 0.00, minHeight: 13 }}>
+                <ListItemText primary="2. Castillo Street" sx={{ fontSize: 13 }} />
+              </ListItem>
+              <ListItem sx={{ py: 0.00, minHeight: 13 }}>
+                <ListItemText primary="3. Etc" sx={{ fontSize: 13 }} />
+              </ListItem>
+              <ListItem sx={{ py: 0.00, minHeight: 13 }}>
+                <ListItemText primary="4. etc" sx={{ fontSize: 13 }} />
+              </ListItem>
+              <ListItem sx={{ py: 0.00, minHeight: 13 }}>
+                <ListItemText primary="5. etc" sx={{ fontSize: 13 }} />
+              </ListItem>
             </List>
             <Divider sx={{ my: 2 }} />
             <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
