@@ -5,6 +5,8 @@ import { ArcgisMap } from "@arcgis/map-components-react";
 // ArcGIS imports for TimeSlider
 import TimeSlider from "@arcgis/core/widgets/TimeSlider";
 import TimeInterval from "@arcgis/core/time/TimeInterval";
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 const Volume = () => {
   const [leftMenuOpen, setLeftMenuOpen] = useState(true);
@@ -18,6 +20,9 @@ const Volume = () => {
   const mapViewRef = useRef<any>(null);
   const [timeSliderLoaded, setTimeSliderLoaded] = useState(false);
   const [viewReady, setViewReady] = useState(false);
+
+  const [showBicyclist, setShowBicyclist] = useState(true);
+  const [showPedestrian, setShowPedestrian] = useState(false);
 
   // Handler to set map center/zoom when view is ready
   const handleArcgisViewReadyChange = (event: any) => {
@@ -75,30 +80,50 @@ const Volume = () => {
       >
         <MenuPanel drawerOpen={leftMenuOpen} drawerWidth={leftMenuWidth}>
           <MuiBox p={2}>
-            <Typography mb={2} variant="h6" sx={{ fontWeight: "bold" }}>
+            <Typography mb={2} variant="h6" sx={{ fontWeight: "bold",  }}>
               SORT DATA
             </Typography>
             <FormControl component="fieldset" sx={{ mb: 2 }}>
-              <FormLabel component="legend">Select Road User</FormLabel>
-              <RadioGroup defaultValue="bicyclist" name="user-type">
-                <FormControlLabel value="bicyclist" control={<Radio />} label="Bicyclist" />
-                <FormControlLabel value="pedestrian" control={<Radio />} label="Pedestrian" />
-              </RadioGroup>
+              <FormLabel component="legend" sx={{ fontWeight: "bold" }}>
+                Select Road User
+              </FormLabel>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showBicyclist}
+                    onChange={(_, checked) => setShowBicyclist(checked)}
+                    color="primary"
+                  />
+                }
+                label="Bicyclist"
+                sx={{ mb: 0, mt: 0 }}
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showPedestrian}
+                    onChange={(_, checked) => setShowPedestrian(checked)}
+                    color="primary"
+                  />
+                }
+                label="Pedestrian"
+                sx={{ mb: 0, mt: 0 }}
+              />
             </FormControl>
-            <FormControl component="fieldset" sx={{ mb: 2 }}>
-              <FormLabel component="legend">Model Counts By</FormLabel>
+            <FormControl component="fieldset" sx={{ mb: 0 }}>
+              <FormLabel component="legend" sx={{ fontWeight: "bold", mt: 2 }}>
+                Model Counts By
+              </FormLabel>
               <RadioGroup defaultValue="strava" name="model-counts">
                 <FormControlLabel value="strava" control={<Radio />} label="Strava Bias Correction" />
                 <FormControlLabel value="dillon" control={<Radio />} label="Dillon's ATP (name)" />
                 <FormControlLabel value="aadt" control={<Radio />} label="Average Annual Daily Traffic (AADT)" />
               </RadioGroup>
             </FormControl>
-            <FormControlLabel
-              control={<Switch defaultChecked />}
-              label="Show Electric Bike Count Sites"
-              sx={{ mb: 2 }}
-            />
             {/* ArcGIS TimeSlider placeholder */}
+            <FormLabel component="legend" sx={{ fontWeight: "bold", mt: 2, mb: 1 }}>
+              Select Timeframe
+            </FormLabel>
             <div style={{ marginBottom: 24 }}>
               {!timeSliderLoaded && (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, minHeight: 80 }}>
@@ -113,6 +138,11 @@ const Volume = () => {
               )}
               <div id="volume-time-slider-container" />
             </div>
+            <FormControlLabel
+              control={<Switch color="primary" size="medium" defaultChecked />}
+              label="Show Electric Bike Count Sites"
+              sx={{ mb: 2 }}
+            />
           </MuiBox>
         </MenuPanel>{null}
       </MuiBox>
