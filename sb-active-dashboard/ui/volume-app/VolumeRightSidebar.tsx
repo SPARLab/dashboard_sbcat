@@ -1,6 +1,6 @@
 import { Typography, Divider, List, ListItem, ListItemText, Box as MuiBox } from "@mui/material";
 import MenuPanel from "../dashboard/Menu/MenuPanel";
-import { Bar } from 'react-chartjs-2';
+import { Bar, Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,9 +9,10 @@ import {
   Title,
   Tooltip,
   Legend,
+  ArcElement,
 } from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 // Show just the hour numbers (0-23)
 const hourlyLabels = Array.from({ length: 24 }, (_, i) => `${i}`);
@@ -32,6 +33,33 @@ const data = {
       hoverBorderColor: 'darkgray',
     },
   ],
+};
+
+// Randomly generate pie chart data for 3-4 categories
+const pieLabels = ['Bicyclist', 'Pedestrian'];
+const pieDataArr = Array.from({ length: pieLabels.length }, () => Math.floor(Math.random() * 100) + 10);
+const pieData = {
+  labels: pieLabels,
+  datasets: [
+    {
+      data: pieDataArr,
+      backgroundColor: ['#FFB300', '#D32F2F'], // Burnt yellow and red
+      borderColor: 'transparent',
+      borderWidth: 0,
+    },
+  ],
+};
+const pieOptions = {
+  responsive: true,
+  plugins: {
+    legend: {
+      display: true,
+      position: 'bottom' as const,
+      align: 'start' as const,
+      labels: { font: { size: 12 } },
+    },
+    tooltip: { enabled: true },
+  },
 };
 
 const options = {
@@ -134,9 +162,8 @@ const VolumeRightSidebar = ({ rightMenuOpen, rightMenuWidth }: Props) => (
         <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
           Mode Ratio
         </Typography>
-        {/* Placeholder Pie Chart */}
-        <div style={{ width: 220, height: 120, background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span>Pie Chart</span>
+        <div style={{ width: 180, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Pie data={pieData} options={pieOptions} />
         </div>
       </MuiBox>
     </MenuPanel>
