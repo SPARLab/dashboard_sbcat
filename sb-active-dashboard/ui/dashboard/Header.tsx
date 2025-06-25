@@ -41,15 +41,20 @@ export default function Header(props: any) {
               <Button
                 key={index}
                 href={appInfo["link"]}
-                // sx={{
-                //   backgroundColor: dashboardTheme.palette.mist.main,
-                //   color: dashboardTheme.palette.mist.contrastText, // Ensures text is readable
-                //   '&:hover': {
-                //     backgroundColor: dashboardTheme.palette.mist.light || '#4a148c', // Optional hover color
-                //   },
-                // }}
                 variant="text"
-                style={{ backgroundColor: theme.palette.mist.main }}
+                sx={{
+                  backgroundColor: "#fff",
+                  color: theme.palette.navy.main,
+                  fontWeight: "bold",
+                  fontSize: "1rem",
+                  textTransform: "none",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                  borderRadius: 2,
+                  px: 2,
+                  '&:hover': {
+                    backgroundColor: theme.palette.mist.main,
+                  },
+                }}
               >
                 {appInfo["name"]}
               </Button>
