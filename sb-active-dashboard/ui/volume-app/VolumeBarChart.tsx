@@ -101,6 +101,7 @@ const VolumeBarChart = ({ hourlyData, showBicyclist, showPedestrian, width = 260
           text: 'Hour of Day',
           font: { size: 12 },
         },
+        stacked: true, // Enable stacking on x axis
       },
       y: {
         grid: { display: false },
@@ -111,9 +112,10 @@ const VolumeBarChart = ({ hourlyData, showBicyclist, showPedestrian, width = 260
         border: { display: false },
         title: {
           display: true,
-          text: 'Count',
+          text: 'Average Count',
           font: { size: 12 },
         },
+        stacked: true, // Enable stacking on y axis
       },
     },
     hover: {
