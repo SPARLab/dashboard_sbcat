@@ -7,6 +7,8 @@ import TimeSlider from "@arcgis/core/widgets/TimeSlider";
 import TimeInterval from "@arcgis/core/time/TimeInterval";
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import VolumeLeftSidebar from "./VolumeLeftSidebar";
+import VolumeRightSidebar from "./VolumeRightSidebar";
 
 const Volume = () => {
   const [leftMenuOpen, setLeftMenuOpen] = useState(true);
@@ -40,7 +42,7 @@ const Volume = () => {
   useEffect(() => {
     if (viewReady && mapViewRef.current && document.getElementById("volume-time-slider-container")) {
       if (document.getElementById("volume-time-slider-container")?.children.length === 0) {
-        const timeSlider = new TimeSlider({
+        new TimeSlider({
           container: "volume-time-slider-container",
           view: mapViewRef.current,
           mode: "time-window",
@@ -64,89 +66,15 @@ const Volume = () => {
 
   return (
     <MuiBox id="app-container" sx={{ position: "relative", height: "100%" }}>
-      {/* Left Sidebar */}
-      <MuiBox
-        sx={{
-          height: "100%",
-          width: leftMenuOpen ? leftMenuWidth : "1px",
-          transition: "width 0.5s ease-in-out",
-          zIndex: 3000,
-          position: "absolute",
-          top: 0,
-          left: 0,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <MenuPanel drawerOpen={leftMenuOpen} drawerWidth={leftMenuWidth}>
-          <MuiBox p={2}>
-            <Typography mb={2} variant="h6" sx={{ fontWeight: "bold",  }}>
-              SORT DATA
-            </Typography>
-            <FormControl component="fieldset" sx={{ mb: 2 }}>
-              <FormLabel component="legend" sx={{ fontWeight: "bold" }}>
-                Select Road User
-              </FormLabel>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showBicyclist}
-                    onChange={(_, checked) => setShowBicyclist(checked)}
-                    color="primary"
-                  />
-                }
-                label="Bicyclist"
-                sx={{ mb: 0, mt: 0 }}
-              />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showPedestrian}
-                    onChange={(_, checked) => setShowPedestrian(checked)}
-                    color="primary"
-                  />
-                }
-                label="Pedestrian"
-                sx={{ mb: 0, mt: 0 }}
-              />
-            </FormControl>
-            <FormControl component="fieldset" sx={{ mb: 0 }}>
-              <FormLabel component="legend" sx={{ fontWeight: "bold", mt: 2 }}>
-                Model Counts By
-              </FormLabel>
-              <RadioGroup defaultValue="strava" name="model-counts">
-                <FormControlLabel value="strava" control={<Radio />} label="Strava Bias Correction" />
-                <FormControlLabel value="dillon" control={<Radio />} label="Dillon's ATP (name)" />
-                <FormControlLabel value="aadt" control={<Radio />} label="Average Annual Daily Traffic (AADT)" />
-              </RadioGroup>
-            </FormControl>
-            {/* ArcGIS TimeSlider placeholder */}
-            <FormLabel component="legend" sx={{ fontWeight: "bold", mt: 2, mb: 1 }}>
-              Select Timeframe
-            </FormLabel>
-            <div style={{ marginBottom: 24 }}>
-              {!timeSliderLoaded && (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, minHeight: 80 }}>
-                  <CircularProgress size={32} />
-                  <Typography variant="body2" color="textSecondary">
-                    Loading ArcGIS TimeSlider...
-                  </Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    This is where the ArcGIS TimeSlider widget will go after the map loads.
-                  </Typography>
-                </div>
-              )}
-              <div id="volume-time-slider-container" />
-            </div>
-            <FormControlLabel
-              control={<Switch color="primary" size="medium" defaultChecked />}
-              label="Show Electric Bike Count Sites"
-              sx={{ mb: 2 }}
-            />
-          </MuiBox>
-        </MenuPanel>{null}
-      </MuiBox>
-
+      <VolumeLeftSidebar
+        leftMenuOpen={leftMenuOpen}
+        leftMenuWidth={leftMenuWidth}
+        showBicyclist={showBicyclist}
+        setShowBicyclist={setShowBicyclist}
+        showPedestrian={showPedestrian}
+        setShowPedestrian={setShowPedestrian}
+        timeSliderLoaded={timeSliderLoaded}
+      />
       {/* Main Content */}
       <MuiBox
         component="main"
@@ -166,65 +94,10 @@ const Volume = () => {
           onArcgisViewReadyChange={handleArcgisViewReadyChange}
         />
       </MuiBox>
-
-      {/* Right Sidebar */}
-      <MuiBox
-        sx={{
-          height: "100%",
-          width: rightMenuOpen ? rightMenuWidth : "1px",
-          transition: "width 0.5s ease-in-out",
-          zIndex: 3000,
-          position: "absolute",
-          top: 0,
-          right: 0,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <MenuPanel drawerOpen={rightMenuOpen} drawerWidth={rightMenuWidth}>
-          <MuiBox px={2}>
-            <Typography mb={2} variant="h6" sx={{ fontWeight: "bold" }}>
-              STATISTICS
-            </Typography>
-            <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-              Hourly Trends
-            </Typography>
-            {/* Placeholder Bar Chart */}
-            <div style={{ width: 220, height: 120, background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-              <span>Bar Chart</span>
-            </div>
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-              Highest Volume Areas
-            </Typography>
-            <List dense sx={{ py: 0.00 }}>
-              <ListItem sx={{ py: 0.00, minHeight: 13 }}>
-                <ListItemText primary="1. State Street" sx={{ fontSize: 13 }} />
-              </ListItem>
-              <ListItem sx={{ py: 0.00, minHeight: 13 }}>
-                <ListItemText primary="2. Castillo Street" sx={{ fontSize: 13 }} />
-              </ListItem>
-              <ListItem sx={{ py: 0.00, minHeight: 13 }}>
-                <ListItemText primary="3. Etc" sx={{ fontSize: 13 }} />
-              </ListItem>
-              <ListItem sx={{ py: 0.00, minHeight: 13 }}>
-                <ListItemText primary="4. etc" sx={{ fontSize: 13 }} />
-              </ListItem>
-              <ListItem sx={{ py: 0.00, minHeight: 13 }}>
-                <ListItemText primary="5. etc" sx={{ fontSize: 13 }} />
-              </ListItem>
-            </List>
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-              Mode Ratio
-            </Typography>
-            {/* Placeholder Pie Chart */}
-            <div style={{ width: 220, height: 120, background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span>Pie Chart</span>
-            </div>
-          </MuiBox>
-        </MenuPanel>{null}
-      </MuiBox>
+      <VolumeRightSidebar
+        rightMenuOpen={rightMenuOpen}
+        rightMenuWidth={rightMenuWidth}
+      />
     </MuiBox>
   );
 }
