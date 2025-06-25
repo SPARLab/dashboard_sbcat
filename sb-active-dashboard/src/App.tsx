@@ -6,6 +6,7 @@ import LayerProvider from "@/lib/context/MapContext";
 import HomePage from "./pages/home";
 import ExplorePage from "./pages/dashboard/explore";
 import SafetyPage from "./pages/dashboard/safety";
+import VolumePage from "./pages/dashboard/volume";
 
 import { ThemeProvider, CssBaseline, StyledEngineProvider } from "@mui/material";
 import { appTheme } from "@/ui/theme";  // your existing theme file
@@ -27,10 +28,11 @@ function App() {
               element={
                 <LayerProvider>
                   <DashboardLayout>
-                  <Routes>
-                    <Route path="explore" element={<ExplorePage />} />
-                    <Route path="safety"  element={<SafetyPage  />} />
-                  </Routes>
+                    <Routes>
+                      <Route path="explore" element={<ExplorePage />} />
+                      <Route path="safety"  element={<SafetyPage  />} />
+                      <Route path="volume"  element={<VolumePage  />} />
+                    </Routes>
                   </DashboardLayout>
                 </LayerProvider>
               }

@@ -27,8 +27,7 @@ import { createHeatmaps } from "@/app/lib/safety-app/handleSafety";
 
 import SafetyMenu from "./SafetyMenu";
 import SafetyFilterPanel from "./SafetyFilterPanel";
-import Grid from "@mui/material/Unstable_Grid2/Grid2"
-import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import Grid from "@mui/material/Grid";
 
 export default function SafetyMap() {
   const [showWidgetPanel, setShowWidgetPanel] = useState<Boolean>(false);
