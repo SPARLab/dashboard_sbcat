@@ -9,6 +9,8 @@ type Props = {
   showPedestrian: boolean;
   setShowPedestrian: (checked: boolean) => void;
   timeSliderLoaded: boolean;
+  modelCountsBy: string;
+  setModelCountsBy: (value: string) => void;
 };
 
 const VolumeLeftSidebar = ({
@@ -19,6 +21,8 @@ const VolumeLeftSidebar = ({
   showPedestrian,
   setShowPedestrian,
   timeSliderLoaded,
+  modelCountsBy,
+  setModelCountsBy,
 }: Props) => (
   <MuiBox
     sx={{
@@ -69,10 +73,10 @@ const VolumeLeftSidebar = ({
           <FormLabel component="legend" sx={{ fontWeight: "bold", mt: 2 }}>
             Model Counts By
           </FormLabel>
-          <RadioGroup defaultValue="strava" name="model-counts">
-            <FormControlLabel value="strava" control={<Radio />} label="Strava Bias Correction" />
+          <RadioGroup defaultValue="strava" name="model-counts" value={modelCountsBy} onChange={(e) => setModelCountsBy(e.target.value)}>
             <FormControlLabel value="dillon" control={<Radio />} label="Dillon's ATP (name)" />
             <FormControlLabel value="aadt" control={<Radio />} label="Average Annual Daily Traffic (AADT)" />
+            <FormControlLabel value="strava" control={<Radio />} label="Strava Bias Correction" />
           </RadioGroup>
         </FormControl>
         {/* ArcGIS TimeSlider placeholder */}

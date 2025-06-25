@@ -7,6 +7,7 @@ interface VolumeLayerControlsProps {
   hexagonLayer: GroupLayer | null;
   showBicyclist: boolean;
   showPedestrian: boolean;
+  modelCountsBy: string; // "strava", "dillon", "aadt"
 }
 
 const VolumeLayerControls = ({
@@ -14,6 +15,7 @@ const VolumeLayerControls = ({
   hexagonLayer,
   showBicyclist,
   showPedestrian,
+  modelCountsBy,
 }: VolumeLayerControlsProps) => {
   // Log layer information when hexagon layer is loaded
   useEffect(() => {
@@ -34,9 +36,42 @@ const VolumeLayerControls = ({
     }
   }, [hexagonLayer]);
 
-  // Control hexagon layer visibility based on switches
+  // Control layers based on model counts selection
   useEffect(() => {
-    if (hexagonLayer) {
+    if (aadtLayer && hexagonLayer) {
+      console.log("Model counts selection changed to:", modelCountsBy);
+      
+      switch (modelCountsBy) {
+        case "strava":
+          // Hide both layers for now (placeholder)
+          aadtLayer.visible = false;
+          hexagonLayer.visible = false;
+          console.log("Strava selected - hiding all layers (placeholder)");
+          break;
+          
+        case "dillon":
+          // Show hexagon layers (ModeledVolumes)
+          aadtLayer.visible = false;
+          hexagonLayer.visible = true;
+          console.log("Dillon's ATP selected - showing hexagon layers");
+          break;
+          
+        case "aadt":
+          // Show AADT point layers
+          aadtLayer.visible = true;
+          hexagonLayer.visible = false;
+          console.log("AADT selected - showing point layers");
+          break;
+          
+        default:
+          console.log("Unknown model selection:", modelCountsBy);
+      }
+    }
+  }, [modelCountsBy, aadtLayer, hexagonLayer]);
+
+  // Control hexagon layer visibility based on switches (only when hexagon layer is visible)
+  useEffect(() => {
+    if (hexagonLayer && hexagonLayer.visible) {
       const bikeLayer = hexagonLayer.layers.find(layer => layer.title === "Modeled Biking Volumes");
       const pedLayer = hexagonLayer.layers.find(layer => layer.title === "Modeled Walking Volumes");
       
@@ -54,12 +89,12 @@ const VolumeLayerControls = ({
     }
   }, [hexagonLayer, showBicyclist, showPedestrian]);
 
-  // Control AADT layer visibility
+  // Control AADT layer visibility based on switches (only when AADT layer is visible)
   useEffect(() => {
-    if (aadtLayer) {
-      // Show AADT layer if either bicyclist or pedestrian is selected
-      aadtLayer.visible = showBicyclist || showPedestrian;
-      console.log("AADT layer visibility set to:", showBicyclist || showPedestrian);
+    if (aadtLayer && aadtLayer.visible) {
+      // For AADT layer, we need to filter by count_type instead of just showing/hiding
+      // This would require more complex logic to filter the layer
+      console.log("AADT layer is visible - would need filtering logic for bike/ped");
     }
   }, [aadtLayer, showBicyclist, showPedestrian]);
 

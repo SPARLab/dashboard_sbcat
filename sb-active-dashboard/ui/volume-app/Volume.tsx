@@ -25,6 +25,9 @@ const Volume = () => {
   const [showBicyclist, setShowBicyclist] = useState(true);
   const [showPedestrian, setShowPedestrian] = useState(false);
 
+  // Add state for model counts selection
+  const [modelCountsBy, setModelCountsBy] = useState<string>("dillon"); // "strava", "dillon", "aadt"
+
   // Add state for layers
   const [aadtLayer, setAadtLayer] = useState<FeatureLayer | null>(null);
   const [hexagonLayer, setHexagonLayer] = useState<GroupLayer | null>(null);
@@ -135,6 +138,7 @@ const Volume = () => {
         hexagonLayer={hexagonLayer}
         showBicyclist={showBicyclist}
         showPedestrian={showPedestrian}
+        modelCountsBy={modelCountsBy}
       />
       <VolumeLeftSidebar
         leftMenuOpen={leftMenuOpen}
@@ -144,6 +148,8 @@ const Volume = () => {
         showPedestrian={showPedestrian}
         setShowPedestrian={setShowPedestrian}
         timeSliderLoaded={timeSliderLoaded}
+        modelCountsBy={modelCountsBy}
+        setModelCountsBy={setModelCountsBy}
       />
       {/* Main Content */}
       <MuiBox
