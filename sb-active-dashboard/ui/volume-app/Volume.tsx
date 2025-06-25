@@ -60,42 +60,6 @@ const Volume = () => {
           setAadtLayer(aadt);
           setHexagonLayer(hexagon);
           
-          // Debug: Log detailed layer information
-          console.log("=== LAYER DEBUG INFO ===");
-          console.log("AADT Layer:", aadt);
-          console.log("Hexagon Group Layer:", hexagon);
-          console.log("Hexagon sub-layers:", hexagon.layers);
-          
-          // Try to inspect VectorTileLayer properties
-          hexagon.layers.forEach((layer, index) => {
-            console.log(`Sub-layer ${index}:`, {
-              title: layer.title,
-              type: layer.type,
-              url: (layer as any).url,
-              style: (layer as any).style,
-              source: (layer as any).source,
-            });
-          });
-          
-          // Debug: Inspect AADT Feature Layer
-          console.log("=== AADT FEATURE LAYER DEBUG ===");
-          console.log("AADT Layer fields:", aadt.fields);
-          console.log("AADT Layer objectIdField:", aadt.objectIdField);
-          console.log("AADT Layer outFields:", aadt.outFields);
-          
-          // Query a few features to see the data
-          try {
-            const queryResult = await aadt.queryFeatures({
-              where: "1=1",
-              outFields: ["*"],
-              returnGeometry: false,
-              num: 5
-            });
-            console.log("AADT Sample Features:", queryResult.features.map(f => f.attributes));
-          } catch (error) {
-            console.error("Error querying AADT layer:", error);
-          }
-          
         } catch (error) {
           console.error("Error loading layers:", error);
         }
