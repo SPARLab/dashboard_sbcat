@@ -8,6 +8,7 @@ import VolumeLeftSidebar from "./VolumeLeftSidebar";
 import VolumeRightSidebar from "./VolumeRightSidebar";
 import VolumeLayerControls from "./VolumeLayerControls";
 import { createAADTLayer, createHexagonLayer } from "../../lib/volume-app/volumeLayers";
+import { queryHourlyCounts, HourlyData } from "../../lib/volume-app/hourlyStats";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import GroupLayer from "@arcgis/core/layers/GroupLayer";
 
@@ -31,6 +32,9 @@ const Volume = () => {
   // Add state for layers
   const [aadtLayer, setAadtLayer] = useState<FeatureLayer | null>(null);
   const [hexagonLayer, setHexagonLayer] = useState<GroupLayer | null>(null);
+
+  // Add state for hourly data
+  const [hourlyData, setHourlyData] = useState<HourlyData[]>([]);
 
   // Handler to set map center/zoom when view is ready
   const handleArcgisViewReadyChange = (event: any) => {
@@ -68,6 +72,58 @@ const Volume = () => {
       loadLayers();
     }
   }, [viewReady]);
+
+  // Query hourly data when AADT is selected and view changes
+  useEffect(() => {
+    if (viewReady && mapViewRef.current && modelCountsBy === "aadt") {
+      const fetchHourlyData = async () => {
+        try {
+          const stats = await queryHourlyCounts(
+            mapViewRef.current,
+            showBicyclist,
+            showPedestrian
+          );
+          setHourlyData(stats.hourlyData);
+        } catch (error) {
+          console.error("Error fetching hourly data:", error);
+          setHourlyData([]);
+        }
+      };
+
+      fetchHourlyData();
+    }
+  }, [viewReady, modelCountsBy, showBicyclist, showPedestrian]);
+
+  // Listen to map view changes when AADT is selected
+  useEffect(() => {
+    if (viewReady && mapViewRef.current && modelCountsBy === "aadt") {
+      const handleViewChange = async () => {
+        try {
+          const stats = await queryHourlyCounts(
+            mapViewRef.current,
+            showBicyclist,
+            showPedestrian
+          );
+          setHourlyData(stats.hourlyData);
+        } catch (error) {
+          console.error("Error fetching hourly data on view change:", error);
+        }
+      };
+
+      // Debounce the view change handler
+      let timeoutId: NodeJS.Timeout;
+      const debouncedHandler = () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(handleViewChange, 500);
+      };
+
+      mapViewRef.current.watch("extent", debouncedHandler);
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [viewReady, modelCountsBy, showBicyclist, showPedestrian]);
 
   // Instantiate placeholder TimeSlider when map view is ready
   useEffect(() => {
@@ -137,6 +193,10 @@ const Volume = () => {
       <VolumeRightSidebar
         rightMenuOpen={rightMenuOpen}
         rightMenuWidth={rightMenuWidth}
+        hourlyData={hourlyData}
+        showBicyclist={showBicyclist}
+        showPedestrian={showPedestrian}
+        modelCountsBy={modelCountsBy}
       />
     </MuiBox>
   );

@@ -1,41 +1,17 @@
 import { Typography, Divider, List, ListItem, ListItemText, Box as MuiBox } from "@mui/material";
 import MenuPanel from "../dashboard/Menu/MenuPanel";
-import { Bar, Pie } from 'react-chartjs-2';
+import { Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
+  ArcElement,
   Tooltip,
   Legend,
-  ArcElement,
 } from 'chart.js';
 import VolumeBarChart from './VolumeBarChart';
 import VolumePieChart from './VolumePieChart';
+import { HourlyData } from '../../lib/volume-app/hourlyStats';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
-
-// Show just the hour numbers (0-23)
-const hourlyLabels = Array.from({ length: 24 }, (_, i) => `${i}`);
-const hourlyData = Array.from({ length: 24 }, () => Math.floor(Math.random() * 100) + 20);
-
-const data = {
-  labels: hourlyLabels,
-  datasets: [
-    {
-      label: 'Volume',
-      data: hourlyData,
-      backgroundColor: 'orange',
-      borderColor: 'orange',
-      borderWidth: 1,
-      borderRadius: 0, // No rounded tops
-      maxBarThickness: 16,
-      hoverBackgroundColor: 'darkgray',
-      hoverBorderColor: 'darkgray',
-    },
-  ],
-};
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 // Randomly generate pie chart data for 3-4 categories
 const pieLabels = ['Bicyclist', 'Pedestrian'];
@@ -64,57 +40,23 @@ const pieOptions = {
   },
 };
 
-const options = {
-  responsive: true,
-  plugins: {
-    legend: { display: false },
-    title: { display: false },
-    tooltip: {
-      enabled: true,
-      displayColors: false,
-      // yAlign: 'bottom' as const,
-      position: 'nearest' as const,
-      callbacks: {
-        title: () => '', // No title
-        label: (context: { parsed: { y: number } }) => `${context.parsed.y}`,
-      },
-      backgroundColor: 'rgba(255, 140, 0, 0.95)',
-      borderColor: 'orange',
-      borderWidth: 1,
-      caretSize: 6,
-      caretPadding: 20,
-      padding: 8,
-      bodyFont: { weight: 'bold' as const, size: 14 },
-    },
-  },
-  scales: {
-    x: {
-      grid: { display: false },
-      ticks: {
-        font: { size: 12 },
-        maxRotation: 0,
-        minRotation: 0,
-      },
-      border: { display: false },
-    },
-    y: {
-      grid: { display: false }, // Remove horizontal grid lines
-      ticks: { display: false }, // Hide y-axis labels
-      border: { display: false }, // Hide y-axis line
-    },
-  },
-  hover: {
-    mode: 'index' as const,
-    intersect: true,
-  },
-};
-
 type Props = {
   rightMenuOpen: boolean;
   rightMenuWidth: number;
+  hourlyData: HourlyData[];
+  showBicyclist: boolean;
+  showPedestrian: boolean;
+  modelCountsBy: string;
 };
 
-const VolumeRightSidebar = ({ rightMenuOpen, rightMenuWidth }: Props) => (
+const VolumeRightSidebar = ({ 
+  rightMenuOpen, 
+  rightMenuWidth, 
+  hourlyData, 
+  showBicyclist, 
+  showPedestrian,
+  modelCountsBy 
+}: Props) => (
   <MuiBox
     sx={{
       height: "100%",
@@ -136,7 +78,19 @@ const VolumeRightSidebar = ({ rightMenuOpen, rightMenuWidth }: Props) => (
         <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
           Hourly Trends
         </Typography>
-        <VolumeBarChart />
+        {modelCountsBy === "aadt" ? (
+          <VolumeBarChart 
+            hourlyData={hourlyData}
+            showBicyclist={showBicyclist}
+            showPedestrian={showPedestrian}
+            width={280}
+            height={250}
+          />
+        ) : (
+          <Typography variant="body2" color="textSecondary" sx={{ fontStyle: 'italic' }}>
+            Hourly data only available for AADT count sites
+          </Typography>
+        )}
         <Divider sx={{ my: 2 }} />
         <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
           Highest Volume Areas
