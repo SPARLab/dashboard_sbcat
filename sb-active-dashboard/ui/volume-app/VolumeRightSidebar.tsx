@@ -11,6 +11,8 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
+import VolumeBarChart from './VolumeBarChart';
+import VolumePieChart from './VolumePieChart';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
@@ -134,9 +136,7 @@ const VolumeRightSidebar = ({ rightMenuOpen, rightMenuWidth }: Props) => (
         <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
           Hourly Trends
         </Typography>
-        <div style={{ width: 260, height: 140, marginBottom: 8 }}>
-          <Bar data={data} options={options} />
-        </div>
+        <VolumeBarChart />
         <Divider sx={{ my: 2 }} />
         <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
           Highest Volume Areas
@@ -162,9 +162,7 @@ const VolumeRightSidebar = ({ rightMenuOpen, rightMenuWidth }: Props) => (
         <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
           Mode Ratio
         </Typography>
-        <div style={{ width: 180, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Pie data={pieData} options={pieOptions} />
-        </div>
+        <VolumePieChart />
       </MuiBox>
     </MenuPanel>
   </MuiBox>

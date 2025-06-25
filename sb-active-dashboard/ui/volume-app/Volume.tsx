@@ -12,7 +12,7 @@ import VolumeRightSidebar from "./VolumeRightSidebar";
 
 const Volume = () => {
   const [leftMenuOpen, setLeftMenuOpen] = useState(true);
-  const leftMenuWidth = 400;
+  const leftMenuWidth = 408;
   const handleLeftMenu = () => setLeftMenuOpen((prev) => !prev);
 
   const [rightMenuOpen, setRightMenuOpen] = useState(true);
