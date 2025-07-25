@@ -101,45 +101,117 @@ export default function DateRangeSection() {
 
   // Portal calendar component
   const CalendarPortal = () => {
-    if (!showCalendar || !calendarPosition) return null;
+    const [position, setPosition] = useState<{ top: number; left: number; width: number; } | null>(null);
+
+    useEffect(() => {
+      if (!showCalendar) {
+        setPosition(null);
+        return;
+      }
+
+      // Only calculate position if we don't have one yet (first time opening)
+      if (!position && datePickerRef.current) {
+        const rect = datePickerRef.current.getBoundingClientRect();
+        setPosition({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+      }
+    }, [showCalendar, position]);
+
+    if (!showCalendar || !position) return null;
 
     return ReactDOM.createPortal(
       <div 
         ref={calendarRef}
         className="fixed z-[9999] bg-white border border-gray-300 rounded-lg shadow-lg"
-        style={{ top: `${calendarPosition.top}px`, left: `${calendarPosition.left}px` }}
+        style={{ top: `${position.top}px`, left: `${position.left}px`, width: `${position.width}px` }}
       >
         <style>{`
-          .rdrMonth { width: 250px; }
-          .rdrCalendarWrapper { font-size: 12px; }
+          .rdrCalendarWrapper {
+            font-size: 12px;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            box-sizing: border-box;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+          }
+          .rdrMonths {
+            display: flex;
+            align-items: center;
+            padding: 0 1rem; /* Increased padding to align arrows with calendar content */
+          }
+          .rdrMonth {
+            flex-grow: 1;
+            padding: 0;
+            min-width: 0; /* Allow shrinking below content size */
+            margin-bottom: 0.5rem; /* Add bottom margin under calendar dates */          }
+          .rdrNextPrevButton {
+            flex-shrink: 0;
+            width: 24px; /* Fixed width for arrows */
+            height: 24px;
+            padding: 0;
+            margin: 0 8px;
+          }
+          .rdrMonthAndYearWrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 1;
+            min-width: 0;
+            padding: 0 0.6rem;
+            height: 40px !important;
+            min-height: 40px !important;
+            margin-top: 0.3rem;
+          }
+          .rdrWeekDays {
+            line-height: 0.1rem;
+            margin-top: -0.5rem !important;
+            margin-bottom: 0.0rem !important;
+            height: 24px !important;
+            display: flex !important;
+            align-items: center !important;
+          }
+          .rdrWeekDay {
+            padding: 0 !important;
+            height: 24px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+          .rdrMonthPicker, .rdrYearPicker {
+            flex-shrink: 1;
+            min-width: 0;
+          }
+          .rdrWeekDay {
+          }
+          .rdrMonthPicker select, .rdrYearPicker select {
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            padding: 2px 20px 2px 4px !important;
+            min-width: 0;
+            max-width: 80px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background: transparent;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 4px center;
+            background-size: 12px;
+            cursor: pointer;
+          }
           .rdrDateDisplayWrapper { display: none; }
           
           /* Add left padding and increase font size for month name */
           .rdrMonthName {
-            padding: 0 0 0 8px !important;
+            padding: 0 0 0 6px !important;
             font-size: 16px !important;
             font-weight: 600 !important;
-          }
-          
-          /* Make month picker dropdown text bigger */
-          .rdrMonthPicker select {
-            font-size: 16px !important;
-            font-weight: 600 !important;
-          }
-          
-          /* Make year picker dropdown text bigger */
-          .rdrYearPicker select {
-            font-size: 16px !important;
-            font-weight: 600 !important;
-          }
-          
-          /* Make months fill more width */
-          .rdrMonths.rdrMonthsHorizontal {
-            width: 100% !important;
-          }
-          
-          .rdrMonths.rdrMonthsHorizontal .rdrMonth {
-            width: 100% !important;
+            margin-bottom: .5rem !important;
           }
           
           /* Force black text on selected dates */
