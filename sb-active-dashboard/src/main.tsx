@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import "./index.css"; // or remove if not using
 import "@arcgis/core/assets/esri/themes/light/main.css";
 import "@esri/calcite-components/dist/calcite/calcite.css";
+import "./index.css"; // Tailwind CSS should be imported last for proper specificity
 import { defineCustomElements } from "@esri/calcite-components/dist/loader";
 import { defineCustomElements as defineMapComponents } from "@arcgis/map-components/dist/loader";
 

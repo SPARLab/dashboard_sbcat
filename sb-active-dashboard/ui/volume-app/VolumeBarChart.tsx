@@ -125,7 +125,7 @@ const VolumeBarChart = ({ hourlyData, showBicyclist, showPedestrian, width = 260
   };
 
   return (
-    <div style={{ width, height, marginBottom: 1}}>
+    <div className="w-full" style={{ width, height, marginBottom: 56 }}>
       <Bar data={data} options={options} height={height} />
     </div>
   );

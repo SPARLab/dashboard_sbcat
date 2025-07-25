@@ -35,7 +35,8 @@ export default function AppCard(props: Props) {
       }}
     >
       <CardActionArea
-        href={link}
+        component={RouterLink}
+        to={link}
         sx={{
           flex: "1 1 350px",
           minwidth: 151,

@@ -7,14 +7,15 @@ import HomePage from "./pages/home";
 import ExplorePage from "./pages/dashboard/explore";
 import SafetyPage from "./pages/dashboard/safety";
 import VolumePage from "./pages/dashboard/volume";
+import Test from "./pages/dashboard/test";
 
 import { ThemeProvider, CssBaseline, StyledEngineProvider } from "@mui/material";
-import { appTheme } from "@/ui/theme";  // your existing theme file
+import { appTheme } from "@/ui/theme";
 
 function App() {
   return (
     // Emotion styles should be injected BEFORE any other <style> tags
-    <StyledEngineProvider injectFirst> {/* MUI doc :contentReference[oaicite:4]{index=4} */}
+    <StyledEngineProvider injectFirst>
       <ThemeProvider theme={appTheme}>
         <CssBaseline enableColorScheme />
         <BrowserRouter>
@@ -30,8 +31,9 @@ function App() {
                   <DashboardLayout>
                     <Routes>
                       <Route path="explore" element={<ExplorePage />} />
-                      <Route path="safety"  element={<SafetyPage  />} />
-                      <Route path="volume"  element={<VolumePage  />} />
+                      <Route path="safety" element={<SafetyPage />} />
+                      <Route path="volume" element={<VolumePage />} />
+                      <Route path="test" element={<Test />} />
                     </Routes>
                   </DashboardLayout>
                 </LayerProvider>
