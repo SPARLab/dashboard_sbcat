@@ -38,9 +38,20 @@ export default function NewVolumePage() {
               key={tab.id}
               id={`${tab.id}-tab`}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative px-8 py-2 text-[14px] font-medium bg-transparent border-none cursor-pointer hover:bg-gray-100 transition-colors ${
-                activeTab === tab.id ? 'text-blue-500' : 'text-gray-500'
+              className={`relative px-8 py-2 text-[14px] font-medium bg-transparent cursor-pointer transition-all duration-200 ${
+                activeTab === tab.id ? 'text-blue-500' : 'text-gray-500 hover:text-gray-800'
               }`}
+              // Inline styling required here to remove ugly default browser styling for the active state when you click on the tab.
+              style={{
+                border: 'none',
+                outline: 'none',
+                borderRadius: 0,
+                boxShadow: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                appearance: 'none'
+              }}
+              onMouseDown={(e) => e.preventDefault()}
             >
               {tab.label}
               {activeTab === tab.id && (
