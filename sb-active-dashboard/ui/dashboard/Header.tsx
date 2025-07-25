@@ -9,6 +9,7 @@ export default function Header(props: any) {
   return (
     <AppBar
       position="sticky"
+      elevation={0}
       style={{ backgroundColor: theme.palette.navy.main, width: "100vw" }}
     >
       <Toolbar sx={{ height: "70px" }}>
@@ -48,7 +49,6 @@ export default function Header(props: any) {
                   fontWeight: "bold",
                   fontSize: "1rem",
                   textTransform: "none",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
                   borderRadius: 2,
                   px: 2,
                   '&:hover': {
