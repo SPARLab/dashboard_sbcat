@@ -1,18 +1,22 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { DateRange, RangeKeyDict } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 
 export default function DateRangeSection() {
   const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarPosition, setCalendarPosition] = useState<{ top: number; left: number } | null>(null);
   const [selection, setSelection] = useState({
     startDate: new Date(2023, 0, 1),
     endDate: new Date(2023, 11, 31),
     key: 'selection'
   });
+  const [focusedRange, setFocusedRange] = useState<[number, 0 | 1]>([0, 0]);
   const [isDragging, setIsDragging] = useState<'start' | 'end' | null>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const datePickerRef = useRef<HTMLDivElement>(null);
 
   const calendarIcon = "http://localhost:3845/assets/1be83d6e0c00a3e729a68de2ad961591d68c608d.svg";
 
@@ -20,7 +24,7 @@ export default function DateRangeSection() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
-        setShowCalendar(false);
+        closeCalendar();
       }
     };
 
@@ -34,14 +38,28 @@ export default function DateRangeSection() {
   }, [showCalendar]);
 
   const handleSelect = (ranges: RangeKeyDict) => {
-    const { startDate, endDate } = ranges.selection;
-    if (startDate && endDate) {
-      setSelection({
-        startDate,
-        endDate,
-        key: 'selection'
+    // The component now correctly manages the start/end date logic
+    // because we are controlling its focus.
+    // We just need to update our state with the new range.
+    if (ranges.selection) {
+      setSelection(prev => ({...prev, ...ranges.selection}));
+    }
+  };
+
+  const openCalendar = () => {
+    if (datePickerRef.current) {
+      const rect = datePickerRef.current.getBoundingClientRect();
+      setCalendarPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX
       });
     }
+    setShowCalendar(true);
+  };
+
+  const closeCalendar = () => {
+    setShowCalendar(false);
+    setCalendarPosition(null);
   };
 
   const formatDate = (date: Date) => {
@@ -81,15 +99,90 @@ export default function DateRangeSection() {
     setIsDragging(null);
   }, []);
 
+  // Portal calendar component
+  const CalendarPortal = () => {
+    if (!showCalendar || !calendarPosition) return null;
+
+    return ReactDOM.createPortal(
+      <div 
+        ref={calendarRef}
+        className="fixed z-[9999] bg-white border border-gray-300 rounded-lg shadow-lg"
+        style={{ top: `${calendarPosition.top}px`, left: `${calendarPosition.left}px` }}
+      >
+        <style>{`
+          .rdrMonth { width: 250px; }
+          .rdrCalendarWrapper { font-size: 12px; }
+          .rdrDateDisplayWrapper { display: none; }
+          
+          /* Add left padding and increase font size for month name */
+          .rdrMonthName {
+            padding: 0 0 0 8px !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+          }
+          
+          /* Make month picker dropdown text bigger */
+          .rdrMonthPicker select {
+            font-size: 16px !important;
+            font-weight: 600 !important;
+          }
+          
+          /* Make year picker dropdown text bigger */
+          .rdrYearPicker select {
+            font-size: 16px !important;
+            font-weight: 600 !important;
+          }
+          
+          /* Make months fill more width */
+          .rdrMonths.rdrMonthsHorizontal {
+            width: 100% !important;
+          }
+          
+          .rdrMonths.rdrMonthsHorizontal .rdrMonth {
+            width: 100% !important;
+          }
+          
+          /* Force black text on selected dates */
+          .rdrInRange .rdrDayNumber span,
+          .rdrStartEdge .rdrDayNumber span,
+          .rdrEndEdge .rdrDayNumber span,
+          .rdrSelected .rdrDayNumber span {
+            color: #000000 !important;
+            font-weight: 700 !important;
+          }
+        `}</style>
+        <DateRange
+          ranges={[selection]}
+          onChange={handleSelect}
+          onRangeFocusChange={setFocusedRange}
+          focusedRange={focusedRange}
+          moveRangeOnFirstSelection={false}
+          months={1}
+          direction="horizontal"
+          showDateDisplay={false}
+        />
+        <div className="p-2 border-t">
+          <button 
+            onClick={closeCalendar}
+            className="w-full px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+          >
+            Done
+          </button>
+        </div>
+      </div>,
+      document.getElementById('tooltip-portal')!
+    );
+  };
+
   return (
     <div className="p-4">
       <div id="date-range-section">
         <h3 className="text-base font-medium text-gray-700 mb-3">Date Range</h3>
-        <div id="date-range-picker" className="bg-gray-100 p-2 rounded-md">
+        <div ref={datePickerRef} id="date-range-picker" className="bg-gray-100 p-2 rounded-md">
           <div className="flex justify-between items-center mb-1">
             <div 
               className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300"
-              onClick={() => setShowCalendar(!showCalendar)}
+              onClick={() => showCalendar ? closeCalendar() : openCalendar()}
             >
               <span id="start-date-label" className="text-xs text-gray-600">
                 {formatDate(selection.startDate)}
@@ -102,7 +195,7 @@ export default function DateRangeSection() {
             </div>
             <div 
               className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300"
-              onClick={() => setShowCalendar(!showCalendar)}
+              onClick={() => showCalendar ? closeCalendar() : openCalendar()}
             >
               <span id="end-date-label" className="text-xs text-gray-600">
                 {formatDate(selection.endDate)}
@@ -149,45 +242,7 @@ export default function DateRangeSection() {
             </div>
           </div>
 
-          {showCalendar && (
-            <div className="relative">
-              <div 
-                ref={calendarRef}
-                className="absolute top-0 left-0 z-[9999] bg-white border border-gray-300 rounded-lg shadow-lg"
-              >
-                <style>{`
-                  .rdrMonth { width: 250px; }
-                  .rdrCalendarWrapper { font-size: 12px; }
-                  .rdrDateDisplayWrapper { display: none; }
-                  
-                  /* Force black text on selected dates */
-                  .rdrInRange .rdrDayNumber span,
-                  .rdrStartEdge .rdrDayNumber span,
-                  .rdrEndEdge .rdrDayNumber span,
-                  .rdrSelected .rdrDayNumber span {
-                    color: #000000 !important;
-                    font-weight: 700 !important;
-                  }
-                `}</style>
-                <DateRange
-                  ranges={[selection]}
-                  onChange={handleSelect}
-                  moveRangeOnFirstSelection={false}
-                  months={1}
-                  direction="horizontal"
-                  showDateDisplay={false}
-                />
-                <div className="p-2 border-t">
-                  <button 
-                    onClick={() => setShowCalendar(false)}
-                    className="w-full px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <CalendarPortal />
         </div>
       </div>
     </div>
