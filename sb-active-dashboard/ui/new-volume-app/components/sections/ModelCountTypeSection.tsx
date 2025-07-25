@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Tooltip from "../../../components/Tooltip";
 
 export default function ModelCountTypeSection() {
   const [modelCountType, setModelCountType] = useState('strava');
@@ -61,13 +62,15 @@ export default function ModelCountTypeSection() {
                 />
               )}
             </div>
-            <div className="ml-2.5 flex items-center">
+            <div className="ml-2.5 flex items-start">
               <span className="text-[14px] font-normal leading-6 text-gray-700">
                 Cost Benefit Tool
               </span>
-              <div id="cost-benefit-info-icon" className="ml-1 w-2.5 h-2.5 bg-gray-300 bg-opacity-25 rounded-lg flex items-center justify-center border border-gray-600 border-opacity-50">
-                <span className="text-xs text-gray-600">?</span>
-              </div>
+              <Tooltip 
+                text="Additional information about Cost Benefit Tool"
+                className="ml-[2px]"
+                align="left"
+              />
             </div>
           </label>
         </div>
