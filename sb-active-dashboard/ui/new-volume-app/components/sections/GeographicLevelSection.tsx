@@ -4,11 +4,11 @@ export default function GeographicLevelSection() {
   const [geographicLevel, setGeographicLevel] = useState('census-tract');
 
   const geographicOptions = [
-    { id: 'region', label: 'Region', icon: '🗺️' },
-    { id: 'city', label: 'City / Service Area', icon: '🏙️' },
-    { id: 'census-tract', label: 'Census Tract', icon: '📊' },
-    { id: 'hexagons', label: 'Hexagons', icon: '⬡' },
-    { id: 'custom', label: 'Custom Draw Tool', icon: '✏️' }
+    { id: 'region', label: 'Region', icon: '/icons/region-icon.svg' },
+    { id: 'city', label: 'City / Service Area', icon: '/icons/city-service-area-icon.svg' },
+    { id: 'census-tract', label: 'Census Tract', icon: '/icons/census-tract-icon.svg' },
+    { id: 'hexagons', label: 'Hexagons', icon: '/icons/hexagons-icon.svg' },
+    { id: 'custom', label: 'Custom Draw Tool', icon: '/icons/custom-draw-tool-icon.svg' }
   ];
 
   return (
@@ -27,7 +27,11 @@ export default function GeographicLevelSection() {
                   : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <span className="mr-2">{option.icon}</span>
+              <img 
+                src={option.icon} 
+                alt={`${option.label} icon`}
+                className="w-4 h-4 mr-2"
+              />
               {option.label}
             </button>
           ))}
