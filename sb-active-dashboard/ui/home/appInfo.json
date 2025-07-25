@@ -22,5 +22,11 @@
         "summary": "Identify key areas where equitable access to safe pedestrian and bicycle routes can be improved so all Santa Barbara County residents can partake in active transporation.",
         "image": "/icons/atp_logo_temporary.png",
         "link": ""
+    },
+    {
+        "title": "New Volumes Page",
+        "summary": "Enhanced volume analysis dashboard with improved visualizations and data insights for traffic patterns.",
+        "image": "/icons/atp_logo_temporary.png",
+        "link": "/dashboard/new-volume"
     }
 ]
