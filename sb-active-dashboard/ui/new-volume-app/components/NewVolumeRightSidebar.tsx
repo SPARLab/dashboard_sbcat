@@ -1,7 +1,6 @@
 import React from "react";
 import TrendsHeader from "./sections/TrendsHeader";
 import MilesOfStreetByTrafficLevelBarChart from "./sections/MilesOfStreetByTrafficLevelBarChart";
-import RawDataMetrics from "./sections/RawDataMetrics";
 import CompletenessMetrics from "./sections/CompletenessMetrics";
 import LowDataCoverage from "./right-sidebar/LowDataCoverage";
 import SummaryStatistics from "./right-sidebar/SummaryStatistics";
