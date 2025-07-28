@@ -7,6 +7,7 @@ import LowDataCoverage from "./right-sidebar/LowDataCoverage";
 import SummaryStatistics from "./right-sidebar/SummaryStatistics";
 import HighestVolume from "./right-sidebar/HighestVolume";
 import Placeholder from "./right-sidebar/Placeholder";
+import AggregatedVolumeBreakdown from "./right-sidebar/AggregatedVolumeBreakdown";
 
 interface NewVolumeRightSidebarProps {
   activeTab: string;
@@ -29,7 +30,7 @@ export default function NewVolumeRightSidebar({ activeTab }: NewVolumeRightSideb
               <LowDataCoverage />
               <SummaryStatistics />
               <HighestVolume />
-              <Placeholder label="Aggregated Volume Breakdown" />
+              <AggregatedVolumeBreakdown />
               <Placeholder label="Year to Year Volume Comparison" />
               <Placeholder label="Timeline of Available data per site Sparkline chart" />
               <Placeholder label="Mode Breakdown chart" />
