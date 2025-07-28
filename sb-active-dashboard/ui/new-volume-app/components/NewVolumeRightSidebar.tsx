@@ -1,6 +1,6 @@
 import React from "react";
 import TrendsHeader from "./sections/TrendsHeader";
-import VolumeBarChart from "./sections/VolumeBarChart";
+import MilesOfStreetByTrafficLevelBarChart from "./sections/MilesOfStreetByTrafficLevelBarChart";
 import RawDataMetrics from "./sections/RawDataMetrics";
 import CompletenessMetrics from "./sections/CompletenessMetrics";
 import LowDataCoverage from "./right-sidebar/LowDataCoverage";
@@ -20,7 +20,9 @@ export default function NewVolumeRightSidebar({ activeTab }: NewVolumeRightSideb
       <div className="py-4">
         <TrendsHeader activeTab={activeTab} horizontalMargins={horizontalMargins} />
         <div className="w-full h-[1px] bg-gray-200 my-4"></div>
-        <VolumeBarChart dataType={activeTab} horizontalMargins={horizontalMargins} />
+        {activeTab === 'modeled-data' && (
+          <MilesOfStreetByTrafficLevelBarChart dataType={activeTab} horizontalMargins={horizontalMargins} />
+        )}
         {activeTab === 'raw-data' && (
           <>
             <div className={`space-y-4 ${horizontalMargins} my-4`}>

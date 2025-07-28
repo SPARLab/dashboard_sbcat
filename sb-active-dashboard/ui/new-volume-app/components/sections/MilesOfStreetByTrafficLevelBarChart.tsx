@@ -17,7 +17,7 @@ const chartdata = [
   },
 ];
 
-interface VolumeBarChartProps {
+interface MilesOfStreetByTrafficLevelBarChartProps {
   dataType: string;
   horizontalMargins: string;
 }
@@ -26,7 +26,7 @@ interface HoveredBarData {
   value: number;
 }
 
-export default function VolumeBarChart({ dataType, horizontalMargins }: VolumeBarChartProps) {
+export default function MilesOfStreetByTrafficLevelBarChart({ dataType, horizontalMargins }: MilesOfStreetByTrafficLevelBarChartProps) {
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
 
   const onEvents = useMemo(
