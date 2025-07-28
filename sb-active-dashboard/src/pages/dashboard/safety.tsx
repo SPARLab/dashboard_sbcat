@@ -1,12 +1,12 @@
 import React, { Suspense, lazy } from "react";
 
-// Lazy-load the SafetyMap component
-const SafetyMap = lazy(() => import("../../../ui/safety-app/SafetyMap"));
+// Lazy-load the SafetyApp component  
+const SafetyApp = lazy(() => import("../../../ui/safety-app/SafetyApp"));
 
 export default function Safety() {
   return (
-    <Suspense fallback={<div>Loading safety map...</div>}>
-      <SafetyMap />
+    <Suspense fallback={<div>Loading safety dashboard...</div>}>
+      <SafetyApp />
     </Suspense>
   );
 }
