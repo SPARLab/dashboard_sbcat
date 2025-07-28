@@ -1,17 +1,7 @@
 import React, { useState } from "react";
 import TimelineSparklineHeader from "./TimelineSparklineHeader";
 import TimelineSparklineChart from "./TimelineSparklineChart";
-
-interface DataPeriod {
-  start: number; // percentage from start of timeline
-  end: number;   // percentage from start of timeline
-}
-
-interface SiteData {
-  id: string;
-  name: string;
-  dataPeriods: DataPeriod[];
-}
+import { type SiteData } from "./SharedTimelineChart";
 
 interface TimelineSparklineProps {
   sites: SiteData[];

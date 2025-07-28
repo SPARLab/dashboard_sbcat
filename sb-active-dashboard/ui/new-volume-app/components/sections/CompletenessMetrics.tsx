@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import SharedTimelineChart, { type SiteData } from "../right-sidebar/SharedTimelineChart";
 
 interface CompletenessMetricsProps {
   horizontalMargins: string;
@@ -8,7 +9,7 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
   const [isConfidenceExpanded, setIsConfidenceExpanded] = useState(false);
 
   // Sample data - this would come from your data source
-  const timelineData = [
+  const timelineData: SiteData[] = [
     {
       id: "site1",
       name: "Site 1",
@@ -114,19 +115,19 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
           {/* Freshness */}
           <div id="freshness-metric" className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500">Freshness</span>
+              <span className="text-sm font-medium text-black">Freshness</span>
               <span className="text-xs font-medium text-black">72%</span>
             </div>
-            <p className="text-sm text-black">Avg. last data upload: April 2024</p>
+            <p className="text-xs text-gray-500">Avg. last data upload: April 2024</p>
           </div>
           
           {/* Spatial Density */}
           <div id="spatial-density-metric" className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500">Spatial Density</span>
+              <span className="text-sm font-medium text-black">Spatial Density</span>
               <span className="text-xs font-medium text-black">58%</span>
             </div>
-            <p className="text-sm text-black">4 count sites in this zone</p>
+            <p className="text-xs text-gray-500">4 count sites in this zone</p>
           </div>
         </div>
         <div className="h-px bg-gray-200"></div>
@@ -198,36 +199,12 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
                 <p className="text-xs text-gray-500 mt-1">(Jan 2022 – Sept 2025)</p>
               </div>
               
-              {/* Year Labels */}
-              <div className="flex items-center mb-2">
-                <div className="w-12 shrink-0"></div>
-                <div className="flex-1 flex justify-between text-xs text-gray-500">
-                  <span>2022</span>
-                  <span>2023</span>
-                  <span>2025</span>
-                </div>
-              </div>
-              
-              {/* Timeline Bars */}
-              <div className="space-y-1">
-                {timelineData.map((site) => (
-                  <div key={site.id} className="flex items-center">
-                    <div className="w-12 text-xs text-gray-600 font-medium">{site.name}</div>
-                    <div className="flex-1 relative h-3 bg-gray-100 rounded-sm">
-                      {site.dataPeriods.map((period, index) => (
-                        <div
-                          key={index}
-                          className="absolute top-0 h-full bg-gray-800 rounded-sm"
-                          style={{
-                            left: `${period.start}%`,
-                            width: `${period.end - period.start}%`,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SharedTimelineChart
+                sites={timelineData}
+                years={[2022, 2023, 2025]}
+                variant="compact"
+                idPrefix="data-completeness-timeline"
+              />
             </div>
           </div>
       </div>
