@@ -256,7 +256,7 @@ export default function DateRangeSection() {
               className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300"
               onClick={() => showCalendar ? closeCalendar() : openCalendar()}
             >
-              <span id="start-date-label" className="text-xs text-gray-600">
+              <span id="start-date-label" className="text-sm text-gray-600">
                 {formatDate(selection.startDate)}
               </span>
               <img 
@@ -269,7 +269,7 @@ export default function DateRangeSection() {
               className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300"
               onClick={() => showCalendar ? closeCalendar() : openCalendar()}
             >
-              <span id="end-date-label" className="text-xs text-gray-600">
+              <span id="end-date-label" className="text-sm text-gray-600">
                 {formatDate(selection.endDate)}
               </span>
               <img 

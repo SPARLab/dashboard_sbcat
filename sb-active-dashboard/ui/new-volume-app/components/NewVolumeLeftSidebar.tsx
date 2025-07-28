@@ -15,19 +15,17 @@ export default function NewVolumeLeftSidebar({ activeTab }: NewVolumeLeftSidebar
     <div id="volume-filters-sidebar" className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
       <SortDataSection />
       <hr className="border-gray-200" />
-      <ModelCountTypeSection />
-      <hr className="border-gray-200" />
+      {activeTab === 'modeled-data' && (
+        <>
+          <ModelCountTypeSection />
+          <hr className="border-gray-200" />
+        </>
+      )}
       <RoadUserSection />
       <hr className="border-gray-200" />
       <DateRangeSection />
       <hr className="border-gray-200" />
       <GeographicLevelSection />
-      {activeTab === 'modeled-data' && (
-        <>
-          <hr className="border-gray-200" />
-          <ModeledDataAdditionalSection />
-        </>
-      )}
     </div>
   );
 } 
