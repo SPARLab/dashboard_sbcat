@@ -8,9 +8,9 @@ export default function NewVolumeApp() {
   const [activeTab, setActiveTab] = useState('modeled-data');
 
   return (
-    <div id="new-volumes-page" className="flex flex-col h-screen bg-white">
+    <div id="new-volumes-page" className="flex flex-col h-[calc(100vh-70px)] bg-white">
       <NewVolumeSubHeader activeTab={activeTab} onTabChange={setActiveTab} />
-      <div id="volume-main-content" className="flex flex-1">
+      <div id="volume-main-content" className="flex flex-1 overflow-hidden">
         <NewVolumeLeftSidebar activeTab={activeTab} />
         <NewVolumeMap activeTab={activeTab} />
         <NewVolumeRightSidebar activeTab={activeTab} />
