@@ -1,47 +1,167 @@
-import React from "react";
+'use client';
+import ReactECharts from 'echarts-for-react';
+import { useMemo, useState } from 'react';
+
+const chartdata = [
+  {
+    name: 'Low',
+    value: 115,
+  },
+  {
+    name: 'Medium',
+    value: 127,
+  },
+  {
+    name: 'High',
+    value: 122,
+  },
+];
 
 interface VolumeBarChartProps {
   dataType: string;
 }
 
+interface HoveredBarData {
+  value: number;
+}
+
 export default function VolumeBarChart({ dataType }: VolumeBarChartProps) {
+  const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
+
+  const onEvents = useMemo(
+    () => ({
+      mouseover: (params: any) => {
+        setHoveredBar({ value: params.value });
+      },
+      mouseout: () => {
+        setHoveredBar(null);
+      },
+    }),
+    [],
+  );
+
+  const option = useMemo(
+    () => ({
+      grid: {
+        left: '17px',
+        right: '0px',
+        top: '20px',
+        bottom: '0px',
+        containLabel: true,
+      },
+      xAxis: {
+        type: 'category',
+        data: chartdata.map(item => item.name),
+        axisLine: {
+          show: true,
+          lineStyle: {
+            color: '#9ca3af',
+            width: 1,
+          },
+        },
+        axisTick: {
+          show: false,
+        },
+        axisLabel: {
+          color: '#6b7280',
+          fontSize: 14,
+        },
+      },
+      yAxis: {
+        type: 'value',
+        min: 0,
+        max: 140,
+        interval: 35,
+        axisLine: {
+          show: true,
+          lineStyle: {
+            color: '#9ca3af',
+            width: 1,
+          },
+        },
+        axisTick: {
+          show: false,
+        },
+        axisLabel: {
+          color: '#6b7280',
+          fontSize: 14,
+          formatter: (value: number) => value.toString(),
+        },
+        name: 'Network Miles',
+        nameLocation: 'middle',
+        nameGap: 30,
+        nameTextStyle: {
+          color: '#6b7280',
+          fontSize: 14,
+          fontWeight: 500,
+        },
+        splitLine: {
+          show: true,
+          lineStyle: {
+            color: '#e5e7eb',
+            width: 1,
+            type: [3, 3], // dashed line
+          },
+        },
+      },
+      series: [
+        {
+          data: chartdata.map((item, index) => ({
+            value: item.value,
+            itemStyle: {
+              color: ['#ef4444', '#f97316', '#22c55e'][index], // red, orange, green
+              borderRadius: [4, 4, 0, 0], // rounded top corners
+            },
+          })),
+          type: 'bar',
+          barWidth: '60%',
+          emphasis: {
+            itemStyle: {
+              borderColor: '#3b82f6', // blue border on hover
+              borderWidth: 2,
+              shadowBlur: 0, // remove shadow
+              shadowColor: 'transparent',
+            },
+          },
+        },
+      ],
+      tooltip: {
+        show: false, // disable default tooltip
+      },
+    }),
+    [],
+  );
+
   return (
-    <div id="volume-bar-chart-container" className="border border-gray-200 rounded p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 id="bar-chart-title" className="text-base font-medium text-gray-700">
-          Miles of Street by Traffic Level
-        </h3>
-        <span id="chart-collapse-button" className="text-sm cursor-pointer text-gray-600">−</span>
-      </div>
-
-      <p id="chart-summary" className="text-sm text-blue-600 text-center mb-2 font-semibold">
-        124 Pedestrians & Bicyclists ({dataType})
-      </p>
-
-      <p id="chart-description" className="text-xs text-gray-500 text-center mb-6">
+    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-md">
+      <h3 className="text-lg font-medium text-gray-900">Miles of Street by Traffic Level</h3>
+      <div className="w-full h-[1px] bg-gray-200"></div>
+      <p className="w-full mt-1 text-sm text-gray-600">
         Miles within network assigned to each category, based on current selection
       </p>
 
-      {/* Mock Bar Chart */}
-      <div id="volume-bar-chart" className="flex items-end justify-center gap-4 h-48 mb-4">
-              {/* Y-axis labels would go here in a real implementation */}
-      <div id="chart-y-axis-label" className="text-xs -rotate-90 text-gray-500 text-center">
-        <span className="block transform absolute left-2 top-1/2 w-20">Network Miles</span>
-      </div>
-        <div id="low-traffic-bar" className="flex flex-col items-center gap-2">
-          <div className="w-11 bg-gray-300 rounded-t" style={{ height: '67px' }}></div>
-          <span className="text-xs font-semibold text-gray-700">Low</span>
-        </div>
-        <div id="medium-traffic-bar" className="flex flex-col items-center gap-2">
-          <div className="w-11 bg-gray-600 rounded-t" style={{ height: '164px' }}></div>
-          <span className="text-xs font-semibold text-gray-700">Medium</span>
-        </div>
-        <div id="high-traffic-bar" className="flex flex-col items-center gap-2">
-          <div className="w-11 bg-gray-900 rounded-t" style={{ height: '128px' }}></div>
-          <span className="text-xs font-semibold text-gray-700">High</span>
-        </div>
-      </div>
+      <div className="relative mt-1">
+        {hoveredBar && (
+          <div
+            id="volume-chart-tooltip"
+            className="absolute -top-0 left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
+          >
+            {`${hoveredBar.value.toLocaleString()} Network Miles`}
+          </div>
+        )}
 
+        {useMemo(
+          () => (
+            <ReactECharts
+              option={option}
+              style={{ height: '300px', width: '100%' }}
+              opts={{ renderer: 'canvas' }}
+              onEvents={onEvents}
+            />
+          ),
+          [option, onEvents],
+        )}
+      </div>
     </div>
   );
 } 
