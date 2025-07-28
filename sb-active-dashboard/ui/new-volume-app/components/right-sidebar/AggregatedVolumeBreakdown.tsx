@@ -172,6 +172,7 @@ export default function AggregatedVolumeBreakdown() {
               id={`aggregated-volume-breakdown-button-${scale.toLowerCase().replace(/\s/g, '-')}`}
               key={scale}
               onClick={() => setTimeScale(scale)}
+              // We have to use !outline-none !border-none because Google Chrome does not respect the outline-none class on a hover or click
               className={`px-2 py-1 text-[.8rem] font-semibold rounded-md !outline-none !border-none focus:!outline-none focus:!ring-0 focus:!shadow-none hover:!outline-none hover:!border-none active:!outline-none active:!border-none transition-none ${
                 timeScale === scale
                   ? 'bg-blue-500 text-white'

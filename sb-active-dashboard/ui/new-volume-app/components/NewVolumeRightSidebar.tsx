@@ -8,6 +8,7 @@ import SummaryStatistics from "./right-sidebar/SummaryStatistics";
 import HighestVolume from "./right-sidebar/HighestVolume";
 import Placeholder from "./right-sidebar/Placeholder";
 import AggregatedVolumeBreakdown from "./right-sidebar/AggregatedVolumeBreakdown";
+import YearToYearVolumeComparison from "./right-sidebar/YearToYearVolumeComparison";
 
 interface NewVolumeRightSidebarProps {
   activeTab: string;
@@ -31,7 +32,7 @@ export default function NewVolumeRightSidebar({ activeTab }: NewVolumeRightSideb
               <SummaryStatistics />
               <HighestVolume />
               <AggregatedVolumeBreakdown />
-              <Placeholder label="Year to Year Volume Comparison" />
+              <YearToYearVolumeComparison />
               <Placeholder label="Timeline of Available data per site Sparkline chart" />
               <Placeholder label="Mode Breakdown chart" />
             </div>
