@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 export default function SafetyRightSidebar() {
   return (
-    <div id="safety-analysis-sidebar" className="w-[374px] bg-white border-l border-gray-200 overflow-y-auto">
+    <div id="safety-analysis-sidebar" className="w-[374px] bg-white border-l border-gray-200 overflow-y-auto no-scrollbar">
       <div id="safety-analysis-content" className="py-4">
         {/* Analysis Header */}
         <div id="safety-analysis-header" className="px-4 pb-4 border-b border-gray-200">
