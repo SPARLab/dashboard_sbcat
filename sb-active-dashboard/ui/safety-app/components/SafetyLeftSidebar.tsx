@@ -105,13 +105,16 @@ function SeverityToggle({ label, checked, onChange }: { label: string; checked: 
         <div
           id={`safety-toggle-${labelId}-visual`}
           onClick={onChange}
-          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors ${
+          className={`w-8 h-5 rounded-full flex items-center p-0.5 cursor-pointer transition-all duration-200 ${
             checked 
-              ? 'bg-blue-500 border-blue-500' 
-              : 'bg-gray-300 border-gray-300'
+              ? 'bg-blue-500 justify-end' 
+              : 'bg-gray-300 justify-start'
           }`}
         >
-          <div id={`safety-toggle-${labelId}-dot`} className="w-3 h-3 bg-white rounded-full"></div>
+          <div 
+            id={`safety-toggle-${labelId}-dot`} 
+            className="w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200"
+          ></div>
         </div>
       </div>
       <label 
@@ -316,13 +319,11 @@ function TimeOfDaySection() {
           />
           <div
             onClick={() => setTimeOfDayEnabled(!timeOfDayEnabled)}
-            className={`w-8 h-5 rounded-full flex items-center cursor-pointer transition-colors ${
-              timeOfDayEnabled ? 'bg-blue-500' : 'bg-gray-300'
+            className={`w-8 h-5 rounded-full flex items-center p-0.5 cursor-pointer transition-all duration-200 ${
+              timeOfDayEnabled ? 'bg-blue-500 justify-end' : 'bg-gray-300 justify-start'
             }`}
           >
-            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
-              timeOfDayEnabled ? 'translate-x-3' : 'translate-x-0.5'
-            }`}></div>
+            <div className="w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200"></div>
           </div>
         </div>
       </div>
@@ -370,13 +371,11 @@ function WeekdaysWeekendsSection() {
           />
           <div
             onClick={() => setWeekdayEnabled(!weekdayEnabled)}
-            className={`w-8 h-5 rounded-full flex items-center cursor-pointer transition-colors ${
-              weekdayEnabled ? 'bg-blue-500' : 'bg-gray-300'
+            className={`w-8 h-5 rounded-full flex items-center p-0.5 cursor-pointer transition-all duration-200 ${
+              weekdayEnabled ? 'bg-blue-500 justify-end' : 'bg-gray-300 justify-start'
             }`}
           >
-            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
-              weekdayEnabled ? 'translate-x-3' : 'translate-x-0.5'
-            }`}></div>
+            <div className="w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200"></div>
           </div>
         </div>
       </div>
