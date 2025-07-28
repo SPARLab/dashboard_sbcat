@@ -90,7 +90,6 @@ export default function NewVolumeRightSidebar({ activeTab }: NewVolumeRightSideb
             <div className={`space-y-4 ${horizontalMargins} my-4`}>
               <LowDataCoverage />
               <SummaryStatistics />
-              <HighestVolume />
               <AggregatedVolumeBreakdown />
               <YearToYearVolumeComparison />
               <TimelineSparkline
@@ -101,6 +100,7 @@ export default function NewVolumeRightSidebar({ activeTab }: NewVolumeRightSideb
                 confidenceLevel="Medium confidence"
                 contributingSites="5 out of 7 selected sites"
               />
+              <HighestVolume />
               <ModeBreakdown />
             </div>
           </>
