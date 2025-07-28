@@ -6,7 +6,7 @@ export default function SafetyLeftSidebar() {
   return (
     <div id="safety-filters-sidebar" className="w-80 bg-white border-r border-gray-200 overflow-y-auto no-scrollbar">
       {/* Filter Data Header */}
-      <div id="safety-filters-header" className="bg-white border-b border-gray-200 p-6">
+      <div id="safety-filters-header" className="bg-white border-b border-gray-200 px-4 py-4">
         <h2 id="safety-filters-title" className="text-xl font-semibold text-gray-900">Filter Data</h2>
       </div>
 
@@ -53,9 +53,9 @@ function SeverityOfIncidentSection() {
   };
 
   return (
-    <div id="safety-severity-section" className="p-6">
+    <div id="safety-severity-section" className="px-4 py-4">
       <h3 id="safety-severity-title" className="text-base font-medium text-gray-700 mb-3">Severity of Incident</h3>
-      <div id="safety-severity-toggles" className="space-y-3">
+      <div id="safety-severity-toggles" className="space-y-1.5">
         <div id="safety-severity-fatality-container">
           <SeverityToggle 
             label="Fatality" 
@@ -93,7 +93,7 @@ function SeverityToggle({ label, checked, onChange }: { label: string; checked: 
   const labelId = label.toLowerCase().replace(/[^a-z0-9]/g, '-');
   
   return (
-    <div id={`safety-toggle-${labelId}`} className="flex items-center gap-1.5">
+    <div id={`safety-toggle-${labelId}`} className="flex items-center gap-1">
       <div id={`safety-toggle-${labelId}-input-container`} className="relative">
         <input
           id={`safety-toggle-${labelId}-checkbox`}
@@ -139,9 +139,9 @@ function DataSourceSection() {
   };
 
   return (
-    <div id="safety-data-source-section" className="p-6">
+    <div id="safety-data-source-section" className="px-4 py-4">
       <h3 id="safety-data-source-title" className="text-base font-medium text-gray-700 mb-3">Data Source</h3>
-      <div id="safety-data-source-toggles" className="space-y-3">
+      <div id="safety-data-source-toggles" className="space-y-1.5">
         <div id="safety-data-source-police-container">
           <SeverityToggle 
             label="Police Reports" 
@@ -149,7 +149,7 @@ function DataSourceSection() {
             onChange={() => toggleDataSource('policeReports')}
           />
         </div>
-        <div id="safety-data-source-self-reports-container" className="flex items-center gap-1.5">
+        <div id="safety-data-source-self-reports-container" className="flex items-center gap-1">
           <SeverityToggle 
             label="Self-Reports (BikeMaps.org" 
             checked={dataSource.selfReports}
@@ -214,14 +214,14 @@ function ConflictTypeSection() {
   };
 
   return (
-    <div className="p-6">
-      <h3 className="text-base font-medium text-gray-700 mb-3">Conflict Type</h3>
+    <div className="px-4 py-4">
+      <h3 className="text-base font-medium text-gray-700 mb-2">Conflict Type</h3>
       
       {/* All/None buttons */}
-      <div className="flex gap-1 mb-3">
+      <div className="flex gap-1 mb-2">
         <button 
           onClick={() => handleModeChange('all')}
-          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+          className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
             conflictMode === 'all' 
               ? 'bg-blue-500 text-white' 
               : 'bg-white border border-blue-500 text-blue-500 hover:bg-blue-50'
@@ -231,7 +231,7 @@ function ConflictTypeSection() {
         </button>
         <button 
           onClick={() => handleModeChange('none')}
-          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+          className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
             conflictMode === 'none' 
               ? 'bg-blue-500 text-white' 
               : 'bg-white border border-blue-500 text-blue-500 hover:bg-blue-50'
@@ -242,7 +242,7 @@ function ConflictTypeSection() {
       </div>
 
       {/* Individual conflict toggles */}
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         <ConflictToggle 
           label="Bike vs car" 
           checked={individualConflicts.bikeVsCar}
@@ -290,7 +290,7 @@ function ConflictTypeSection() {
 
 function ConflictToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
   return (
-    <div className="flex items-center gap-1.5 py-0.5">
+    <div className="flex items-center gap-1 py-0.5">
       <SeverityToggle label={label} checked={checked} onChange={onChange} />
     </div>
   );
@@ -307,7 +307,7 @@ function TimeOfDaySection() {
   ];
 
   return (
-    <div className="p-6">
+    <div className="px-4 py-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-base font-medium text-gray-700">Time of Day</h3>
         <div className="relative">
@@ -359,7 +359,7 @@ function WeekdaysWeekendsSection() {
   ];
 
   return (
-    <div className="p-6">
+    <div className="px-4 py-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-base font-medium text-gray-700">Weekdays vs Weekends</h3>
         <div className="relative">
