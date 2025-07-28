@@ -10,6 +10,7 @@ import Placeholder from "./right-sidebar/Placeholder";
 import AggregatedVolumeBreakdown from "./right-sidebar/AggregatedVolumeBreakdown";
 import YearToYearVolumeComparison from "./right-sidebar/YearToYearVolumeComparison";
 import TimelineSparkline from "./right-sidebar/TimelineSparkline";
+import ModeBreakdown from "./right-sidebar/ModeBreakdown";
 
 interface NewVolumeRightSidebarProps {
   activeTab: string;
@@ -100,9 +101,8 @@ export default function NewVolumeRightSidebar({ activeTab }: NewVolumeRightSideb
                 confidenceLevel="Medium confidence"
                 contributingSites="5 out of 7 selected sites"
               />
-              <Placeholder label="Mode Breakdown chart" />
+              <ModeBreakdown />
             </div>
-            <RawDataMetrics horizontalMargins={horizontalMargins} />
           </>
         )}
         {activeTab === 'data-completeness' && (
