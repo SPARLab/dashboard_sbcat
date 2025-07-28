@@ -3,6 +3,10 @@ import TrendsHeader from "./sections/TrendsHeader";
 import VolumeBarChart from "./sections/VolumeBarChart";
 import RawDataMetrics from "./sections/RawDataMetrics";
 import CompletenessMetrics from "./sections/CompletenessMetrics";
+import LowDataCoverage from "./right-sidebar/LowDataCoverage";
+import SummaryStatistics from "./right-sidebar/SummaryStatistics";
+import HighestVolume from "./right-sidebar/HighestVolume";
+import Placeholder from "./right-sidebar/Placeholder";
 
 interface NewVolumeRightSidebarProps {
   activeTab: string;
@@ -19,6 +23,15 @@ export default function NewVolumeRightSidebar({ activeTab }: NewVolumeRightSideb
         <VolumeBarChart dataType={activeTab} horizontalMargins={horizontalMargins} />
         {activeTab === 'raw-data' && (
           <>
+            <div className={`space-y-4 ${horizontalMargins} my-4`}>
+              <LowDataCoverage />
+              <SummaryStatistics />
+              <HighestVolume />
+              <Placeholder label="Aggregated Volume Breakdown" />
+              <Placeholder label="Year to Year Volume Comparison" />
+              <Placeholder label="Timeline of Available data per site Sparkline chart" />
+              <Placeholder label="Mode Breakdown chart" />
+            </div>
             <RawDataMetrics horizontalMargins={horizontalMargins} />
           </>
         )}
