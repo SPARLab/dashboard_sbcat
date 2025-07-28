@@ -106,7 +106,7 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
 
       {/* Data Breakdown Section */}
       <div id="data-breakdown-section" className="bg-white">
-        <div className={`py-2 space-y-3 ${horizontalMargins}`}>
+        <div className={`py-2 space-y-2 ${horizontalMargins}`}>
           <h4 id="data-breakdown-title" className="text-sm font-medium text-gray-700">
             Data Breakdown
           </h4>
@@ -141,11 +141,19 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
           
           <div id="stale-sites-list" className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-3.5 h-3.5 rounded-full bg-orange-400 flex-shrink-0" />
+              <div className="w-3.5 h-3.5 flex-shrink-0">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2.05078 2.05078L1.12109 1.12109C0.708203 0.708203 0 1.00078 0 1.5832V4.59375C0 4.95742 0.292578 5.25 0.65625 5.25H3.6668C4.25195 5.25 4.54453 4.5418 4.13164 4.12891L3.28945 3.28672C4.23828 2.33789 5.55078 1.75 7 1.75C9.89844 1.75 12.25 4.10156 12.25 7C12.25 9.89844 9.89844 12.25 7 12.25C5.88438 12.25 4.85078 11.9027 4.00039 11.3094C3.60391 11.0332 3.05977 11.1289 2.78086 11.5254C2.50195 11.9219 2.60039 12.466 2.99688 12.7449C4.13438 13.5352 5.51523 14 7 14C10.8664 14 14 10.8664 14 7C14 3.13359 10.8664 0 7 0C5.0668 0 3.3168 0.784766 2.05078 2.05078ZM7 3.5C6.63633 3.5 6.34375 3.79258 6.34375 4.15625V7C6.34375 7.175 6.41211 7.3418 6.53516 7.46484L8.50391 9.43359C8.76094 9.69063 9.17656 9.69063 9.43086 9.43359C9.68516 9.17656 9.68789 8.76094 9.43086 8.50664L7.65352 6.7293V4.15625C7.65352 3.79258 7.36094 3.5 6.99727 3.5H7Z" fill="#F59E0B"/>
+                </svg>
+              </div>
               <span className="text-sm text-black">Main St & Broadway (Last count: 2021)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3.5 h-3.5 rounded-full bg-orange-400 flex-shrink-0" />
+              <div className="w-3.5 h-3.5 flex-shrink-0">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2.05078 2.05078L1.12109 1.12109C0.708203 0.708203 0 1.00078 0 1.5832V4.59375C0 4.95742 0.292578 5.25 0.65625 5.25H3.6668C4.25195 5.25 4.54453 4.5418 4.13164 4.12891L3.28945 3.28672C4.23828 2.33789 5.55078 1.75 7 1.75C9.89844 1.75 12.25 4.10156 12.25 7C12.25 9.89844 9.89844 12.25 7 12.25C5.88438 12.25 4.85078 11.9027 4.00039 11.3094C3.60391 11.0332 3.05977 11.1289 2.78086 11.5254C2.50195 11.9219 2.60039 12.466 2.99688 12.7449C4.13438 13.5352 5.51523 14 7 14C10.8664 14 14 10.8664 14 7C14 3.13359 10.8664 0 7 0C5.0668 0 3.3168 0.784766 2.05078 2.05078ZM7 3.5C6.63633 3.5 6.34375 3.79258 6.34375 4.15625V7C6.34375 7.175 6.41211 7.3418 6.53516 7.46484L8.50391 9.43359C8.76094 9.69063 9.17656 9.69063 9.43086 9.43359C9.68516 9.17656 9.68789 8.76094 9.43086 8.50664L7.65352 6.7293V4.15625C7.65352 3.79258 7.36094 3.5 6.99727 3.5H7Z" fill="#F59E0B"/>
+                </svg>
+              </div>
               <span className="text-sm text-black">Oak Ave & 5th St (Last count: 2020)</span>
             </div>
           </div>
