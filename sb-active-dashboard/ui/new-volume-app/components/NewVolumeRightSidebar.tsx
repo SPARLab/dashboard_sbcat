@@ -16,7 +16,7 @@ export default function NewVolumeRightSidebar({ activeTab }: NewVolumeRightSideb
   const horizontalMargins = "mx-4";
 
   return (
-    <div id="volume-trends-sidebar" className="w-[412px] bg-white border-l border-gray-200 overflow-y-auto">
+    <div id="volume-trends-sidebar" className="w-[412px] bg-white border-l border-gray-200 overflow-y-auto no-scrollbar">
       <div className="py-4">
         <TrendsHeader activeTab={activeTab} horizontalMargins={horizontalMargins} />
         <div className="w-full h-[1px] bg-gray-200 my-4"></div>

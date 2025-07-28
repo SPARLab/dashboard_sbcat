@@ -134,7 +134,7 @@ export default function VolumeBarChart({ dataType, horizontalMargins }: VolumeBa
   );
 
   return (
-    <div className={`rounded-lg border border-gray-200 bg-white py-4 shadow-md px-4 ${horizontalMargins}`}>
+    <div className={`rounded-lg border border-gray-200 bg-white py-4 px-4 ${horizontalMargins}`}>
       <h3 className="text-lg font-medium text-gray-900">Miles of Street by Traffic Level</h3>
       <div className="w-full h-[1px] bg-gray-200"></div>
       <p className="w-full mt-1 text-sm text-gray-600">
