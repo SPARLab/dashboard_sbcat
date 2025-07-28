@@ -2,9 +2,10 @@ import React from "react";
 
 interface TrendsHeaderProps {
   activeTab: string;
+  horizontalMargins: string;
 }
 
-export default function TrendsHeader({ activeTab }: TrendsHeaderProps) {
+export default function TrendsHeader({ activeTab, horizontalMargins }: TrendsHeaderProps) {
   const getHeaderText = () => {
     switch (activeTab) {
       case 'modeled-data':
@@ -19,8 +20,10 @@ export default function TrendsHeader({ activeTab }: TrendsHeaderProps) {
   };
 
   return (
-    <h2 id="trends-header" className="text-xl font-semibold text-gray-900 mb-6">
-      {getHeaderText()}
-    </h2>
+    <div className={horizontalMargins}>
+      <h2 id="trends-header" className="text-xl font-semibold text-gray-900 mb-0">
+        {getHeaderText()}
+      </h2>
+    </div>
   );
 } 

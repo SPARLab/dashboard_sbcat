@@ -19,13 +19,14 @@ const chartdata = [
 
 interface VolumeBarChartProps {
   dataType: string;
+  horizontalMargins: string;
 }
 
 interface HoveredBarData {
   value: number;
 }
 
-export default function VolumeBarChart({ dataType }: VolumeBarChartProps) {
+export default function VolumeBarChart({ dataType, horizontalMargins }: VolumeBarChartProps) {
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
 
   const onEvents = useMemo(
@@ -133,7 +134,7 @@ export default function VolumeBarChart({ dataType }: VolumeBarChartProps) {
   );
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-md">
+    <div className={`rounded-lg border border-gray-200 bg-white py-4 shadow-md px-4 ${horizontalMargins}`}>
       <h3 className="text-lg font-medium text-gray-900">Miles of Street by Traffic Level</h3>
       <div className="w-full h-[1px] bg-gray-200"></div>
       <p className="w-full mt-1 text-sm text-gray-600">
