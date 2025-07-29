@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import CollapseExpandIcon from "../../components/CollapseExpandIcon";
 
 export default function SafetyRightSidebar() {
   return (
@@ -30,7 +31,7 @@ function SummaryStatistics() {
     <div id="safety-summary-statistics" className="bg-white border border-gray-200 rounded p-4">
       <div id="safety-summary-header" className="flex items-center justify-between mb-2">
         <h3 id="safety-summary-title" className="text-base font-medium text-gray-700">Summary Statistics</h3>
-        <CollapseButton isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />
+        <CollapseExpandIcon isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />
       </div>
       
       {!isCollapsed && (
@@ -75,7 +76,7 @@ function MostDangerousAreas() {
     <div className="bg-white border border-gray-200 rounded p-4">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-base font-medium text-gray-700">Most Dangerous Areas</h3>
-        <CollapseButton isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />
+        <CollapseExpandIcon isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />
       </div>
       
       {!isCollapsed && (
@@ -112,7 +113,7 @@ function AnnualIncidentsComparison() {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-medium text-gray-700">Annual Incidents Comparison</h3>
-          <CollapseButton isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />
+          <CollapseExpandIcon isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />
         </div>
         
         {!isCollapsed && (
@@ -192,7 +193,7 @@ function SeverityBreakdown() {
     <div className="bg-white border border-gray-200 rounded p-4">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-base font-medium text-gray-700">Severity Breakdown</h3>
-        <CollapseButton isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />
+        <CollapseExpandIcon isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />
       </div>
       
       {!isCollapsed && (
@@ -232,7 +233,7 @@ function ConflictTypeBreakdown() {
     <div className="bg-white border border-gray-200 rounded p-4">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-base font-medium text-gray-700">Conflict Type Breakdown</h3>
-        <CollapseButton isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />
+        <CollapseExpandIcon isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />
       </div>
       
       {!isCollapsed && (
@@ -260,27 +261,4 @@ function ConflictTypeBreakdown() {
   );
 }
 
-function CollapseButton({ isCollapsed, onClick }: { isCollapsed: boolean; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="w-3.5 h-6 flex items-center justify-center">
-      <div className="w-3.5 h-3.5 flex items-center justify-center">
-        <svg 
-          className={`w-3 h-3 transition-transform ${isCollapsed ? 'rotate-180' : ''}`}
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-        </svg>
-      </div>
-    </button>
-  );
-}
-
-function CollapseExpandIcon({ isCollapsed, onClick }: { isCollapsed: boolean; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="w-3.5 h-6 flex items-center justify-center">
-      <div className="w-3 h-2 bg-gray-400 rounded-sm"></div>
-    </button>
-  );
-} 
+ 
