@@ -1,4 +1,5 @@
 import React from "react";
+import { useLocation, Link as RouterLink } from "react-router-dom";
 
 import { Toolbar, Box, Typography, Button, AppBar } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -6,11 +7,16 @@ import { useTheme } from "@mui/material/styles";
 export default function Header(props: any) {
   const { apps } = props;
   const theme = useTheme();
+  const location = useLocation();
   return (
     <AppBar
       position="sticky"
       elevation={0}
-      style={{ backgroundColor: theme.palette.navy.main, width: "100vw" }}
+      sx={{
+        backgroundColor: theme.palette.white.main,
+        borderBottom: `1px solid ${theme.palette.lightgray.main}`,
+        width: "100vw",
+      }}
     >
       <Toolbar sx={{ height: "70px" }}>
         <Box
@@ -22,7 +28,7 @@ export default function Header(props: any) {
             alignItems: "center",
           }}
         >
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ color: theme.palette.navy.main }}>
             ACTIVE SB
           </Typography>
 
@@ -38,27 +44,38 @@ export default function Header(props: any) {
               alignItems: "center",
             }}
           >
-            {apps?.map((appInfo: any, index: any) => (
-              <Button
-                key={index}
-                href={appInfo["link"]}
-                variant="text"
-                sx={{
-                  backgroundColor: "#fff",
-                  color: theme.palette.navy.main,
-                  fontWeight: "bold",
-                  fontSize: "1rem",
-                  textTransform: "none",
-                  borderRadius: 2,
-                  px: 2,
-                  '&:hover': {
-                    backgroundColor: theme.palette.mist.main,
-                  },
-                }}
-              >
-                {appInfo["name"]}
-              </Button>
-            ))}
+            {apps?.map((appInfo: any, index: any) => {
+              const isActive = location.pathname.startsWith(appInfo.link);
+              return (
+                <Button
+                  key={index}
+                  component={RouterLink}
+                  to={appInfo.link}
+                  variant="text"
+                  sx={{
+                    backgroundColor: isActive
+                      ? theme.palette.navy.main
+                      : "transparent",
+                    color: isActive
+                      ? theme.palette.white.main
+                      : theme.palette.lightgray.contrastText,
+                    fontWeight: "bold",
+                    fontSize: "1rem",
+                    textTransform: "none",
+                    borderRadius: 2,
+                    px: 2,
+                    py: 1,
+                    "&:hover": {
+                      backgroundColor: isActive
+                        ? theme.palette.navy.main
+                        : theme.palette.mist.light,
+                    },
+                  }}
+                >
+                  {appInfo["name"]}
+                </Button>
+              );
+            })}
           </Box>
         </Box>
       </Toolbar>
