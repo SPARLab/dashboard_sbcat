@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Box as MuiBox } from "@mui/material";
 import { ArcgisMap } from "@arcgis/map-components-react";
-import TimeSlider from "@arcgis/core/widgets/TimeSlider";
-import TimeInterval from "@arcgis/core/time/TimeInterval";
 import { createAADTLayer, createHexagonLayer } from "../../../../lib/volume-app/volumeLayers";
 import { queryHourlyCounts, HourlyData } from "../../../../lib/volume-app/hourlyStats";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
@@ -22,7 +20,6 @@ export default function NewVolumeMap({
   modelCountsBy 
 }: NewVolumeMapProps) {
   const mapViewRef = useRef<any>(null);
-  const [timeSliderLoaded, setTimeSliderLoaded] = useState(false);
   const [viewReady, setViewReady] = useState(false);
 
   // Layer state
@@ -158,32 +155,6 @@ export default function NewVolumeMap({
     }
   }, [viewReady, modelCountsBy, showBicyclist, showPedestrian]);
 
-  // Instantiate TimeSlider when map view is ready
-  useEffect(() => {
-    if (viewReady && mapViewRef.current && document.getElementById("new-volume-time-slider-container")) {
-      if (document.getElementById("new-volume-time-slider-container")?.children.length === 0) {
-        new TimeSlider({
-          container: "new-volume-time-slider-container",
-          view: mapViewRef.current,
-          mode: "time-window",
-          timeZone: "system",
-          stops: {
-            interval: new TimeInterval({ value: 1, unit: "years" })
-          },
-          fullTimeExtent: {
-            start: new Date(2012, 1, 1),
-            end: new Date(2025, 5, 25),
-          },
-          timeExtent: {
-            start: new Date(2012, 1, 1),
-            end: new Date(2025, 5, 25),
-          },
-        });
-        setTimeSliderLoaded(true);
-      }
-    }
-  }, [viewReady]);
-
   return (
     <div id="volume-map-container" className="flex-1 bg-gray-200 relative">
       <MuiBox
@@ -220,11 +191,6 @@ export default function NewVolumeMap({
             <span className="text-xs text-gray-600">High</span>
           </div>
         </div>
-      </div>
-
-      {/* Time Slider Container */}
-      <div id="new-volume-time-slider-container" className="absolute bottom-5 left-5 bg-white p-3 rounded border border-gray-300 shadow-sm min-w-[300px]">
-        {/* TimeSlider will be instantiated here */}
       </div>
     </div>
   );
