@@ -27,7 +27,7 @@ export default function SafetyMapArea() {
                 key={tab.id}
                 id={`safety-map-tab-${tab.id}`}
                 onClick={() => setActiveMapTab(tab.id)}
-                className={`px-4 py-2 text-xs font-normal transition-colors whitespace-nowrap ${
+                className={`px-4 py-2 text-xs font-normal transition-colors whitespace-nowrap focus:outline-none active:outline-none ${
                   activeMapTab === tab.id
                     ? 'bg-gray-900 text-white'
                     : 'bg-white text-gray-600 hover:bg-gray-50'
