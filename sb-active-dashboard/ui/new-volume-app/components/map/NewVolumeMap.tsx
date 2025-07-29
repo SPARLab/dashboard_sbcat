@@ -1,33 +1,230 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { Box as MuiBox } from "@mui/material";
+import { ArcgisMap } from "@arcgis/map-components-react";
+import TimeSlider from "@arcgis/core/widgets/TimeSlider";
+import TimeInterval from "@arcgis/core/time/TimeInterval";
+import { createAADTLayer, createHexagonLayer } from "../../../../lib/volume-app/volumeLayers";
+import { queryHourlyCounts, HourlyData } from "../../../../lib/volume-app/hourlyStats";
+import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import GroupLayer from "@arcgis/core/layers/GroupLayer";
 
 interface NewVolumeMapProps {
   activeTab: string;
+  showBicyclist: boolean;
+  showPedestrian: boolean;
+  modelCountsBy: string;
 }
 
-export default function NewVolumeMap({ activeTab }: NewVolumeMapProps) {
+export default function NewVolumeMap({ 
+  activeTab, 
+  showBicyclist, 
+  showPedestrian, 
+  modelCountsBy 
+}: NewVolumeMapProps) {
+  const mapViewRef = useRef<any>(null);
+  const [timeSliderLoaded, setTimeSliderLoaded] = useState(false);
+  const [viewReady, setViewReady] = useState(false);
+
+  // Layer state
+  const [aadtLayer, setAadtLayer] = useState<FeatureLayer | null>(null);
+  const [hexagonLayer, setHexagonLayer] = useState<GroupLayer | null>(null);
+
+  // Hourly data for Cost Benefit Tool (AADT)
+  const [hourlyData, setHourlyData] = useState<HourlyData[]>([]);
+
+  // Handler to set map center/zoom when view is ready
+  const handleArcgisViewReadyChange = (event: any) => {
+    if (event?.target?.view) {
+      event.target.view.goTo({
+        center: [-120, 34.7],
+        zoom: 9,
+      });
+      mapViewRef.current = event.target.view;
+      setViewReady(true);
+    }
+  };
+
+  // Load layers when map view is ready
+  useEffect(() => {
+    if (viewReady && mapViewRef.current) {
+      const loadLayers = async () => {
+        try {
+          const aadt = await createAADTLayer();
+          const hexagon = createHexagonLayer();
+          
+          // Add layers to map
+          mapViewRef.current.map.add(aadt);
+          mapViewRef.current.map.add(hexagon);
+          
+          // Store layer references
+          setAadtLayer(aadt);
+          setHexagonLayer(hexagon);
+          
+        } catch (error) {
+          console.error("Error loading layers:", error);
+        }
+      };
+      
+      loadLayers();
+    }
+  }, [viewReady]);
+
+  // Control layers based on model counts selection
+  useEffect(() => {
+    if (aadtLayer && hexagonLayer) {
+      switch (modelCountsBy) {
+        case "strava":
+          // Hide both layers for now (no Strava data available)
+          aadtLayer.visible = false;
+          hexagonLayer.visible = false;
+          break;
+          
+        case "cost-benefit":
+          // Show AADT point layers (Cost Benefit Tool)
+          aadtLayer.visible = true;
+          hexagonLayer.visible = false;
+          break;
+          
+        default:
+          break;
+      }
+    }
+  }, [modelCountsBy, aadtLayer, hexagonLayer]);
+
+  // Control hexagon layer visibility based on road user switches
+  useEffect(() => {
+    if (hexagonLayer) {
+      const bikeLayer = hexagonLayer.layers.find(layer => layer.title === "Modeled Biking Volumes");
+      const pedLayer = hexagonLayer.layers.find(layer => layer.title === "Modeled Walking Volumes");
+      
+      if (bikeLayer) {
+        bikeLayer.visible = showBicyclist;
+      }
+      if (pedLayer) {
+        pedLayer.visible = showPedestrian;
+      }
+    }
+  }, [hexagonLayer, showBicyclist, showPedestrian]);
+
+  // Query hourly data when Cost Benefit Tool is selected and view changes
+  useEffect(() => {
+    if (viewReady && mapViewRef.current && modelCountsBy === "cost-benefit") {
+      const fetchHourlyData = async () => {
+        try {
+          const stats = await queryHourlyCounts(
+            mapViewRef.current,
+            showBicyclist,
+            showPedestrian
+          );
+          setHourlyData(stats.hourlyData);
+        } catch (error) {
+          console.error("Error fetching hourly data:", error);
+          setHourlyData([]);
+        }
+      };
+
+      fetchHourlyData();
+    }
+  }, [viewReady, modelCountsBy, showBicyclist, showPedestrian]);
+
+  // Listen to map view changes when Cost Benefit Tool is selected
+  useEffect(() => {
+    if (viewReady && mapViewRef.current && modelCountsBy === "cost-benefit") {
+      const handleViewChange = async () => {
+        try {
+          const stats = await queryHourlyCounts(
+            mapViewRef.current,
+            showBicyclist,
+            showPedestrian
+          );
+          setHourlyData(stats.hourlyData);
+        } catch (error) {
+          console.error("Error fetching hourly data on view change:", error);
+        }
+      };
+
+      // Debounce the view change handler
+      let timeoutId: NodeJS.Timeout;
+      const debouncedHandler = () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(handleViewChange, 500);
+      };
+
+      mapViewRef.current.watch("extent", debouncedHandler);
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [viewReady, modelCountsBy, showBicyclist, showPedestrian]);
+
+  // Instantiate TimeSlider when map view is ready
+  useEffect(() => {
+    if (viewReady && mapViewRef.current && document.getElementById("new-volume-time-slider-container")) {
+      if (document.getElementById("new-volume-time-slider-container")?.children.length === 0) {
+        new TimeSlider({
+          container: "new-volume-time-slider-container",
+          view: mapViewRef.current,
+          mode: "time-window",
+          timeZone: "system",
+          stops: {
+            interval: new TimeInterval({ value: 1, unit: "years" })
+          },
+          fullTimeExtent: {
+            start: new Date(2012, 1, 1),
+            end: new Date(2025, 5, 25),
+          },
+          timeExtent: {
+            start: new Date(2012, 1, 1),
+            end: new Date(2025, 5, 25),
+          },
+        });
+        setTimeSliderLoaded(true);
+      }
+    }
+  }, [viewReady]);
+
   return (
-    <div id="volume-map-container" className="flex-1 bg-gray-200 relative flex items-center justify-center">
-      <h2 id="map-placeholder-text" className="text-lg text-gray-600">
-        Interactive Map - Heatmap View ({activeTab})
-      </h2>
+    <div id="volume-map-container" className="flex-1 bg-gray-200 relative">
+      <MuiBox
+        component="main"
+        sx={{
+          position: "relative",
+          height: "100%",
+          width: "100%",
+          background: "#fff",
+        }}
+      >
+        <ArcgisMap
+          basemap="topo-vector"
+          onArcgisViewReadyChange={handleArcgisViewReadyChange}
+        />
+      </MuiBox>
       
       {/* Map Legend */}
       <div id="volume-map-legend" className="absolute bottom-5 right-5 bg-white p-3 rounded border border-gray-300 shadow-sm min-w-[200px]">
-        <h4 id="legend-title" className="text-sm font-medium text-gray-700 mb-2">Volume Legend</h4>
+        <h4 id="legend-title" className="text-sm font-medium text-gray-700 mb-2">
+          {modelCountsBy === "cost-benefit" ? "Cost Benefit Tool Legend" : "Volume Legend"}
+        </h4>
         <div className="flex items-center gap-4">
           <div id="legend-low" className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-gray-300 rounded"></div>
+            <div className="w-4 h-4 bg-yellow-200 rounded"></div>
             <span className="text-xs text-gray-600">Low</span>
           </div>
           <div id="legend-medium" className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-gray-600 rounded"></div>
+            <div className="w-4 h-4 bg-orange-400 rounded"></div>
             <span className="text-xs text-gray-600">Medium</span>
           </div>
           <div id="legend-high" className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-gray-900 rounded"></div>
+            <div className="w-4 h-4 bg-red-600 rounded"></div>
             <span className="text-xs text-gray-600">High</span>
           </div>
         </div>
+      </div>
+
+      {/* Time Slider Container */}
+      <div id="new-volume-time-slider-container" className="absolute bottom-5 left-5 bg-white p-3 rounded border border-gray-300 shadow-sm min-w-[300px]">
+        {/* TimeSlider will be instantiated here */}
       </div>
     </div>
   );

@@ -1,9 +1,15 @@
-import React, { useState } from "react";
+import React from "react";
 import Tooltip from "../../../components/Tooltip";
 
-export default function ModelCountTypeSection() {
-  const [modelCountType, setModelCountType] = useState('strava');
+interface ModelCountTypeSectionProps {
+  modelCountsBy: string;
+  setModelCountsBy: (type: string) => void;
+}
 
+export default function ModelCountTypeSection({ 
+  modelCountsBy, 
+  setModelCountsBy 
+}: ModelCountTypeSectionProps) {
   return (
     <div className="p-4">
       <div id="model-count-type-section">
@@ -15,8 +21,8 @@ export default function ModelCountTypeSection() {
             type="radio"
             name="modelCountType"
             value="strava"
-            checked={modelCountType === 'strava'}
-            onChange={(e) => setModelCountType(e.target.value)}
+            checked={modelCountsBy === 'strava'}
+            onChange={(e) => setModelCountsBy(e.target.value)}
             className="sr-only"
           />
           <input
@@ -24,19 +30,19 @@ export default function ModelCountTypeSection() {
             type="radio"
             name="modelCountType"
             value="cost-benefit"
-            checked={modelCountType === 'cost-benefit'}
-            onChange={(e) => setModelCountType(e.target.value)}
+            checked={modelCountsBy === 'cost-benefit'}
+            onChange={(e) => setModelCountsBy(e.target.value)}
             className="sr-only"
           />
 
           {/* Strava Bias Correction */}
           <label htmlFor="strava-bias-correction-radio" className="flex items-center cursor-pointer">
             <div className={`relative size-3.5 rounded-full ${
-              modelCountType === 'strava' 
+              modelCountsBy === 'strava' 
                 ? 'bg-blue-500 border-[0.5px] border-blue-500' 
                 : 'bg-transparent border border-gray-700'
             }`}>
-              {modelCountType === 'strava' && (
+              {modelCountsBy === 'strava' && (
                 <div 
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-transparent border border-white w-2.5 h-2.5 rounded-full"
                   style={{ boxSizing: 'border-box' }}
@@ -51,11 +57,11 @@ export default function ModelCountTypeSection() {
           {/* Cost Benefit Tool */}
           <label htmlFor="cost-benefit-tool-radio" className="flex items-center cursor-pointer">
             <div className={`relative size-3.5 rounded-full ${
-              modelCountType === 'cost-benefit' 
+              modelCountsBy === 'cost-benefit' 
                 ? 'bg-blue-500 border-[0.5px] border-blue-500' 
                 : 'bg-transparent border border-gray-700'
             }`}>
-              {modelCountType === 'cost-benefit' && (
+              {modelCountsBy === 'cost-benefit' && (
                 <div
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-transparent border border-white w-2.5 h-2.5 rounded-full"
                   style={{ boxSizing: 'border-box' }}

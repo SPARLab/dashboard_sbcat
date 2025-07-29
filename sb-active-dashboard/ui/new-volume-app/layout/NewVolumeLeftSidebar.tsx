@@ -8,20 +8,42 @@ import ModeledDataAdditionalSection from "../components/left-sidebar/ModeledData
 
 interface NewVolumeLeftSidebarProps {
   activeTab: string;
+  showBicyclist: boolean;
+  setShowBicyclist: (show: boolean) => void;
+  showPedestrian: boolean;
+  setShowPedestrian: (show: boolean) => void;
+  modelCountsBy: string;
+  setModelCountsBy: (type: string) => void;
 }
 
-export default function NewVolumeLeftSidebar({ activeTab }: NewVolumeLeftSidebarProps) {
+export default function NewVolumeLeftSidebar({ 
+  activeTab,
+  showBicyclist,
+  setShowBicyclist,
+  showPedestrian,
+  setShowPedestrian,
+  modelCountsBy,
+  setModelCountsBy
+}: NewVolumeLeftSidebarProps) {
   return (
     <div id="volume-filters-sidebar" className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
       <SortDataSection />
       <hr className="border-gray-200" />
       {activeTab === 'modeled-data' && (
         <>
-          <ModelCountTypeSection />
+          <ModelCountTypeSection 
+            modelCountsBy={modelCountsBy}
+            setModelCountsBy={setModelCountsBy}
+          />
           <hr className="border-gray-200" />
         </>
       )}
-      <RoadUserSection />
+      <RoadUserSection 
+        showBicyclist={showBicyclist}
+        setShowBicyclist={setShowBicyclist}
+        showPedestrian={showPedestrian}
+        setShowPedestrian={setShowPedestrian}
+      />
       <hr className="border-gray-200" />
       <DateRangeSection />
       <hr className="border-gray-200" />

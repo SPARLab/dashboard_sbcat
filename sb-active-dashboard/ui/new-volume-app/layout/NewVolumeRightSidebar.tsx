@@ -13,9 +13,17 @@ import ModeBreakdown from "../components/right-sidebar/ModeBreakdown";
 
 interface NewVolumeRightSidebarProps {
   activeTab: string;
+  showBicyclist: boolean;
+  showPedestrian: boolean;
+  modelCountsBy: string;
 }
 
-export default function NewVolumeRightSidebar({ activeTab }: NewVolumeRightSidebarProps) {
+export default function NewVolumeRightSidebar({ 
+  activeTab,
+  showBicyclist,
+  showPedestrian,
+  modelCountsBy
+}: NewVolumeRightSidebarProps) {
   const horizontalMargins = "mx-4";
 
   // Sample data for the timeline sparkline - this would come from your data source

@@ -40,16 +40,16 @@ export default function SummaryStatistics() {
               <div id="weekday-section" className="space-y-2">
                 <p id="weekday-label" className="font-medium text-gray-600">Weekday</p>
                 <div id="weekday-stats" className="pl-4 space-y-2">
-                    <StatsRow idPrefix="weekday-ped-aadt" label="Median Pedestrian AADT" value={102} tooltip />
-                    <StatsRow idPrefix="weekday-bike-aadt" label="Median Bike AADT" value={56} tooltip />
+                    <StatsRow idPrefix="weekday-ped-cbt" label="Median Pedestrian CBT" value={102} tooltip />
+                    <StatsRow idPrefix="weekday-bike-cbt" label="Median Bike CBT" value={56} tooltip />
                 </div>
               </div>
 
               <div id="weekend-section" className="space-y-2">
                 <p id="weekend-label" className="font-medium text-gray-600">Weekend</p>
                 <div id="weekend-stats" className="pl-4 space-y-2">
-                    <StatsRow idPrefix="weekend-ped-aadt" label="Median Pedestrian AADT" value={89} tooltip />
-                    <StatsRow idPrefix="weekend-bike-aadt" label="Median Bike AADT" value={67} tooltip />
+                    <StatsRow idPrefix="weekend-ped-cbt" label="Median Pedestrian CBT" value={89} tooltip />
+                    <StatsRow idPrefix="weekend-bike-cbt" label="Median Bike CBT" value={67} tooltip />
                 </div>
               </div>
           </div>
