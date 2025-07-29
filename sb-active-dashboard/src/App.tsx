@@ -33,8 +33,8 @@ function App() {
                     <Routes>
                       <Route path="explore" element={<ExplorePage />} />
                       <Route path="safety" element={<SafetyPage />} />
-                      <Route path="volume" element={<VolumePage />} />
-                      <Route path="new-volume" element={<NewVolumePage />} />
+                      <Route path="volume" element={<NewVolumePage />} />
+                      <Route path="old-volume" element={<VolumePage />} />
                       <Route path="test" element={<Test />} />
                     </Routes>
                   </DashboardLayout>

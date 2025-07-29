@@ -24,9 +24,9 @@
         "link": ""
     },
     {
-        "title": "New Volumes Page",
+        "title": "Volume",
         "summary": "Enhanced volume analysis dashboard with improved visualizations and data insights for traffic patterns.",
         "image": "/icons/atp_logo_temporary.png",
-        "link": "/dashboard/new-volume"
+        "link": "/dashboard/volume"
     }
 ]

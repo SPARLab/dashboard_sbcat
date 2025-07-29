@@ -11,7 +11,7 @@ const apps = [
   { name: "Explore", link: "/dashboard/explore" },
   { name: "Safety", link: "/dashboard/safety" },
   { name: "Volume", link: "/dashboard/volume" },
-  { name: "New Volumes Page", link: "/dashboard/new-volume" },
+  { name: "Old Volume", link: "/dashboard/old-volume" },
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
