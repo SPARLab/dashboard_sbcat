@@ -183,7 +183,7 @@ const CalendarPortal = React.memo(
         <div className="p-2 border-t">
           <button
             onClick={closeCalendar}
-            className="w-full px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+            className="w-full px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 focus:outline-none active:outline-none"
           >
             Done
           </button>
@@ -266,7 +266,7 @@ function DateRangeSection() {
         <div ref={datePickerRef} id="date-range-picker" className="bg-gray-100 p-2 rounded-md">
           <div className="flex justify-between items-center mb-1">
             <div 
-              className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300"
+              className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300 focus:outline-none active:outline-none"
               onClick={openCalendar}
             >
               <span id="start-date-label" className="text-sm text-gray-600">
@@ -279,7 +279,7 @@ function DateRangeSection() {
               />
             </div>
             <div 
-              className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300"
+              className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300 focus:outline-none active:outline-none"
               onClick={openCalendar}
             >
               <span id="end-date-label" className="text-sm text-gray-600">

@@ -21,7 +21,7 @@ export default function GeographicLevelSection() {
               key={option.id}
               id={`geographic-${option.id}-button`}
               onClick={() => setGeographicLevel(option.id)}
-              className={`w-full flex items-center justify-start px-3 py-2 text-sm rounded border transition-colors duration-200 ${
+              className={`w-full flex items-center justify-start px-3 py-2 text-sm rounded border transition-colors duration-200 focus:outline-none active:outline-none ${
                 geographicLevel === option.id
                   ? 'bg-blue-50 border-blue-500 text-blue-700'
                   : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
