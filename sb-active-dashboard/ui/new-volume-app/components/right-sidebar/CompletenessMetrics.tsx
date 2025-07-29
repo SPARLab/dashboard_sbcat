@@ -6,7 +6,7 @@ interface CompletenessMetricsProps {
 }
 
 export default function CompletenessMetrics({ horizontalMargins }: CompletenessMetricsProps) {
-  const [isConfidenceExpanded, setIsConfidenceExpanded] = useState(false);
+  const [isConfidenceExpanded, setIsConfidenceExpanded] = useState(true);
 
   // Sample data - this would come from your data source
   const timelineData: SiteData[] = [
