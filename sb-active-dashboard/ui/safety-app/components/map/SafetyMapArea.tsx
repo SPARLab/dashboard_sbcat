@@ -12,7 +12,7 @@ export default function SafetyMapArea() {
   return (
     <div id="safety-map-area-container" className="flex-1 bg-white flex flex-col">
       {/* Geographic Area Header */}
-      <div id="safety-geographic-header" className="bg-gray-100 border-b border-gray-200 px-4 py-3 flex-shrink-0">
+      <div id="safety-geographic-header" className="bg-gray-100 border-b border-gray-200 px-4 py-[1.15rem] flex-shrink-0">
         <h2 id="safety-current-geographic-area" className="text-base font-bold text-gray-700">Census Tract 23</h2>
       </div>
 
