@@ -18,7 +18,7 @@ export default function Header(props: any) {
         width: "100vw",
       }}
     >
-      <Toolbar sx={{ height: "70px" }}>
+      <Toolbar sx={{ maxHeight: "70px" }}>
         <Box
           sx={{
             display: "flex",
