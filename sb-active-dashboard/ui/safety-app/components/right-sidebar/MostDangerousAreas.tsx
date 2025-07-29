@@ -25,7 +25,7 @@ export default function MostDangerousAreas() {
               key={area.rank}
               id={`safety-dangerous-area-${area.rank}`}
               className={`flex justify-between items-center px-2 py-0.5 rounded-md text-xs ${
-                index % 2 === 0 ? 'bg-gray-200' : 'bg-white'
+                index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
               }`}
             >
               <span className="text-gray-900">
