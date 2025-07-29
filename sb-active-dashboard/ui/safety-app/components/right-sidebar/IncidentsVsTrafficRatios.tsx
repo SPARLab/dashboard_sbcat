@@ -71,7 +71,7 @@ export default function IncidentsVsTrafficRatios() {
       animationDuration: 1000,
       animationEasing: 'cubicOut',
       grid: {
-        left: '60px',
+        left: '64px',
         right: '20px',
         top: '40px',
         bottom: '60px',
