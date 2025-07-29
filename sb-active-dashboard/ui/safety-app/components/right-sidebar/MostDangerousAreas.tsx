@@ -7,7 +7,7 @@ export default function MostDangerousAreas() {
   const dangerousAreas = [
     { rank: 1, location: "Mission St & De La Vina", incidents: 5 },
     { rank: 2, location: "State St & Cabrillo Blvd", incidents: 4 },
-    { rank: 3, location: "Milpas St & Montecito St", incidents: 3, highlighted: true },
+    { rank: 3, location: "Milpas St & Montecito St", incidents: 3 },
     { rank: 4, location: "Hollister Ave & Storke Rd", incidents: 2 },
   ];
 
@@ -20,18 +20,18 @@ export default function MostDangerousAreas() {
       
       {!isCollapsed && (
         <div id="safety-dangerous-areas-list" className="space-y-1">
-          {dangerousAreas.map((area) => (
+          {dangerousAreas.map((area, index) => (
             <div 
               key={area.rank}
               id={`safety-dangerous-area-${area.rank}`}
               className={`flex justify-between items-center px-2 py-0.5 rounded-md text-xs ${
-                area.highlighted ? 'bg-gray-200' : 'bg-white'
+                index % 2 === 0 ? 'bg-gray-200' : 'bg-white'
               }`}
             >
               <span className="text-gray-900">
                 {area.rank}. {area.location}
               </span>
-              <span className={area.highlighted ? 'text-gray-500' : 'text-gray-600'}>
+              <span className="text-gray-600">
                 {area.incidents} Incidents
               </span>
             </div>
