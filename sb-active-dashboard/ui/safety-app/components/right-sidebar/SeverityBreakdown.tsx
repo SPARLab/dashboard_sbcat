@@ -125,7 +125,7 @@ export default function SeverityBreakdown() {
   );
 
   return (
-    <div id="safety-severity-breakdown" className="bg-white border border-gray-200 rounded p-4">
+    <div id="safety-severity-breakdown" className="bg-white border border-gray-200 rounded-md p-4">
       <div id="safety-severity-breakdown-header" className="flex items-center justify-between mb-4">
         <h3 id="safety-severity-breakdown-title" className="text-base font-medium text-gray-700">Severity Breakdown</h3>
         <CollapseExpandIcon isCollapsed={isCollapsed} onClick={toggleCollapse} />

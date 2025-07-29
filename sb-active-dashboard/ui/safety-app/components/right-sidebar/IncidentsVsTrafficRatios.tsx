@@ -188,7 +188,7 @@ export default function IncidentsVsTrafficRatios() {
   );
 
   return (
-    <div id="safety-incidents-vs-traffic-ratios" className="bg-white border border-gray-200 rounded p-4">
+    <div id="safety-incidents-vs-traffic-ratios" className="bg-white border border-gray-200 rounded-md p-4">
       <div id="safety-incidents-vs-traffic-header" className="flex items-center justify-between mb-2">
         <h3 id="safety-incidents-vs-traffic-title" className="text-base font-medium text-gray-700">Incidents vs. Traffic Ratios</h3>
         <CollapseExpandIcon isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />

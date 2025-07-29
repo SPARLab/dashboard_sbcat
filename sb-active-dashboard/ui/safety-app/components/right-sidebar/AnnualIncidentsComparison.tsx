@@ -300,7 +300,7 @@ export default function AnnualIncidentsComparison() {
   };
 
   return (
-    <div id="safety-annual-incidents-comparison" className={`rounded-lg border border-gray-200 bg-white p-4`}>
+    <div id="safety-annual-incidents-comparison" className={`rounded-md border border-gray-200 bg-white p-4`}>
       <div id="safety-annual-incidents-header" className="flex justify-between items-center">
         <h3 id="safety-annual-incidents-title" className="text-lg font-medium text-gray-900">Annual Incidents Comparison</h3>
         <CollapseExpandIcon id="safety-annual-incidents-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
