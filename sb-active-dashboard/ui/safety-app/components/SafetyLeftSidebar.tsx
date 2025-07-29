@@ -155,13 +155,13 @@ function DataSourceSection() {
             checked={dataSource.selfReports}
             onChange={() => toggleDataSource('selfReports')}
           />
-          <span id="safety-data-source-closing-paren" className="text-sm text-gray-700">)</span>
           <img 
             id="safety-data-source-bikemaps-logo"
-            src="/icons/atp_logo_temporary.png" 
+            src="/icons/bike-maps-icon.svg" 
             alt="BikeMaps.org logo" 
-            className="w-3 h-3.5 ml-1"
+            className="w-4 h-4 -ml-1"
           />
+          <span id="safety-data-source-closing-paren" className="text-sm -ml-1 text-gray-700">)</span>
         </div>
       </div>
     </div>
