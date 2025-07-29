@@ -8,14 +8,14 @@ import ConflictTypeBreakdown from "../components/right-sidebar/ConflictTypeBreak
 
 export default function SafetyRightSidebar() {
   return (
-    <div id="safety-analysis-sidebar" className="w-[374px] bg-white border-l border-gray-200 overflow-y-auto no-scrollbar">
-      <div id="safety-analysis-content" className="py-4">
-        {/* Analysis Header */}
-        <div id="safety-analysis-header" className="px-4 pb-4 border-b border-gray-200">
-          <h2 id="safety-analysis-title" className="text-xl font-semibold text-gray-900">Analysis of Current View</h2>
-        </div>
+    <div id="safety-analysis-sidebar" className="w-[374px] bg-white border-l border-gray-200 flex flex-col h-full">
+      {/* Fixed Analysis Header */}
+      <div id="safety-analysis-header" className="flex-shrink-0 px-4 py-4 border-b border-gray-200 bg-white">
+        <h2 id="safety-analysis-title" className="text-xl font-semibold text-gray-900">Analysis of Current View</h2>
+      </div>
 
-        {/* Analysis Components */}
+      {/* Scrollable Analysis Content */}
+      <div id="safety-analysis-content" className="flex-1 overflow-y-auto no-scrollbar">
         <div id="safety-analysis-components" className="space-y-3 px-3.5 py-2">
           <SummaryStatistics />
           <MostDangerousAreas />
