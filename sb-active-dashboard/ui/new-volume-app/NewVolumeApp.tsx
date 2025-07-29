@@ -5,7 +5,7 @@ import NewVolumeRightSidebar from "./layout/NewVolumeRightSidebar";
 import NewVolumeMap from "./components/map/NewVolumeMap";
 
 export default function NewVolumeApp() {
-  const [activeTab, setActiveTab] = useState('modeled-data');
+  const [activeTab, setActiveTab] = useState('raw-data');
 
   return (
     <div id="new-volumes-page" className="flex flex-col h-[calc(100vh-70px)] bg-white">

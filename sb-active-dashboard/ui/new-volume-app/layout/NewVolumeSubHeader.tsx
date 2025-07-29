@@ -7,8 +7,8 @@ interface NewVolumeSubHeaderProps {
 
 export default function NewVolumeSubHeader({ activeTab, onTabChange }: NewVolumeSubHeaderProps) {
   const tabs = [
-    { id: 'modeled-data', label: 'Modeled Data' },
     { id: 'raw-data', label: 'Raw Data' },
+    { id: 'modeled-data', label: 'Modeled Data' },
     { id: 'data-completeness', label: 'Data Completeness' }
   ];
 
