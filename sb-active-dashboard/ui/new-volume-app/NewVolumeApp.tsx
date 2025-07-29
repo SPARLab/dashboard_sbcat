@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import NewVolumeSubHeader from "./components/NewVolumeSubHeader";
-import NewVolumeLeftSidebar from "./components/NewVolumeLeftSidebar";
-import NewVolumeMap from "./components/NewVolumeMap";
-import NewVolumeRightSidebar from "./components/NewVolumeRightSidebar";
+import NewVolumeSubHeader from "./layout/NewVolumeSubHeader";
+import NewVolumeLeftSidebar from "./layout/NewVolumeLeftSidebar";
+import NewVolumeRightSidebar from "./layout/NewVolumeRightSidebar";
+import NewVolumeMap from "./components/map/NewVolumeMap";
 
 export default function NewVolumeApp() {
   const [activeTab, setActiveTab] = useState('modeled-data');

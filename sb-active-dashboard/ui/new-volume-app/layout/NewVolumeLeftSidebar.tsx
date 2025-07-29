@@ -1,10 +1,10 @@
 import React from "react";
-import SortDataSection from "./sections/SortDataSection";
-import ModelCountTypeSection from "./sections/ModelCountTypeSection";
-import RoadUserSection from "./sections/RoadUserSection";
-import DateRangeSection from "./sections/DateRangeSection";
-import GeographicLevelSection from "./sections/GeographicLevelSection";
-import ModeledDataAdditionalSection from "./sections/ModeledDataAdditionalSection";
+import SortDataSection from "../components/left-sidebar/SortDataSection";
+import ModelCountTypeSection from "../components/left-sidebar/ModelCountTypeSection";
+import RoadUserSection from "../components/left-sidebar/RoadUserSection";
+import DateRangeSection from "../../components/filters/DateRangeSection";
+import GeographicLevelSection from "../../components/filters/GeographicLevelSection";
+import ModeledDataAdditionalSection from "../components/left-sidebar/ModeledDataAdditionalSection";
 
 interface NewVolumeLeftSidebarProps {
   activeTab: string;

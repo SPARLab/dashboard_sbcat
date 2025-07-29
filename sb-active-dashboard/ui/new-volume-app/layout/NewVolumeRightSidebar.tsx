@@ -1,15 +1,15 @@
 import React from "react";
-import TrendsHeader from "./sections/TrendsHeader";
-import MilesOfStreetByTrafficLevelBarChart from "./sections/MilesOfStreetByTrafficLevelBarChart";
-import CompletenessMetrics from "./sections/CompletenessMetrics";
-import LowDataCoverage from "./right-sidebar/LowDataCoverage";
-import SummaryStatistics from "./right-sidebar/SummaryStatistics";
-import HighestVolume from "./right-sidebar/HighestVolume";
-import Placeholder from "./right-sidebar/Placeholder";
-import AggregatedVolumeBreakdown from "./right-sidebar/AggregatedVolumeBreakdown";
-import YearToYearVolumeComparison from "./right-sidebar/YearToYearVolumeComparison";
-import TimelineSparkline from "./right-sidebar/TimelineSparkline";
-import ModeBreakdown from "./right-sidebar/ModeBreakdown";
+import TrendsHeader from "../components/right-sidebar/TrendsHeader";
+import MilesOfStreetByTrafficLevelBarChart from "../components/right-sidebar/MilesOfStreetByTrafficLevelBarChart";
+import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
+import LowDataCoverage from "../components/right-sidebar/LowDataCoverage";
+import SummaryStatistics from "../components/right-sidebar/SummaryStatistics";
+import HighestVolume from "../components/right-sidebar/HighestVolume";
+import Placeholder from "../components/right-sidebar/Placeholder";
+import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVolumeBreakdown";
+import YearToYearVolumeComparison from "../components/right-sidebar/YearToYearVolumeComparison";
+import TimelineSparkline from "../components/right-sidebar/TimelineSparkline";
+import ModeBreakdown from "../components/right-sidebar/ModeBreakdown";
 
 interface NewVolumeRightSidebarProps {
   activeTab: string;

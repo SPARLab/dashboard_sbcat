@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import SafetyLeftSidebar from "./components/SafetyLeftSidebar";
-import SafetyMapArea from "./components/SafetyMapArea";
-import SafetyRightSidebar from "./components/SafetyRightSidebar";
+import SafetyLeftSidebar from "./layout/SafetyLeftSidebar";
+import SafetyMapArea from "./components/map/SafetyMapArea";
+import SafetyRightSidebar from "./layout/SafetyRightSidebar";
 
 export default function SafetyApp() {
   return (
