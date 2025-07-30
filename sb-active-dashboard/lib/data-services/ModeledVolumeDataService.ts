@@ -46,7 +46,7 @@ export class ModeledVolumeDataService {
       url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Modeled_Volumes/FeatureServer/0",
       title: "Modeled Volume Network (Line Segments)",
       visible: false, // Keep invisible but queryable for performance
-      outFields: ["objectid", "edgeuid", "osmId", "streetName", "SHAPE__Length"]
+      outFields: ["objectid", "edgeuid", "osmid", "streetName", "SHAPE__Length"]
     });
 
     // ✅ Traffic data table (ATPEvaluationModel)
@@ -57,10 +57,7 @@ export class ModeledVolumeDataService {
       outFields: ["objectid", "count_type", "aadt", "safety_weight", "year", "strava_id"]
     });
     
-    console.log('✅ ModeledVolumeDataService: Initialized with real ArcGIS data layers');
-    console.log('   📍 Network Layer (0): Line segments with geometry');
-    console.log('   📊 Data Table (1): ATPEvaluationModel with traffic volumes');
-  }
+      }
 
   /**
    * Get layers for adding to map
@@ -96,11 +93,6 @@ export class ModeledVolumeDataService {
     mapView: MapView, 
     config: ModeledDataConfig
   ): Promise<TrafficLevelData> {
-    console.log('🔍 ModeledVolumeDataService: Getting traffic level data', { 
-      config, 
-      hasLineLayer: !!this.lineSegmentLayer,
-      hasDataTable: !!this.trafficDataTable 
-    });
 
     if (!this.lineSegmentLayer || !this.trafficDataTable) {
       console.warn('⚠️ Required layers not available - using simulation data');
@@ -108,17 +100,15 @@ export class ModeledVolumeDataService {
     }
 
     try {
-      console.log('🔄 Step 1: Querying line segments in map extent...');
       
       // Step 1: Query line segments in the current map extent
       const networkQuery = this.lineSegmentLayer.createQuery();
       networkQuery.geometry = mapView.extent;
       networkQuery.spatialRelationship = "intersects";
-      networkQuery.outFields = ["objectid", "edgeuid", "osmId", "streetName", "SHAPE__Length"];
+      networkQuery.outFields = ["objectid", "edgeuid", "osmid", "streetName", "SHAPE__Length"];
       networkQuery.returnGeometry = true;
 
       const networkResult = await this.lineSegmentLayer.queryFeatures(networkQuery);
-      console.log('✅ Network query successful, segments found:', networkResult.features.length);
 
       if (networkResult.features.length === 0) {
         console.warn('⚠️ No line segments found in map extent');
@@ -127,14 +117,12 @@ export class ModeledVolumeDataService {
 
       // Step 2: Extract edge IDs and query traffic data
       const edgeUIDs = networkResult.features.map(f => f.attributes.edgeuid).filter(id => id != null);
-      console.log('🔄 Step 2: Querying traffic data for', edgeUIDs.length, 'segments...');
-
+      
       const dataQuery = this.trafficDataTable.createQuery();
       dataQuery.where = this.buildTrafficDataWhereClause(edgeUIDs, config);
       dataQuery.outFields = ["objectid", "count_type", "aadt", "safety_weight", "year", "strava_id"];
 
       const dataResult = await this.trafficDataTable.queryFeatures(dataQuery);
-      console.log('✅ Traffic data query successful, records found:', dataResult.features.length);
 
       // Step 3: Join and process the data
       return this.processJoinedTrafficData(networkResult.features, dataResult.features, config);
@@ -173,8 +161,7 @@ export class ModeledVolumeDataService {
     const mediumMiles = Math.round(baseMedium * urbanFactor * zoomFactor * modeFactor);
     const highMiles = Math.round(baseHigh * urbanFactor * zoomFactor * modeFactor);
     
-    console.log('🎭 Generated simulated data:', { lowMiles, mediumMiles, highMiles, urbanFactor, zoomFactor, modeFactor });
-    
+
     return {
       categories: ['Low', 'Medium', 'High'],
       totalMiles: [lowMiles, mediumMiles, highMiles],
@@ -216,7 +203,6 @@ export class ModeledVolumeDataService {
     clauses.push("aadt IS NOT NULL AND aadt > 0");
 
     const whereClause = clauses.length > 0 ? clauses.join(" AND ") : "1=1";
-    console.log('🔍 Traffic data WHERE clause:', whereClause);
     return whereClause;
   }
 
@@ -228,8 +214,6 @@ export class ModeledVolumeDataService {
     dataFeatures: __esri.Graphic[], 
     config: ModeledDataConfig
   ): TrafficLevelData {
-    console.log('🔄 Processing joined traffic data...');
-    
     // Create lookup map of traffic data by strava_id (join field)
     const trafficDataMap = new Map<number, __esri.Graphic[]>();
     dataFeatures.forEach(feature => {
@@ -250,7 +234,7 @@ export class ModeledVolumeDataService {
       // Try different join fields to find the traffic data
       const possibleIds = [
         networkFeature.attributes.edgeuid,
-        networkFeature.attributes.osmId,
+        networkFeature.attributes.osmid,
         networkFeature.attributes.objectid
       ].filter(id => id != null);
 
@@ -291,13 +275,6 @@ export class ModeledVolumeDataService {
         highMiles += lengthMiles;
         highSegments++;
       }
-    });
-
-    console.log('📊 Traffic level processing complete:', { 
-      lowMiles: lowMiles.toFixed(2), 
-      mediumMiles: mediumMiles.toFixed(2), 
-      highMiles: highMiles.toFixed(2),
-      totalSegments: lowSegments + mediumSegments + highSegments 
     });
 
     return {

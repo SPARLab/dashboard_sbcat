@@ -76,12 +76,8 @@ export async function queryHourlyCounts(
     query.groupByFieldsForStatistics = ["EXTRACT(HOUR FROM timestamp) as hour", "count_type"];
     query.orderByFields = ["hour ASC", "count_type ASC"];
     query.returnGeometry = false;
-    query.outFields = ["hour", "count_type"];
 
     const countsQuery = await countsLayer.queryFeatures(query);
-
-    // Log the raw features for debugging
-    console.log('countsQuery.features (aggregated):', countsQuery.features);
 
     // Aggregate the data by hour (using average)
     return aggregateHourlyData(countsQuery.features);

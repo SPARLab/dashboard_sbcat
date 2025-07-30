@@ -72,10 +72,7 @@ export default function NewVolumeMap({
           try {
             const result = await boundaryService.switchGeographicLevel('city', mapViewRef.current);
             if (result.success) {
-              console.log('✅ City boundaries loaded with interactive features');
-              if (result.defaultArea) {
-                console.log(`📍 Default area: ${result.defaultArea.name}`);
-              }
+
             } else {
               console.warn('⚠️ City boundaries warning:', result.warning);
             }

@@ -49,11 +49,8 @@ export default function MilesOfStreetByTrafficLevelBarChart({
 
   // Fetch real data for modeled data type
   useEffect(() => {
-    console.log('📊 Chart Effect:', { dataType, mapView: !!mapView, modelCountsBy, showBicyclist, showPedestrian });
-    
+
     if (dataType === 'modeled-data' && mapView && modelCountsBy === 'cost-benefit' && (showBicyclist || showPedestrian)) {
-      console.log('🔄 Fetching real traffic level data from ArcGIS...');
-      
       const fetchTrafficLevelData = async () => {
         setIsLoading(true);
         setError(null);
@@ -77,7 +74,6 @@ export default function MilesOfStreetByTrafficLevelBarChart({
             value: Math.round(trafficData.totalMiles[index])
           }));
 
-          console.log('✅ Real chart data:', newChartData.map(d => `${d.name}: ${d.value} miles`).join(', '));
           setChartData(newChartData);
         } catch (err) {
           console.error('❌ Error fetching traffic level data:', err);
@@ -90,12 +86,6 @@ export default function MilesOfStreetByTrafficLevelBarChart({
 
       fetchTrafficLevelData();
     } else {
-      console.log('📋 Using fallback data - conditions not met:', {
-        isModeledData: dataType === 'modeled-data',
-        hasMapView: !!mapView,
-        isCostBenefit: modelCountsBy === 'cost-benefit',
-        hasRoadUsers: showBicyclist || showPedestrian,
-      });
       // Use fallback data for raw data or when no map view
       setChartData([]);
     }
