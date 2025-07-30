@@ -57,61 +57,71 @@ export class GeographicBoundariesService {
   private currentLevel: GeographicLevel['id'] = 'census-tract';
   private selectedArea: SelectedArea | null = null;
   private mapView: MapView | null = null;
-  private hoverHighlight: __esri.Handle | null = null;
-  private selectedFeature: __esri.Graphic | null = null;
-  private selectedHighlight: __esri.Handle | null = null;
   
+  // State for interactivity
+  private selectedFeature: __esri.Graphic | null = null;
+  private hoveredFeature: __esri.Graphic | null = null;
+  
+  private interactivityHandlers: __esri.Handle[] = [];
+  private hitTestInProgress = false;
+
+  private defaultSymbol = new SimpleFillSymbol({
+    color: [0, 0, 0, 0], // Transparent fill
+    outline: new SimpleLineSymbol({
+      color: [70, 130, 180, 0.8], // Steel blue outline
+      width: 2
+    })
+  });
+
+  private selectedSymbol = new SimpleFillSymbol({
+    color: [30, 144, 255, 0.4], // Dodger blue with transparency
+    outline: new SimpleLineSymbol({
+      color: [30, 144, 255, 1], // Solid dodger blue outline
+      width: 3
+    })
+  });
+  
+  private hoverSymbol = new SimpleFillSymbol({
+    color: [255, 255, 0, 0.5], // Yellow with transparency
+    outline: new SimpleLineSymbol({
+        color: [200, 200, 0, 0.8],
+        width: 2
+    })
+  });
+
   constructor() {
     this.initializeLayers();
   }
 
   private initializeLayers() {
     try {
-      // County boundaries - USGS National Map
       if (BOUNDARY_LAYER_URLS.COUNTIES) {
         this.countyLayer = new FeatureLayer({
           url: BOUNDARY_LAYER_URLS.COUNTIES,
           title: "Counties",
           visible: false,
-          popupTemplate: {
-            title: "County: {NAME}",
-            content: "State: {STATE_NAME}<br/>County: {NAME}"
-          }
+          popupEnabled: false,
         });
       }
 
-      // City boundaries - USGS National Map (Incorporated Places)
       if (BOUNDARY_LAYER_URLS.CITIES) {
         this.cityLayer = new FeatureLayer({
           url: BOUNDARY_LAYER_URLS.CITIES,
           title: "Cities & Towns",
           visible: false,
-          popupTemplate: {
-            title: "City: {NAME}",
-            content: "City: {NAME}<br/>State: {STATE_NAME}"
-          },
+          popupEnabled: false, // Disable popups to prevent interference
           renderer: new SimpleRenderer({
-            symbol: new SimpleFillSymbol({
-              color: [0, 0, 0, 0], // Transparent fill
-              outline: new SimpleLineSymbol({
-                color: [70, 130, 180, 0.8], // Steel blue outline
-                width: 2
-              })
-            })
+            symbol: this.defaultSymbol
           })
         });
       }
 
-      // Census Tracts - U.S. Census Bureau TIGERweb
       if (BOUNDARY_LAYER_URLS.CENSUS_TRACTS) {
         this.censusTractLayer = new FeatureLayer({
           url: BOUNDARY_LAYER_URLS.CENSUS_TRACTS,
           title: "Census Tracts",
           visible: false,
-          popupTemplate: {
-            title: "Census Tract: {NAME}",
-            content: "Tract: {BASENAME}<br/>County: {COUNTY}<br/>State: {STATE}"
-          }
+          popupEnabled: false,
         });
       }
 
@@ -121,92 +131,35 @@ export class GeographicBoundariesService {
     }
   }
 
-  /**
-   * Get available geographic levels based on what data is available
-   */
   getAvailableGeographicLevels(): GeographicLevel[] {
     const levels: GeographicLevel[] = [
-      {
-        id: 'hexagons',
-        name: 'Hexagons',
-        // Hexagons are handled by the modeled data service
-      },
-      {
-        id: 'custom',
-        name: 'Custom Draw Tool',
-        // Custom areas can be drawn without predefined boundaries
-      }
+      { id: 'hexagons', name: 'Hexagons' },
+      { id: 'custom', name: 'Custom Draw Tool' }
     ];
-
-    // Add levels only if we have the corresponding layers (most granular to least granular)
-    if (this.censusTractLayer) {
-      levels.unshift({
-        id: 'census-tract',
-        name: 'Census Tract',
-        layer: this.censusTractLayer
-      });
-    }
-
-    if (this.cityLayer) {
-      levels.unshift({
-        id: 'city',
-        name: 'City / Service Area',
-        layer: this.cityLayer
-      });
-    }
-
-    if (this.countyLayer) {
-      levels.unshift({
-        id: 'county',
-        name: 'County',
-        layer: this.countyLayer
-      });
-    }
-
+    if (this.censusTractLayer) levels.unshift({ id: 'census-tract', name: 'Census Tract', layer: this.censusTractLayer });
+    if (this.cityLayer) levels.unshift({ id: 'city', name: 'City / Service Area', layer: this.cityLayer });
+    if (this.countyLayer) levels.unshift({ id: 'county', name: 'County', layer: this.countyLayer });
     return levels;
   }
 
-  /**
-   * Switch to a different geographic level
-   */
   async switchGeographicLevel(
     level: GeographicLevel['id'],
     mapView: MapView
-  ): Promise<{
-    success: boolean;
-    defaultArea?: SelectedArea;
-    warning?: string;
-  }> {
+  ): Promise<{ success: boolean; defaultArea?: SelectedArea; warning?: string }> {
     this.currentLevel = level;
-    
-    // Hide all boundary layers first
     this.hideAllBoundaryLayers();
-
-    // Store map view reference for interactive features
     this.mapView = mapView;
 
     switch (level) {
       case 'county':
-        if (!this.countyLayer) {
-          return { 
-            success: false, 
-            warning: "County boundaries not available." 
-          };
-        }
+        if (!this.countyLayer) return { success: false, warning: "County boundaries not available." };
         this.countyLayer.visible = true;
         return await this.selectDefaultArea(this.countyLayer, mapView, 'Santa Barbara');
 
       case 'city':
-        if (!this.cityLayer) {
-          return { 
-            success: false, 
-            warning: "City boundaries not available." 
-          };
-        }
+        if (!this.cityLayer) return { success: false, warning: "City boundaries not available." };
         this.cityLayer.visible = true;
         await this.setupCityInteractivity(mapView);
-        
-        // Try to select default area, but don't fail if it doesn't work
         try {
           return await this.selectDefaultArea(this.cityLayer, mapView, 'Santa Barbara');
         } catch (error) {
@@ -215,44 +168,30 @@ export class GeographicBoundariesService {
         }
 
       case 'census-tract':
-        if (!this.censusTractLayer) {
-          return { 
-            success: false, 
-            warning: "Census tract boundaries not available." 
-          };
-        }
+        if (!this.censusTractLayer) return { success: false, warning: "Census tract boundaries not available." };
         this.censusTractLayer.visible = true;
         return await this.selectDefaultAreaByMapCenter(this.censusTractLayer, mapView, 'census-tract');
 
       case 'hexagons':
-        // Hexagons are handled by the modeled volume service
         return { success: true, warning: "Hexagon filtering handled by modeled data service" };
-
       case 'custom':
-        // Custom drawing doesn't need predefined boundaries
         return { success: true, warning: "Custom draw tool: draw your own area" };
-
       default:
         return { success: false, warning: `Unknown geographic level: ${level}` };
     }
   }
 
-  /**
-   * Get the default area for a geographic level based on map center
-   */
   private async selectDefaultAreaByMapCenter(
     layer: FeatureLayer,
     mapView: MapView,
     levelName: string
   ): Promise<{ success: boolean; defaultArea?: SelectedArea; warning?: string }> {
     try {
-      // Query feature that contains the map center
       const centerPoint = new Point({
         x: mapView.center.longitude,
         y: mapView.center.latitude,
         spatialReference: mapView.spatialReference
       });
-
       const query = layer.createQuery();
       query.geometry = centerPoint;
       query.spatialRelationship = "contains";
@@ -262,33 +201,16 @@ export class GeographicBoundariesService {
       const result = await layer.queryFeatures(query);
 
       if (result.features.length > 0) {
-        const feature = result.features[0];
-        const selectedArea: SelectedArea = {
-          id: feature.attributes.OBJECTID || feature.attributes.GEOID || 'unknown',
-          name: feature.attributes.NAME || feature.attributes.NAMELSAD || `${levelName} ${feature.attributes.OBJECTID}`,
-          geometry: feature.geometry,
-          level: levelName
-        };
-
-        this.selectedArea = selectedArea;
-        return { success: true, defaultArea: selectedArea };
+        return this.processDefaultSelection(result.features[0], levelName);
       } else {
-        // Fall back to Santa Barbara area if no feature contains map center
         return await this.selectDefaultArea(layer, mapView, 'Santa Barbara');
       }
-
     } catch (error) {
       console.error(`Error selecting default area for ${levelName}:`, error);
-      return { 
-        success: false, 
-        warning: `Error loading ${levelName} boundaries: ${error}` 
-      };
+      return { success: false, warning: `Error loading ${levelName} boundaries: ${error}` };
     }
   }
 
-  /**
-   * Get the default area by name (e.g., "Santa Barbara")
-   */
   private async selectDefaultArea(
     layer: FeatureLayer,
     mapView: MapView,
@@ -303,287 +225,148 @@ export class GeographicBoundariesService {
       const result = await layer.queryFeatures(query);
 
       if (result.features.length > 0) {
-        const feature = result.features[0];
-        const selectedArea: SelectedArea = {
-          id: feature.attributes.OBJECTID || feature.attributes.GEOID || 'unknown',
-          name: feature.attributes.NAME || feature.attributes.NAMELSAD || defaultName,
-          geometry: feature.geometry,
-          level: this.currentLevel
-        };
-
-        this.selectedArea = selectedArea;
-        return { success: true, defaultArea: selectedArea };
+        return this.processDefaultSelection(result.features[0], this.currentLevel, defaultName);
       } else {
-        return { 
-          success: false, 
-          warning: `No area found matching "${defaultName}"` 
-        };
+        return { success: false, warning: `No area found matching "${defaultName}"` };
       }
-
     } catch (error) {
       console.error(`Error selecting default area "${defaultName}":`, error);
-      return { 
-        success: false, 
-        warning: `Error loading area "${defaultName}": ${error}` 
-      };
+      return { success: false, warning: `Error loading area "${defaultName}": ${error}` };
     }
   }
 
-  /**
-   * Hide all boundary layers
-   */
+  private processDefaultSelection(feature: __esri.Graphic, levelName: string, defaultName?: string) {
+    const selectedArea: SelectedArea = {
+      id: feature.attributes.OBJECTID || feature.attributes.GEOID || 'unknown',
+      name: feature.attributes.NAME || feature.attributes.NAMELSAD || defaultName || `${levelName} ${feature.attributes.OBJECTID}`,
+      geometry: feature.geometry,
+      level: levelName
+    };
+    this.selectedArea = selectedArea;
+    this.selectedFeature = feature;
+    this.updateCityLayerRenderer();
+    return { success: true, defaultArea: selectedArea };
+  }
+
   private hideAllBoundaryLayers() {
-    // Clean up any existing interactivity
     this.cleanupInteractivity();
-    
     if (this.countyLayer) this.countyLayer.visible = false;
     if (this.cityLayer) this.cityLayer.visible = false;
     if (this.censusTractLayer) this.censusTractLayer.visible = false;
   }
 
-  /**
-   * Get all boundary layers for adding to map
-   */
   getBoundaryLayers(): FeatureLayer[] {
     const layers: FeatureLayer[] = [];
-    
     if (this.countyLayer) layers.push(this.countyLayer);
     if (this.cityLayer) layers.push(this.cityLayer);
     if (this.censusTractLayer) layers.push(this.censusTractLayer);
-    
     return layers;
   }
 
-  /**
-   * Get currently selected area
-   */
   getSelectedArea(): SelectedArea | null {
     return this.selectedArea;
   }
 
-  /**
-   * Get current geographic level
-   */
   getCurrentLevel(): GeographicLevel['id'] {
     return this.currentLevel;
   }
-
-  /**
-   * Check if a geographic level is available
-   */
-  isLevelAvailable(level: GeographicLevel['id']): boolean {
-    switch (level) {
-      case 'county': return !!this.countyLayer;
-      case 'city': return !!this.cityLayer;
-      case 'census-tract': return !!this.censusTractLayer;
-      case 'hexagons': return true; // Always available via modeled data
-      case 'custom': return true; // Always available for drawing
-      default: return false;
-    }
-  }
-
-  /**
-   * Get missing data sources report
-   */
-  getMissingDataSources(): { 
-    missing: string[]; 
-    available: string[]; 
-    recommendations: string[] 
-  } {
-    const missing: string[] = [];
-    const available: string[] = [];
-    const recommendations: string[] = [];
-
-    // Check required boundary types
-    if (!this.countyLayer) {
-      missing.push("County boundaries");
-      recommendations.push("Add USGS National Map county boundaries");
-    } else {
-      available.push("County boundaries (USGS National Map)");
-    }
-
-    if (!this.cityLayer) {
-      missing.push("City/municipal boundaries");
-      recommendations.push("Add USGS National Map incorporated places");
-    } else {
-      available.push("City/municipal boundaries (USGS National Map)");
-    }
-
-    if (!this.censusTractLayer) {
-      missing.push("Census tract boundaries");
-      recommendations.push("Add U.S. Census Bureau TIGERweb services");
-    } else {
-      available.push("Census tract boundaries (U.S. Census TIGERweb)");
-    }
-
-    // Always available
-    available.push("Hexagon areas (from modeled data)");
-    available.push("Custom draw tool");
-
-    return { missing, available, recommendations };
-  }
-
-  /**
-   * Setup interactive hover and click effects for city boundaries
-   */
+  
   private async setupCityInteractivity(mapView: MapView) {
     if (!this.cityLayer) return;
 
-    // Clean up any existing interactivity first
     this.cleanupInteractivity();
 
-    try {
-      // Cache the layer view to avoid repeated async calls
-      this.cityLayerView = await mapView.whenLayerView(this.cityLayer);
-    } catch (error) {
-      console.warn('Could not get city layer view for interactivity:', error);
-      return;
-    }
+    const pointerMoveHandler = mapView.on("pointer-move", (event) => {
+        if (this.hitTestInProgress) return;
+        this.hitTestInProgress = true;
 
-    // Pointer move event for hover effects
-    const pointerMoveHandler = mapView.on("pointer-move", async (event) => {
-      const hit = await mapView.hitTest(event, {
-        include: [this.cityLayer!]
-      });
+        mapView.hitTest(event, { include: [this.cityLayer!] })
+            .then(response => {
+                let newHoveredFeature: __esri.Graphic | null = null;
+                if (response.results.length > 0) {
+                    newHoveredFeature = response.results[0].graphic;
+                }
 
-      if (hit.results.length > 0) {
-        const graphic = hit.results[0].graphic;
-        
-        // Only highlight if it's not the currently selected feature
-        if (!this.selectedFeature || graphic.attributes.OBJECTID !== this.selectedFeature.attributes.OBJECTID) {
-          // Change cursor to indicate interactivity
-          mapView.container.style.cursor = "pointer";
-          
-          // Remove previous hover highlight
-          if (this.hoverHighlight) {
-            this.hoverHighlight.remove();
-          }
-          
-          // Add yellow hover highlight using cached layer view
-          this.hoverHighlight = this.cityLayerView!.highlight(graphic);
-        }
-      } else {
-        // Reset cursor and remove hover highlight (but keep selection highlight)
-        mapView.container.style.cursor = "default";
-        if (this.hoverHighlight) {
-          this.hoverHighlight.remove();
-          this.hoverHighlight = null;
-        }
-      }
+                const oldHoveredId = this.hoveredFeature?.attributes.OBJECTID;
+                const newHoveredId = newHoveredFeature?.attributes.OBJECTID;
+
+                if (oldHoveredId !== newHoveredId) {
+                    this.hoveredFeature = newHoveredFeature;
+                    this.updateCityLayerRenderer();
+                }
+                
+                mapView.container.style.cursor = newHoveredFeature ? "pointer" : "default";
+
+                this.hitTestInProgress = false;
+            })
+            .catch(err => {
+                if (err.name !== "AbortError") {
+                    console.error("hitTest failed:", err);
+                }
+                this.hitTestInProgress = false;
+            });
     });
 
-    // Click event for selection
-    const clickHandler = mapView.on("click", async (event) => {
-      const hit = await mapView.hitTest(event, {
-        include: [this.cityLayer!]
-      });
-
-      if (hit.results.length > 0) {
-        const graphic = hit.results[0].graphic;
-        
-        // Remove previous selection highlight
-        if (this.selectedHighlight) {
-          this.selectedHighlight.remove();
-        }
-        
-        // Update selected feature
-        this.selectedFeature = graphic;
-        
-        // Update selected area
-        this.selectedArea = {
-          id: graphic.attributes.OBJECTID || graphic.attributes.GEOID || 'unknown',
-          name: graphic.attributes.NAME || graphic.attributes.NAMELSAD || 'Unknown City',
-          geometry: graphic.geometry,
-          level: 'city'
-        };
-
-        // Apply blue selection highlight using cached layer view
-        this.selectedHighlight = this.cityLayerView!.highlight(graphic);
-        
-        // Remove hover highlight since we're now selected
-        if (this.hoverHighlight) {
-          this.hoverHighlight.remove();
-          this.hoverHighlight = null;
-        }
-        
-        console.log('City selected:', this.selectedArea.name);
-      }
+    const clickHandler = mapView.on("click", (event) => {
+        mapView.hitTest(event, { include: [this.cityLayer!] }).then((hit) => {
+            if (hit.results.length > 0) {
+                this.selectedFeature = hit.results[0].graphic;
+                this.hoveredFeature = null; // Clear hover when selecting
+                
+                this.selectedArea = {
+                    id: this.selectedFeature.attributes.OBJECTID,
+                    name: this.selectedFeature.attributes.NAME || this.selectedFeature.attributes.NAMELSAD || 'Unknown City',
+                    geometry: this.selectedFeature.geometry,
+                    level: 'city'
+                };
+                
+                this.updateCityLayerRenderer();
+                console.log('City selected:', this.selectedArea.name);
+            }
+        });
     });
 
-    // Store handlers for cleanup
     this.interactivityHandlers = [pointerMoveHandler, clickHandler];
   }
 
-  private interactivityHandlers: __esri.Handle[] = [];
-  private cityLayerView: __esri.FeatureLayerView | null = null;
-
-  /**
-   * Clean up interactivity handlers and highlights
-   */
   private cleanupInteractivity() {
-    // Remove event handlers
     this.interactivityHandlers.forEach(handler => handler.remove());
     this.interactivityHandlers = [];
-
-    // Clear cached layer view
-    this.cityLayerView = null;
-
-    // Remove highlights
-    if (this.hoverHighlight) {
-      this.hoverHighlight.remove();
-      this.hoverHighlight = null;
-    }
+    this.selectedFeature = null;
+    this.hoveredFeature = null;
+    this.updateCityLayerRenderer();
     
-    if (this.selectedHighlight) {
-      this.selectedHighlight.remove();
-      this.selectedHighlight = null;
-    }
-
-    // Reset cursor
     if (this.mapView?.container) {
       this.mapView.container.style.cursor = "default";
     }
-
-    // Clear selection
-    this.selectedFeature = null;
   }
+  
+  private updateCityLayerRenderer() {
+    if (!this.cityLayer) return;
 
-  /**
-   * Update highlight style for hover (yellow) or selection (blue)
-   */
-  private updateHighlightStyle(layerView: __esri.LayerView, type: 'hover' | 'selection') {
-    // Note: The actual highlight color is controlled by CSS
-    // We'll add custom CSS for this
-  }
-
-  /**
-   * Update city layer styling to show selected feature in blue
-   */
-  private async updateCitySelectionStyle() {
-    if (!this.cityLayer || !this.selectedFeature) return;
-
-    // Create a definition expression to style selected vs unselected features
-    const selectedId = this.selectedFeature.attributes.OBJECTID;
+    const uniqueValueInfos: any[] = [];
     
-    // Update renderer to show selected feature in blue
-    const selectedSymbol = new SimpleFillSymbol({
-      color: [30, 144, 255, 0.4], // Blue with transparency
-      outline: new SimpleLineSymbol({
-        color: [30, 144, 255, 1], // Solid blue outline
-        width: 3
-      })
-    });
+    // Selected feature gets top priority for styling
+    if (this.selectedFeature) {
+      uniqueValueInfos.push({
+        value: this.selectedFeature.attributes.OBJECTID,
+        symbol: this.selectedSymbol,
+      });
+    }
 
-    const defaultSymbol = new SimpleFillSymbol({
-      color: [0, 0, 0, 0], // Transparent fill
-      outline: new SimpleLineSymbol({
-        color: [70, 130, 180, 0.8], // Steel blue outline
-        width: 2
-      })
-    });
+    // Hovered feature is styled only if it's not the same as the selected one
+    if (this.hoveredFeature && 
+        (!this.selectedFeature || this.selectedFeature.attributes.OBJECTID !== this.hoveredFeature.attributes.OBJECTID)) {
+      uniqueValueInfos.push({
+        value: this.hoveredFeature.attributes.OBJECTID,
+        symbol: this.hoverSymbol,
+      });
+    }
 
-    // We'll use a more advanced renderer approach
-    // For now, let's just log the selection
-    console.log(`Selected city: ${this.selectedFeature.attributes.NAME} (ID: ${selectedId})`);
+    this.cityLayer.renderer = new UniqueValueRenderer({
+      field: "OBJECTID",
+      defaultSymbol: this.defaultSymbol,
+      uniqueValueInfos: uniqueValueInfos,
+    });
   }
 }

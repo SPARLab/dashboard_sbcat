@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Box as MuiBox } from "@mui/material";
 import { ArcgisMap } from "@arcgis/map-components-react";
 import { createAADTLayer, createHexagonLayer } from "../../../../lib/volume-app/volumeLayers";
+import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 import { queryHourlyCounts, HourlyData } from "../../../../lib/volume-app/hourlyStats";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import GroupLayer from "@arcgis/core/layers/GroupLayer";
@@ -76,7 +77,7 @@ export default function NewVolumeMap({
             } else {
               console.warn('⚠️ City boundaries warning:', result.warning);
             }
-          } catch (boundaryError) {
+          } catch (boundaryError: any) {
             console.warn('City boundaries loaded without default selection:', boundaryError.message);
           }
           
@@ -154,7 +155,10 @@ export default function NewVolumeMap({
     handleViewChange(); 
     
     // Watch for extent changes
-    const watcher = mapViewRef.current.watch("extent", debouncedHandler);
+    const watcher = reactiveUtils.watch(
+      () => mapViewRef.current.extent,
+      debouncedHandler
+    );
 
     return () => {
       clearTimeout(timeoutId);
