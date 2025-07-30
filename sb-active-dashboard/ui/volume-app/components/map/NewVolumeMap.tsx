@@ -11,13 +11,15 @@ interface NewVolumeMapProps {
   showBicyclist: boolean;
   showPedestrian: boolean;
   modelCountsBy: string;
+  onMapViewReady?: (mapView: __esri.MapView) => void;
 }
 
 export default function NewVolumeMap({ 
   activeTab, 
   showBicyclist, 
   showPedestrian, 
-  modelCountsBy 
+  modelCountsBy,
+  onMapViewReady
 }: NewVolumeMapProps) {
   const mapViewRef = useRef<any>(null);
   const [viewReady, setViewReady] = useState(false);
@@ -38,6 +40,11 @@ export default function NewVolumeMap({
       });
       mapViewRef.current = event.target.view;
       setViewReady(true);
+      
+      // Pass mapView back to parent component  
+      if (onMapViewReady) {
+        onMapViewReady(event.target.view);
+      }
     }
   };
 
@@ -66,27 +73,19 @@ export default function NewVolumeMap({
     }
   }, [viewReady]);
 
-  // Control layers based on model counts selection
+  // Control layers based on tab and model counts selection
   useEffect(() => {
     if (aadtLayer && hexagonLayer) {
-      switch (modelCountsBy) {
-        case "strava":
-          // Hide both layers for now (no Strava data available)
-          aadtLayer.visible = false;
-          hexagonLayer.visible = false;
-          break;
-          
-        case "cost-benefit":
-          // Show AADT point layers (Cost Benefit Tool)
-          aadtLayer.visible = true;
-          hexagonLayer.visible = false;
-          break;
-          
-        default:
-          break;
+      if (activeTab === 'raw-data') {
+        aadtLayer.visible = true;
+        hexagonLayer.visible = false;
+      } else { // 'modeled-data' tab
+        aadtLayer.visible = false;
+        // Visibility of hexagon layer depends on the modeled data source
+        hexagonLayer.visible = modelCountsBy === 'cost-benefit';
       }
     }
-  }, [modelCountsBy, aadtLayer, hexagonLayer]);
+  }, [activeTab, modelCountsBy, aadtLayer, hexagonLayer]);
 
   // Control hexagon layer visibility based on road user switches
   useEffect(() => {
@@ -103,57 +102,47 @@ export default function NewVolumeMap({
     }
   }, [hexagonLayer, showBicyclist, showPedestrian]);
 
-  // Query hourly data when Cost Benefit Tool is selected and view changes
+  // Listen to map view changes to query hourly data for raw count sites
   useEffect(() => {
-    if (viewReady && mapViewRef.current && modelCountsBy === "cost-benefit") {
-      const fetchHourlyData = async () => {
-        try {
-          const stats = await queryHourlyCounts(
-            mapViewRef.current,
-            showBicyclist,
-            showPedestrian
-          );
-          setHourlyData(stats.hourlyData);
-        } catch (error) {
-          console.error("Error fetching hourly data:", error);
-          setHourlyData([]);
-        }
-      };
-
-      fetchHourlyData();
+    // Only query when the raw data tab is active and view is ready
+    if (activeTab !== "raw-data" || !viewReady || !mapViewRef.current) {
+      setHourlyData([]); // Clear data when not on raw tab
+      return;
     }
-  }, [viewReady, modelCountsBy, showBicyclist, showPedestrian]);
 
-  // Listen to map view changes when Cost Benefit Tool is selected
-  useEffect(() => {
-    if (viewReady && mapViewRef.current && modelCountsBy === "cost-benefit") {
-      const handleViewChange = async () => {
-        try {
-          const stats = await queryHourlyCounts(
-            mapViewRef.current,
-            showBicyclist,
-            showPedestrian
-          );
-          setHourlyData(stats.hourlyData);
-        } catch (error) {
-          console.error("Error fetching hourly data on view change:", error);
-        }
-      };
+    const handleViewChange = async () => {
+      try {
+        const stats = await queryHourlyCounts(
+          mapViewRef.current,
+          showBicyclist,
+          showPedestrian
+        );
+        setHourlyData(stats.hourlyData);
+      } catch (error) {
+        console.error("Error fetching hourly data on view change:", error);
+      }
+    };
 
-      // Debounce the view change handler
-      let timeoutId: NodeJS.Timeout;
-      const debouncedHandler = () => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(handleViewChange, 500);
-      };
+    // Debounce the view change handler
+    let timeoutId: NodeJS.Timeout;
+    const debouncedHandler = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleViewChange, 500);
+    };
 
-      mapViewRef.current.watch("extent", debouncedHandler);
+    // Initial fetch
+    handleViewChange(); 
+    
+    // Watch for extent changes
+    const watcher = mapViewRef.current.watch("extent", debouncedHandler);
 
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [viewReady, modelCountsBy, showBicyclist, showPedestrian]);
+    return () => {
+      clearTimeout(timeoutId);
+      if (watcher) {
+        watcher.remove(); // Clean up watcher
+      }
+    };
+  }, [viewReady, activeTab, showBicyclist, showPedestrian]);
 
   return (
     <div id="volume-map-container" className="flex-1 bg-gray-200 relative">

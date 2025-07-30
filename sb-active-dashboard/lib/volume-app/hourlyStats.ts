@@ -73,7 +73,7 @@ export async function queryHourlyCounts(
         outStatisticFieldName: "num_records"
       }
     ];
-    query.groupByFieldsForStatistics = ["hour", "count_type"];
+    query.groupByFieldsForStatistics = ["EXTRACT(HOUR FROM timestamp) as hour", "count_type"];
     query.orderByFields = ["hour ASC", "count_type ASC"];
     query.returnGeometry = false;
     query.outFields = ["hour", "count_type"];

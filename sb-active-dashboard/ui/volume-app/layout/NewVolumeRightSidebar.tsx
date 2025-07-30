@@ -16,13 +16,15 @@ interface NewVolumeRightSidebarProps {
   showBicyclist: boolean;
   showPedestrian: boolean;
   modelCountsBy: string;
+  mapView?: __esri.MapView;
 }
 
 export default function NewVolumeRightSidebar({ 
   activeTab,
   showBicyclist,
   showPedestrian,
-  modelCountsBy
+  modelCountsBy,
+  mapView
 }: NewVolumeRightSidebarProps) {
   const horizontalMargins = "mx-4";
 
@@ -90,7 +92,15 @@ export default function NewVolumeRightSidebar({
         <TrendsHeader activeTab={activeTab} horizontalMargins={horizontalMargins} />
         <div className="w-full h-[1px] bg-gray-200 my-4"></div>
         {activeTab === 'modeled-data' && (
-          <MilesOfStreetByTrafficLevelBarChart dataType={activeTab} horizontalMargins={horizontalMargins} />
+          <MilesOfStreetByTrafficLevelBarChart 
+            dataType={activeTab} 
+            horizontalMargins={horizontalMargins}
+            mapView={mapView}
+            showBicyclist={showBicyclist}
+            showPedestrian={showPedestrian}
+            modelCountsBy={modelCountsBy}
+            year={2023}
+          />
         )}
         {activeTab === 'raw-data' && (
           <>

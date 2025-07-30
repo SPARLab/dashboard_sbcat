@@ -11,6 +11,13 @@ export default function NewVolumeApp() {
   const [showBicyclist, setShowBicyclist] = useState(true);
   const [showPedestrian, setShowPedestrian] = useState(true);
   const [modelCountsBy, setModelCountsBy] = useState<string>("cost-benefit");
+  const [mapView, setMapView] = useState<__esri.MapView | null>(null);
+
+  // Handle map view ready from map component
+  const handleMapViewReady = (view: __esri.MapView) => {
+    console.log('🗺️ MapView ready for chart integration');
+    setMapView(view);
+  };
 
   return (
     <div id="new-volumes-page" className="flex flex-col h-[calc(100vh-70px)] bg-white">
@@ -30,12 +37,14 @@ export default function NewVolumeApp() {
           showBicyclist={showBicyclist}
           showPedestrian={showPedestrian}
           modelCountsBy={modelCountsBy}
+          onMapViewReady={handleMapViewReady}
         />
         <NewVolumeRightSidebar 
           activeTab={activeTab}
           showBicyclist={showBicyclist}
           showPedestrian={showPedestrian}
           modelCountsBy={modelCountsBy}
+          mapView={mapView}
         />
       </div>
       {/* Footer */}
