@@ -1,2 +1,2 @@
-import Volume from '../../../ui/volume-app/Volume';
-export default Volume; 
+import NewVolumeApp from '../../../ui/volume-app/NewVolumeApp';
+export default NewVolumeApp; 

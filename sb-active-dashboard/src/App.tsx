@@ -6,7 +6,6 @@ import LayerProvider from "@/lib/context/MapContext";
 import HomePage from "./pages/home";
 import ExplorePage from "./pages/dashboard/explore";
 import SafetyPage from "./pages/dashboard/safety";
-import VolumePage from "./pages/dashboard/volume";
 import NewVolumePage from "./pages/dashboard/new-volume";
 import Test from "./pages/dashboard/test";
 
@@ -34,7 +33,6 @@ function App() {
                       <Route path="explore" element={<ExplorePage />} />
                       <Route path="safety" element={<SafetyPage />} />
                       <Route path="volume" element={<NewVolumePage />} />
-                      <Route path="old-volume" element={<VolumePage />} />
                       <Route path="test" element={<Test />} />
                     </Routes>
                   </DashboardLayout>
