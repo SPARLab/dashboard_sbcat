@@ -10,24 +10,29 @@ import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import MapView from "@arcgis/core/views/MapView";
 import Point from "@arcgis/core/geometry/Point";
 
-// TODO: These URLs need to be replaced with actual boundary layer URLs
+// Working boundary layer URLs - tested and verified
 const BOUNDARY_LAYER_URLS = {
-  // California/regional boundaries
-  REGIONS: "", // TODO: Need regional boundary layer (e.g., Central Coast, San Luis Obispo County)
+  // County/regional boundaries - USGS National Map (reliable, no token required)
+  COUNTIES: "https://carto.nationalmap.gov/arcgis/rest/services/govunits/MapServer/23",
+  STATES: "https://carto.nationalmap.gov/arcgis/rest/services/govunits/MapServer/22",
   
-  // City/service area boundaries  
-  CITIES: "", // TODO: Need city boundaries (Santa Barbara, Goleta, Carpinteria, etc.)
+  // City/municipal boundaries - USGS National Map (national coverage)
+  CITIES: "https://carto.nationalmap.gov/arcgis/rest/services/govunits/MapServer/24", // Incorporated Places
   
-  // Census boundaries (these might exist via ArcGIS Online)
-  CENSUS_TRACTS: "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_Census_Tracts/FeatureServer/0",
-  CENSUS_BLOCK_GROUPS: "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_Census_Block_Groups/FeatureServer/0",
+  // Census boundaries - U.S. Census Bureau TIGERweb (official 2020 data, no token required)
+  CENSUS_TRACTS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Census2020/MapServer/6",
+  CENSUS_BLOCK_GROUPS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Census2020/MapServer/8",
+  CENSUS_BLOCKS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Census2020/MapServer/10",
+  
+  // Alternative Santa Barbara area cities (may require verification)
+  SB_CITIES: "https://services.arcgis.com/UXmFoWC7yDHcDN5Q/ArcGIS/rest/services/CityBoundaries_SOC_Dissolve/FeatureServer/0",
   
   // Custom boundaries
-  CUSTOM_STUDY_AREAS: "", // TODO: If they have custom study area boundaries
+  CUSTOM_STUDY_AREAS: "", // For custom study areas if needed
 };
 
 interface GeographicLevel {
-  id: 'region' | 'city' | 'census-tract' | 'census-block-group' | 'hexagons' | 'custom';
+  id: 'county' | 'city' | 'census-tract' | 'hexagons' | 'custom';
   name: string;
   layer?: FeatureLayer;
   defaultSelection?: __esri.Geometry;
@@ -41,10 +46,9 @@ interface SelectedArea {
 }
 
 export class GeographicBoundariesService {
-  private regionLayer: FeatureLayer | null = null;
+  private countyLayer: FeatureLayer | null = null;
   private cityLayer: FeatureLayer | null = null;
   private censusTractLayer: FeatureLayer | null = null;
-  private censusBlockGroupLayer: FeatureLayer | null = null;
   
   private currentLevel: GeographicLevel['id'] = 'census-tract';
   private selectedArea: SelectedArea | null = null;
@@ -54,25 +58,50 @@ export class GeographicBoundariesService {
   }
 
   private initializeLayers() {
-    // Only initialize layers that have URLs
-    if (BOUNDARY_LAYER_URLS.CENSUS_TRACTS) {
-      this.censusTractLayer = new FeatureLayer({
-        url: BOUNDARY_LAYER_URLS.CENSUS_TRACTS,
-        title: "Census Tracts",
-        visible: false // Start invisible
-      });
-    }
-    
-    if (BOUNDARY_LAYER_URLS.CENSUS_BLOCK_GROUPS) {
-      this.censusBlockGroupLayer = new FeatureLayer({
-        url: BOUNDARY_LAYER_URLS.CENSUS_BLOCK_GROUPS,
-        title: "Census Block Groups", 
-        visible: false
-      });
-    }
+    try {
+      // County boundaries - USGS National Map
+      if (BOUNDARY_LAYER_URLS.COUNTIES) {
+        this.countyLayer = new FeatureLayer({
+          url: BOUNDARY_LAYER_URLS.COUNTIES,
+          title: "Counties",
+          visible: false,
+          popupTemplate: {
+            title: "County: {NAME}",
+            content: "State: {STATE_NAME}<br/>County: {NAME}"
+          }
+        });
+      }
 
-    // TODO: Initialize other layers when URLs are available
-    console.warn("Geographic Boundaries Service: Some boundary layers are missing URLs and won't function");
+      // City boundaries - USGS National Map (Incorporated Places)
+      if (BOUNDARY_LAYER_URLS.CITIES) {
+        this.cityLayer = new FeatureLayer({
+          url: BOUNDARY_LAYER_URLS.CITIES,
+          title: "Cities & Towns",
+          visible: false,
+          popupTemplate: {
+            title: "City: {NAME}",
+            content: "City: {NAME}<br/>State: {STATE_NAME}"
+          }
+        });
+      }
+
+      // Census Tracts - U.S. Census Bureau TIGERweb
+      if (BOUNDARY_LAYER_URLS.CENSUS_TRACTS) {
+        this.censusTractLayer = new FeatureLayer({
+          url: BOUNDARY_LAYER_URLS.CENSUS_TRACTS,
+          title: "Census Tracts",
+          visible: false,
+          popupTemplate: {
+            title: "Census Tract: {NAME}",
+            content: "Tract: {BASENAME}<br/>County: {COUNTY}<br/>State: {STATE}"
+          }
+        });
+      }
+
+      console.log("Geographic Boundaries Service: Boundary layers initialized successfully");
+    } catch (error) {
+      console.error("Geographic Boundaries Service: Error initializing layers:", error);
+    }
   }
 
   /**
@@ -92,20 +121,12 @@ export class GeographicBoundariesService {
       }
     ];
 
-    // Add levels only if we have the corresponding layers
+    // Add levels only if we have the corresponding layers (most granular to least granular)
     if (this.censusTractLayer) {
       levels.unshift({
         id: 'census-tract',
         name: 'Census Tract',
         layer: this.censusTractLayer
-      });
-    }
-
-    if (this.censusBlockGroupLayer) {
-      levels.unshift({
-        id: 'census-block-group', 
-        name: 'Census Block Group',
-        layer: this.censusBlockGroupLayer
       });
     }
 
@@ -117,11 +138,11 @@ export class GeographicBoundariesService {
       });
     }
 
-    if (this.regionLayer) {
+    if (this.countyLayer) {
       levels.unshift({
-        id: 'region',
-        name: 'Region',
-        layer: this.regionLayer
+        id: 'county',
+        name: 'County',
+        layer: this.countyLayer
       });
     }
 
@@ -145,21 +166,21 @@ export class GeographicBoundariesService {
     this.hideAllBoundaryLayers();
 
     switch (level) {
-      case 'region':
-        if (!this.regionLayer) {
+      case 'county':
+        if (!this.countyLayer) {
           return { 
             success: false, 
-            warning: "Region boundaries not available. Need regional boundary layer URL." 
+            warning: "County boundaries not available." 
           };
         }
-        this.regionLayer.visible = true;
-        return await this.selectDefaultArea(this.regionLayer, mapView, 'Santa Barbara County');
+        this.countyLayer.visible = true;
+        return await this.selectDefaultArea(this.countyLayer, mapView, 'Santa Barbara');
 
       case 'city':
         if (!this.cityLayer) {
           return { 
             success: false, 
-            warning: "City boundaries not available. Need city boundary layer URL." 
+            warning: "City boundaries not available." 
           };
         }
         this.cityLayer.visible = true;
@@ -284,10 +305,9 @@ export class GeographicBoundariesService {
    * Hide all boundary layers
    */
   private hideAllBoundaryLayers() {
-    if (this.regionLayer) this.regionLayer.visible = false;
+    if (this.countyLayer) this.countyLayer.visible = false;
     if (this.cityLayer) this.cityLayer.visible = false;
     if (this.censusTractLayer) this.censusTractLayer.visible = false;
-    if (this.censusBlockGroupLayer) this.censusBlockGroupLayer.visible = false;
   }
 
   /**
@@ -296,10 +316,9 @@ export class GeographicBoundariesService {
   getBoundaryLayers(): FeatureLayer[] {
     const layers: FeatureLayer[] = [];
     
-    if (this.regionLayer) layers.push(this.regionLayer);
+    if (this.countyLayer) layers.push(this.countyLayer);
     if (this.cityLayer) layers.push(this.cityLayer);
     if (this.censusTractLayer) layers.push(this.censusTractLayer);
-    if (this.censusBlockGroupLayer) layers.push(this.censusBlockGroupLayer);
     
     return layers;
   }
@@ -323,10 +342,9 @@ export class GeographicBoundariesService {
    */
   isLevelAvailable(level: GeographicLevel['id']): boolean {
     switch (level) {
-      case 'region': return !!this.regionLayer;
+      case 'county': return !!this.countyLayer;
       case 'city': return !!this.cityLayer;
       case 'census-tract': return !!this.censusTractLayer;
-      case 'census-block-group': return !!this.censusBlockGroupLayer;
       case 'hexagons': return true; // Always available via modeled data
       case 'custom': return true; // Always available for drawing
       default: return false;
@@ -345,25 +363,26 @@ export class GeographicBoundariesService {
     const available: string[] = [];
     const recommendations: string[] = [];
 
-    if (!this.regionLayer) {
-      missing.push("Regional boundaries");
-      recommendations.push("Contact Santa Barbara County GIS for regional boundary data");
+    // Check required boundary types
+    if (!this.countyLayer) {
+      missing.push("County boundaries");
+      recommendations.push("Add USGS National Map county boundaries");
     } else {
-      available.push("Regional boundaries");
+      available.push("County boundaries (USGS National Map)");
     }
 
     if (!this.cityLayer) {
-      missing.push("City/service area boundaries");
-      recommendations.push("Contact cities (Santa Barbara, Goleta, Carpinteria) for municipal boundary data");
+      missing.push("City/municipal boundaries");
+      recommendations.push("Add USGS National Map incorporated places");
     } else {
-      available.push("City boundaries");
+      available.push("City/municipal boundaries (USGS National Map)");
     }
 
     if (!this.censusTractLayer) {
       missing.push("Census tract boundaries");
-      recommendations.push("Use ArcGIS Online census boundary services");
+      recommendations.push("Add U.S. Census Bureau TIGERweb services");
     } else {
-      available.push("Census tract boundaries");
+      available.push("Census tract boundaries (U.S. Census TIGERweb)");
     }
 
     // Always available

@@ -4,7 +4,7 @@ export default function GeographicLevelSection() {
   const [geographicLevel, setGeographicLevel] = useState('census-tract');
 
   const geographicOptions = [
-    { id: 'region', label: 'Region', icon: '/icons/region-icon.svg' },
+    { id: 'county', label: 'County', icon: '/icons/region-icon.svg' },
     { id: 'city', label: 'City / Service Area', icon: '/icons/city-service-area-icon.svg' },
     { id: 'census-tract', label: 'Census Tract', icon: '/icons/census-tract-icon.svg' },
     { id: 'hexagons', label: 'Hexagons', icon: '/icons/hexagons-icon.svg' },

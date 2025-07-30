@@ -8,6 +8,7 @@ import ExplorePage from "./pages/dashboard/explore";
 import SafetyPage from "./pages/dashboard/safety";
 import NewVolumePage from "./pages/dashboard/new-volume";
 import Test from "./pages/dashboard/test";
+import TestBoundariesPage from "./pages/dashboard/test-boundaries";
 
 import { ThemeProvider, CssBaseline, StyledEngineProvider } from "@mui/material";
 import { appTheme } from "@/ui/theme";
@@ -34,6 +35,7 @@ function App() {
                       <Route path="safety" element={<SafetyPage />} />
                       <Route path="volume" element={<NewVolumePage />} />
                       <Route path="test" element={<Test />} />
+                      <Route path="test-boundaries" element={<TestBoundariesPage />} />
                     </Routes>
                   </DashboardLayout>
                 </LayerProvider>
