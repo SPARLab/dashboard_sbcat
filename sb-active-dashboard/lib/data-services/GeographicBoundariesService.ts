@@ -74,7 +74,7 @@ export class GeographicBoundariesService {
   });
 
   private selectedSymbol = new SimpleFillSymbol({
-    color: [30, 144, 255, 0.4], // Dodger blue with transparency
+    color: [30, 144, 255, 0], // Transparent fill
     outline: new SimpleLineSymbol({
       color: [30, 144, 255, 1], // Solid dodger blue outline
       width: 3
@@ -82,10 +82,10 @@ export class GeographicBoundariesService {
   });
   
   private hoverSymbol = new SimpleFillSymbol({
-    color: [255, 255, 0, 0.5], // Yellow with transparency
+    color: [255, 255, 0, 0], // Transparent fill for hover
     outline: new SimpleLineSymbol({
-        color: [200, 200, 0, 0.8],
-        width: 2
+        color: [255, 255, 0, 1], // Solid yellow outline for hover
+        width: 3
     })
   });
 
