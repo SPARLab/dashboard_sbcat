@@ -82,3 +82,10 @@ button:focus-visible {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Remove focus outline from ArcGIS Map */
+.esri-view .esri-view-surface--is-touch-none:focus::after,
+.esri-view .esri-view-surface:focus::after {
+  outline: none !important;
+  box-shadow: none !important;
+}

@@ -168,7 +168,7 @@ export default function NewVolumeMap({
   }, [viewReady, activeTab, showBicyclist, showPedestrian]);
 
   return (
-    <div id="volume-map-container" className="flex-1 bg-gray-200 relative !hover:border-none !active:border-none">
+    <div id="volume-map-container" className="flex-1 bg-gray-200 relative">
       <MuiBox
         component="main"
         sx={{
