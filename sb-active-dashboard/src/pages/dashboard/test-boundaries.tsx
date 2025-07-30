@@ -224,26 +224,38 @@ export default function TestBoundariesPage() {
             className="w-full h-full"
           />
           
-          {/* Map Info Overlay */}
+                      {/* Map Info Overlay */}
           <div className="absolute top-4 right-4 bg-white bg-opacity-90 rounded-lg p-3 shadow-lg max-w-xs">
-            <h4 id="map-info-title" className="text-sm font-medium text-gray-900 mb-2">Map Instructions</h4>
+            <h4 id="map-info-title" className="text-sm font-medium text-gray-900 mb-2">Interactive Features</h4>
             <ul className="text-xs text-gray-600 space-y-1">
-              <li>• Run tests to load boundary layers</li>
-              <li>• Click features to see popup information</li>
+              <li>• <span className="font-medium">Test "city"</span> to enable interactivity</li>
+              <li>• <span className="inline-block w-3 h-3 bg-yellow-400 rounded mr-1"></span>Hover cities → Yellow highlight</li>
+              <li>• <span className="inline-block w-3 h-3 bg-blue-500 rounded mr-1"></span>Click cities → Blue selection</li>
+              <li>• Check console for selection logs</li>
               <li>• Pan/zoom to explore boundaries</li>
-              <li>• Watch the test panel for results</li>
             </ul>
             
             {boundaryServiceRef.current?.getSelectedArea() && (
               <div className="mt-3 pt-2 border-t">
                 <div className="text-xs">
-                  <div className="font-medium">Currently Selected:</div>
-                  <div className="text-gray-600">
+                  <div className="font-medium">🎯 Selected:</div>
+                  <div className="text-blue-600 font-medium">
                     {boundaryServiceRef.current.getSelectedArea()?.name}
                   </div>
                   <div className="text-gray-600">
                     Level: {boundaryServiceRef.current.getCurrentLevel()}
                   </div>
+                </div>
+              </div>
+            )}
+            
+            {boundaryServiceRef.current?.getCurrentLevel() === 'city' && (
+              <div className="mt-2 pt-2 border-t">
+                <div className="text-xs text-green-600 font-medium">
+                  ✨ City interactivity enabled!
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Hover and click cities to test
                 </div>
               </div>
             )}

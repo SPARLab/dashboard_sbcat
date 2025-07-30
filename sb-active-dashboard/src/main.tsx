@@ -4,6 +4,7 @@ import App from "./App";
 import "@arcgis/core/assets/esri/themes/light/main.css";
 import "@esri/calcite-components/dist/calcite/calcite.css";
 import "./index.css"; // Tailwind CSS should be imported last for proper specificity
+import "./city-boundary-styles.css"; // City boundary interactive styles
 import { defineCustomElements } from "@esri/calcite-components/dist/loader";
 import { defineCustomElements as defineMapComponents } from "@arcgis/map-components/dist/loader";
 

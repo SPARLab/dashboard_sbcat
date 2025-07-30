@@ -9,6 +9,10 @@
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import MapView from "@arcgis/core/views/MapView";
 import Point from "@arcgis/core/geometry/Point";
+import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
+import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
+import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
+import UniqueValueRenderer from "@arcgis/core/renderers/UniqueValueRenderer";
 
 // Working boundary layer URLs - tested and verified
 const BOUNDARY_LAYER_URLS = {
@@ -52,6 +56,10 @@ export class GeographicBoundariesService {
   
   private currentLevel: GeographicLevel['id'] = 'census-tract';
   private selectedArea: SelectedArea | null = null;
+  private mapView: MapView | null = null;
+  private hoverHighlight: __esri.Handle | null = null;
+  private selectedFeature: __esri.Graphic | null = null;
+  private selectedHighlight: __esri.Handle | null = null;
   
   constructor() {
     this.initializeLayers();
@@ -81,7 +89,16 @@ export class GeographicBoundariesService {
           popupTemplate: {
             title: "City: {NAME}",
             content: "City: {NAME}<br/>State: {STATE_NAME}"
-          }
+          },
+          renderer: new SimpleRenderer({
+            symbol: new SimpleFillSymbol({
+              color: [0, 0, 0, 0], // Transparent fill
+              outline: new SimpleLineSymbol({
+                color: [70, 130, 180, 0.8], // Steel blue outline
+                width: 2
+              })
+            })
+          })
         });
       }
 
@@ -165,6 +182,9 @@ export class GeographicBoundariesService {
     // Hide all boundary layers first
     this.hideAllBoundaryLayers();
 
+    // Store map view reference for interactive features
+    this.mapView = mapView;
+
     switch (level) {
       case 'county':
         if (!this.countyLayer) {
@@ -184,7 +204,15 @@ export class GeographicBoundariesService {
           };
         }
         this.cityLayer.visible = true;
-        return await this.selectDefaultArea(this.cityLayer, mapView, 'Santa Barbara');
+        await this.setupCityInteractivity(mapView);
+        
+        // Try to select default area, but don't fail if it doesn't work
+        try {
+          return await this.selectDefaultArea(this.cityLayer, mapView, 'Santa Barbara');
+        } catch (error) {
+          console.warn('Could not select default Santa Barbara area:', error);
+          return { success: true, warning: 'City boundaries loaded but default area selection failed' };
+        }
 
       case 'census-tract':
         if (!this.censusTractLayer) {
@@ -305,6 +333,9 @@ export class GeographicBoundariesService {
    * Hide all boundary layers
    */
   private hideAllBoundaryLayers() {
+    // Clean up any existing interactivity
+    this.cleanupInteractivity();
+    
     if (this.countyLayer) this.countyLayer.visible = false;
     if (this.cityLayer) this.cityLayer.visible = false;
     if (this.censusTractLayer) this.censusTractLayer.visible = false;
@@ -390,5 +421,169 @@ export class GeographicBoundariesService {
     available.push("Custom draw tool");
 
     return { missing, available, recommendations };
+  }
+
+  /**
+   * Setup interactive hover and click effects for city boundaries
+   */
+  private async setupCityInteractivity(mapView: MapView) {
+    if (!this.cityLayer) return;
+
+    // Clean up any existing interactivity first
+    this.cleanupInteractivity();
+
+    try {
+      // Cache the layer view to avoid repeated async calls
+      this.cityLayerView = await mapView.whenLayerView(this.cityLayer);
+    } catch (error) {
+      console.warn('Could not get city layer view for interactivity:', error);
+      return;
+    }
+
+    // Pointer move event for hover effects
+    const pointerMoveHandler = mapView.on("pointer-move", async (event) => {
+      const hit = await mapView.hitTest(event, {
+        include: [this.cityLayer!]
+      });
+
+      if (hit.results.length > 0) {
+        const graphic = hit.results[0].graphic;
+        
+        // Only highlight if it's not the currently selected feature
+        if (!this.selectedFeature || graphic.attributes.OBJECTID !== this.selectedFeature.attributes.OBJECTID) {
+          // Change cursor to indicate interactivity
+          mapView.container.style.cursor = "pointer";
+          
+          // Remove previous hover highlight
+          if (this.hoverHighlight) {
+            this.hoverHighlight.remove();
+          }
+          
+          // Add yellow hover highlight using cached layer view
+          this.hoverHighlight = this.cityLayerView!.highlight(graphic);
+        }
+      } else {
+        // Reset cursor and remove hover highlight (but keep selection highlight)
+        mapView.container.style.cursor = "default";
+        if (this.hoverHighlight) {
+          this.hoverHighlight.remove();
+          this.hoverHighlight = null;
+        }
+      }
+    });
+
+    // Click event for selection
+    const clickHandler = mapView.on("click", async (event) => {
+      const hit = await mapView.hitTest(event, {
+        include: [this.cityLayer!]
+      });
+
+      if (hit.results.length > 0) {
+        const graphic = hit.results[0].graphic;
+        
+        // Remove previous selection highlight
+        if (this.selectedHighlight) {
+          this.selectedHighlight.remove();
+        }
+        
+        // Update selected feature
+        this.selectedFeature = graphic;
+        
+        // Update selected area
+        this.selectedArea = {
+          id: graphic.attributes.OBJECTID || graphic.attributes.GEOID || 'unknown',
+          name: graphic.attributes.NAME || graphic.attributes.NAMELSAD || 'Unknown City',
+          geometry: graphic.geometry,
+          level: 'city'
+        };
+
+        // Apply blue selection highlight using cached layer view
+        this.selectedHighlight = this.cityLayerView!.highlight(graphic);
+        
+        // Remove hover highlight since we're now selected
+        if (this.hoverHighlight) {
+          this.hoverHighlight.remove();
+          this.hoverHighlight = null;
+        }
+        
+        console.log('City selected:', this.selectedArea.name);
+      }
+    });
+
+    // Store handlers for cleanup
+    this.interactivityHandlers = [pointerMoveHandler, clickHandler];
+  }
+
+  private interactivityHandlers: __esri.Handle[] = [];
+  private cityLayerView: __esri.FeatureLayerView | null = null;
+
+  /**
+   * Clean up interactivity handlers and highlights
+   */
+  private cleanupInteractivity() {
+    // Remove event handlers
+    this.interactivityHandlers.forEach(handler => handler.remove());
+    this.interactivityHandlers = [];
+
+    // Clear cached layer view
+    this.cityLayerView = null;
+
+    // Remove highlights
+    if (this.hoverHighlight) {
+      this.hoverHighlight.remove();
+      this.hoverHighlight = null;
+    }
+    
+    if (this.selectedHighlight) {
+      this.selectedHighlight.remove();
+      this.selectedHighlight = null;
+    }
+
+    // Reset cursor
+    if (this.mapView?.container) {
+      this.mapView.container.style.cursor = "default";
+    }
+
+    // Clear selection
+    this.selectedFeature = null;
+  }
+
+  /**
+   * Update highlight style for hover (yellow) or selection (blue)
+   */
+  private updateHighlightStyle(layerView: __esri.LayerView, type: 'hover' | 'selection') {
+    // Note: The actual highlight color is controlled by CSS
+    // We'll add custom CSS for this
+  }
+
+  /**
+   * Update city layer styling to show selected feature in blue
+   */
+  private async updateCitySelectionStyle() {
+    if (!this.cityLayer || !this.selectedFeature) return;
+
+    // Create a definition expression to style selected vs unselected features
+    const selectedId = this.selectedFeature.attributes.OBJECTID;
+    
+    // Update renderer to show selected feature in blue
+    const selectedSymbol = new SimpleFillSymbol({
+      color: [30, 144, 255, 0.4], // Blue with transparency
+      outline: new SimpleLineSymbol({
+        color: [30, 144, 255, 1], // Solid blue outline
+        width: 3
+      })
+    });
+
+    const defaultSymbol = new SimpleFillSymbol({
+      color: [0, 0, 0, 0], // Transparent fill
+      outline: new SimpleLineSymbol({
+        color: [70, 130, 180, 0.8], // Steel blue outline
+        width: 2
+      })
+    });
+
+    // We'll use a more advanced renderer approach
+    // For now, let's just log the selection
+    console.log(`Selected city: ${this.selectedFeature.attributes.NAME} (ID: ${selectedId})`);
   }
 }

@@ -1,0 +1,33 @@
+/* City Boundary Interactive Styles */
+
+/* ArcGIS highlight styles for hover (yellow) and selection (blue) */
+.esri-view .esri-view-surface .esri-highlight {
+  fill: rgba(255, 255, 0, 0.5) !important; /* Yellow hover */
+  stroke: rgba(255, 200, 0, 0.9) !important; /* Golden yellow outline */
+  stroke-width: 3 !important;
+  opacity: 0.8 !important;
+}
+
+/* Multiple selection highlights - first is hover (yellow), second is selection (blue) */
+.esri-view .esri-view-surface .esri-highlight:nth-child(2) {
+  fill: rgba(30, 144, 255, 0.6) !important; /* Blue selection */
+  stroke: rgba(30, 144, 255, 1) !important; /* Solid blue outline */
+  stroke-width: 4 !important;
+  opacity: 0.9 !important;
+}
+
+/* Alternative approach - target specific highlight classes */
+.esri-view .esri-highlight polygon,
+.esri-view .esri-highlight path {
+  fill: rgba(255, 255, 0, 0.5) !important;
+  stroke: rgba(255, 200, 0, 0.9) !important;
+  stroke-width: 3px !important;
+}
+
+/* Override for selected features */
+.esri-view .esri-highlight.city-selected polygon,
+.esri-view .esri-highlight.city-selected path {
+  fill: rgba(30, 144, 255, 0.6) !important;
+  stroke: rgba(30, 144, 255, 1) !important;
+  stroke-width: 4px !important;
+}

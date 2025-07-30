@@ -5,6 +5,7 @@ import { createAADTLayer, createHexagonLayer } from "../../../../lib/volume-app/
 import { queryHourlyCounts, HourlyData } from "../../../../lib/volume-app/hourlyStats";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import GroupLayer from "@arcgis/core/layers/GroupLayer";
+import { GeographicBoundariesService } from "../../../../lib/data-services/GeographicBoundariesService";
 
 interface NewVolumeMapProps {
   activeTab: string;
@@ -27,6 +28,9 @@ export default function NewVolumeMap({
   // Layer state
   const [aadtLayer, setAadtLayer] = useState<FeatureLayer | null>(null);
   const [hexagonLayer, setHexagonLayer] = useState<GroupLayer | null>(null);
+  
+  // Boundary service state
+  const [boundaryService] = useState(() => new GeographicBoundariesService());
 
   // Hourly data for Cost Benefit Tool (AADT)
   const [hourlyData, setHourlyData] = useState<HourlyData[]>([]);
@@ -56,9 +60,28 @@ export default function NewVolumeMap({
           const aadt = await createAADTLayer();
           const hexagon = createHexagonLayer();
           
-          // Add layers to map
+          // Add volume layers to map
           mapViewRef.current.map.add(aadt);
           mapViewRef.current.map.add(hexagon);
+          
+          // Add boundary layers to map
+          const boundaryLayers = boundaryService.getBoundaryLayers();
+          boundaryLayers.forEach(layer => mapViewRef.current.map.add(layer));
+          
+          // Switch to city level to enable interactive boundaries
+          try {
+            const result = await boundaryService.switchGeographicLevel('city', mapViewRef.current);
+            if (result.success) {
+              console.log('✅ City boundaries loaded with interactive features');
+              if (result.defaultArea) {
+                console.log(`📍 Default area: ${result.defaultArea.name}`);
+              }
+            } else {
+              console.warn('⚠️ City boundaries warning:', result.warning);
+            }
+          } catch (boundaryError) {
+            console.warn('City boundaries loaded without default selection:', boundaryError.message);
+          }
           
           // Store layer references
           setAadtLayer(aadt);
@@ -71,7 +94,7 @@ export default function NewVolumeMap({
       
       loadLayers();
     }
-  }, [viewReady]);
+  }, [viewReady, boundaryService]);
 
   // Control layers based on tab and model counts selection
   useEffect(() => {
@@ -145,7 +168,7 @@ export default function NewVolumeMap({
   }, [viewReady, activeTab, showBicyclist, showPedestrian]);
 
   return (
-    <div id="volume-map-container" className="flex-1 bg-gray-200 relative">
+    <div id="volume-map-container" className="flex-1 bg-gray-200 relative !hover:border-none !active:border-none">
       <MuiBox
         component="main"
         sx={{
