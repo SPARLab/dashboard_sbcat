@@ -12,6 +12,8 @@ import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 import FeatureEffect from "@arcgis/core/layers/support/FeatureEffect";
 
+import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
+
 const BOUNDARY_LAYER_URLS = {
   CITIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/25", // Incorporated Places
   SERVICE_AREAS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/26" // Census Designated Places
@@ -35,16 +37,15 @@ export class GeographicBoundariesService {
   private interactivityHandlers: __esri.Handle[] = [];
   private hitTestInProgress = false;
   
-  // Track selected feature and highlight
-  private selectedFeatureId: number | null = null;
+  private selectedFeature: { objectId: number, layer: FeatureLayer } | null = null;
 
   private hoverSymbol = new SimpleFillSymbol({
-    color: [0, 0, 0, 0], // Transparent fill
+    color: [0, 0, 0, 0],
     outline: new SimpleLineSymbol({ color: [255, 255, 0, 1], width: 4 })
   });
 
   private selectionSymbol = new SimpleFillSymbol({
-    color: [0, 0, 0, 0], // Transparent fill
+    color: [0, 0, 0, 0],
     outline: new SimpleLineSymbol({ color: [30, 144, 255, 1], width: 4 })
   });
 
@@ -70,7 +71,7 @@ export class GeographicBoundariesService {
 
     this.highlightLayer = new GraphicsLayer({
         title: "Boundary Highlights",
-        listMode: "hide" // Hide this layer from the layer list widget
+        listMode: "hide"
     });
   }
 
@@ -103,6 +104,7 @@ export class GeographicBoundariesService {
     this.serviceAreaLayer.visible = false;
   }
   
+  
   private setupInteractivity(mapView: MapView, layers: FeatureLayer[]) {
     this.cleanupInteractivity();
 
@@ -133,7 +135,13 @@ export class GeographicBoundariesService {
       });
     });
 
-    this.interactivityHandlers = [pointerMoveHandler, clickHandler];
+    const stationaryHandle = reactiveUtils.when(
+        () => mapView.stationary,
+        () => this.refreshHighlight(),
+        { initial: true }
+    );
+
+    this.interactivityHandlers = [pointerMoveHandler, clickHandler, stationaryHandle];
   }
   
   private handleHover(newlyHovered: Graphic | null) {
@@ -146,7 +154,7 @@ export class GeographicBoundariesService {
       this.hoveredGraphic = null;
     }
     
-    const isSelected = newlyHovered?.attributes.OBJECTID === this.selectedFeatureId;
+    const isSelected = newlyHovered?.attributes.OBJECTID === this.selectedFeature?.objectId;
     if (newlyHovered && !isSelected) {
         this.hoveredGraphic = new Graphic({
             geometry: newlyHovered.geometry,
@@ -161,32 +169,49 @@ export class GeographicBoundariesService {
   }
   
   private async handleSelection(clickedGraphic: Graphic | null) {
-      // Clear any temporary hover graphics
-      if (this.hoveredGraphic) {
-        this.highlightLayer.remove(this.hoveredGraphic);
-        this.hoveredGraphic = null;
-      }
+    this.clearSelection();
 
-      const clickedId = clickedGraphic?.attributes.OBJECTID;
+    if (this.hoveredGraphic) {
+      this.highlightLayer.remove(this.hoveredGraphic);
+      this.hoveredGraphic = null;
+    }
 
-      // Deselect if clicking the same feature or clicking off features
-      if (!clickedGraphic || this.selectedFeatureId === clickedId) {
-          this.clearSelection();
-          return;
-      }
+    if (!clickedGraphic || clickedGraphic.attributes.OBJECTID === this.selectedFeature?.objectId) {
+      this.selectedFeature = null;
+      return;
+    }
 
-      // A new feature is selected
-      this.clearSelection(); // Clear previous selection first
-      this.selectedFeatureId = clickedId;
+    this.selectedFeature = {
+      objectId: clickedGraphic.attributes.OBJECTID,
+      layer: clickedGraphic.layer as FeatureLayer
+    };
 
-      if (clickedGraphic) {
+    this.refreshHighlight();
+  }
+
+  private async refreshHighlight() {
+    this.clearSelection();
+
+    if (!this.selectedFeature) return;
+
+    const { objectId, layer } = this.selectedFeature;
+    const query = layer.createQuery();
+    query.objectIds = [objectId];
+    query.returnGeometry = true;
+
+    try {
+      const { features } = await layer.queryFeatures(query);
+      if (features.length > 0) {
         this.selectedGraphic = new Graphic({
-            geometry: clickedGraphic.geometry,
-            attributes: clickedGraphic.attributes,
-            symbol: this.selectionSymbol
+          geometry: features[0].geometry,
+          symbol: this.selectionSymbol,
+          attributes: features[0].attributes
         });
         this.highlightLayer.add(this.selectedGraphic);
       }
+    } catch (error) {
+      console.error("Failed to refresh highlight:", error);
+    }
   }
 
   private clearSelection() {
@@ -194,7 +219,6 @@ export class GeographicBoundariesService {
       this.highlightLayer.remove(this.selectedGraphic);
       this.selectedGraphic = null;
     }
-    this.selectedFeatureId = null;
   }
 
   private cleanupInteractivity() {
@@ -204,6 +228,7 @@ export class GeographicBoundariesService {
     this.clearSelection();
     this.highlightLayer.removeAll();
     this.hoveredGraphic = null;
+    this.selectedFeature = null;
     
     if (this.mapView?.container) {
       this.mapView.container.style.cursor = "default";
