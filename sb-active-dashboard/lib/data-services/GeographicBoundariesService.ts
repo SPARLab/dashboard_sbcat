@@ -37,6 +37,8 @@ export class GeographicBoundariesService {
   private interactivityHandlers: __esri.Handle[] = [];
   private hitTestInProgress = false;
   
+  private abortController: AbortController | null = null;
+  
   private selectedFeature: { objectId: number, layer: FeatureLayer } | null = null;
 
   private hoverSymbol = new SimpleFillSymbol({
@@ -169,48 +171,73 @@ export class GeographicBoundariesService {
   }
   
   private async handleSelection(clickedGraphic: Graphic | null) {
-    this.clearSelection();
-
     if (this.hoveredGraphic) {
-      this.highlightLayer.remove(this.hoveredGraphic);
-      this.hoveredGraphic = null;
+        this.highlightLayer.remove(this.hoveredGraphic);
+        this.hoveredGraphic = null;
     }
 
     if (!clickedGraphic || clickedGraphic.attributes.OBJECTID === this.selectedFeature?.objectId) {
-      this.selectedFeature = null;
-      return;
+        this.clearSelection();
+        this.selectedFeature = null;
+        return;
     }
 
     this.selectedFeature = {
-      objectId: clickedGraphic.attributes.OBJECTID,
-      layer: clickedGraphic.layer as FeatureLayer
+        objectId: clickedGraphic.attributes.OBJECTID,
+        layer: clickedGraphic.layer as FeatureLayer
     };
+
+    this.clearSelection();
+    
+    // Optimistic update
+    this.selectedGraphic = new Graphic({
+        geometry: clickedGraphic.geometry,
+        symbol: this.selectionSymbol,
+        attributes: clickedGraphic.attributes
+    });
+    this.highlightLayer.add(this.selectedGraphic);
 
     this.refreshHighlight();
   }
 
   private async refreshHighlight() {
-    this.clearSelection();
+    if (this.abortController) {
+      this.abortController.abort();
+    }
 
-    if (!this.selectedFeature) return;
+    if (!this.selectedFeature) {
+        this.clearSelection();
+        return;
+    }
 
     const { objectId, layer } = this.selectedFeature;
     const query = layer.createQuery();
     query.objectIds = [objectId];
     query.returnGeometry = true;
 
+    this.abortController = new AbortController();
+    const { signal } = this.abortController;
+
     try {
-      const { features } = await layer.queryFeatures(query);
-      if (features.length > 0) {
-        this.selectedGraphic = new Graphic({
-          geometry: features[0].geometry,
-          symbol: this.selectionSymbol,
-          attributes: features[0].attributes
-        });
-        this.highlightLayer.add(this.selectedGraphic);
-      }
+        const { features } = await layer.queryFeatures(query, { signal });
+        if (features.length > 0) {
+            if (this.selectedGraphic) {
+                this.selectedGraphic.geometry = features[0].geometry;
+            } else {
+                this.selectedGraphic = new Graphic({
+                    geometry: features[0].geometry,
+                    symbol: this.selectionSymbol,
+                    attributes: features[0].attributes
+                });
+                this.highlightLayer.add(this.selectedGraphic);
+            }
+        }
     } catch (error) {
-      console.error("Failed to refresh highlight:", error);
+        if ((error as any).name !== 'AbortError') {
+            console.error("Failed to refresh highlight:", error);
+        }
+    } finally {
+        this.abortController = null;
     }
   }
 
