@@ -1,58 +1,141 @@
 'use client';
 import ReactECharts from 'echarts-for-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import Polygon from "@arcgis/core/geometry/Polygon";
 import MoreInformationIcon from './MoreInformationIcon';
 import CollapseExpandIcon from './CollapseExpandIcon';
-
-const chartData = {
-  Hour: Array.from({ length: 24 }, (_, i) => ({ name: `${i}`, value: Math.floor(Math.random() * 200) })),
-  Day: [
-    { name: 'Mon', value: 120 },
-    { name: 'Tue', value: 132 },
-    { name: 'Wed', value: 101 },
-    { name: 'Thu', value: 134 },
-    { name: 'Fri', value: 90 },
-    { name: 'Sat', value: 230 },
-    { name: 'Sun', value: 210 },
-  ],
-  'Weekday vs Weekend': [
-    { name: 'Weekday', value: 677 },
-    { name: 'Weekend', value: 440 },
-  ],
-  Month: [
-    { name: 'Jan', value: 115 },
-    { name: 'Feb', value: 127 },
-    { name: 'Mar', value: 122 },
-    { name: 'Apr', value: 130 },
-    { name: 'May', value: 110 },
-    { name: 'Jun', value: 140 },
-    { name: 'Jul', value: 150 },
-    { name: 'Aug', value: 145 },
-    { name: 'Sep', value: 135 },
-    { name: 'Oct', value: 125 },
-    { name: 'Nov', value: 118 },
-    { name: 'Dec', value: 128 },
-  ],
-  Year: Array.from({ length: 5 }, (_, i) => ({ name: `${new Date().getFullYear() - i}`, value: Math.floor(Math.random() * 1500) })).reverse(),
-};
-
-type TimeScale = 'Hour' | 'Day' | 'Weekday vs Weekend' | 'Month' | 'Year';
-const timeScales: TimeScale[] = ['Hour', 'Day', 'Weekday vs Weekend', 'Month', 'Year'];
-
+import { VolumeBreakdownDataService, TimeScale, VolumeBreakdownData } from '../../../../lib/data-services/VolumeBreakdownDataService';
+const timeScales: TimeScale[] = ['Hour', 'Day', 'Week', 'Weekday vs Weekend', 'Month', 'Year'];
 
 interface HoveredBarData {
   value: number;
   name: string;
 }
 
-export default function AggregatedVolumeBreakdown() {
+interface AggregatedVolumeBreakdownProps {
+  selectedGeometry?: Polygon | null;
+  showBicyclist?: boolean;
+  showPedestrian?: boolean;
+}
+
+export default function AggregatedVolumeBreakdown({ 
+  selectedGeometry = null, 
+  showBicyclist = true, 
+  showPedestrian = true 
+}: AggregatedVolumeBreakdownProps) {
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
   const [timeScale, setTimeScale] = useState<TimeScale>('Month');
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [currentData, setCurrentData] = useState<VolumeBreakdownData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Cache for preloaded data by time scale
+  const [dataCache, setDataCache] = useState<Map<TimeScale, VolumeBreakdownData[]>>(new Map());
+  const [cacheKey, setCacheKey] = useState<string>('');
+  const [isPreloading, setIsPreloading] = useState(false);
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
+
+  // Generate cache key based on selection and filters
+  const generateCacheKey = (geometry: Polygon | null, bike: boolean, ped: boolean): string => {
+    if (!geometry) return 'default';
+    const bounds = geometry.extent;
+    return `${bounds.xmin}_${bounds.ymin}_${bounds.xmax}_${bounds.ymax}_${bike}_${ped}`;
+  };
+
+  // Preload all time scales for current selection
+  const preloadAllTimeScales = async (geometry: Polygon | null, bike: boolean, ped: boolean) => {
+    const newCacheKey = generateCacheKey(geometry, bike, ped);
+    const newCache = new Map<TimeScale, VolumeBreakdownData[]>();
+
+    setIsPreloading(true);
+    
+    try {
+      // Load all time scales in parallel
+      const loadPromises = timeScales.map(async (scale) => {
+        try {
+          if (geometry) {
+            const result = await VolumeBreakdownDataService.queryVolumeBreakdown(
+              geometry, scale, bike, ped
+            );
+            return { scale, data: result.error ? VolumeBreakdownDataService.getDefaultData(scale) : result.data };
+          } else {
+            return { scale, data: VolumeBreakdownDataService.getDefaultData(scale) };
+          }
+        } catch (err) {
+          console.error(`Error preloading ${scale} data:`, err);
+          return { scale, data: VolumeBreakdownDataService.getDefaultData(scale) };
+        }
+      });
+
+      const results = await Promise.all(loadPromises);
+      results.forEach(({ scale, data }) => {
+        newCache.set(scale, data);
+      });
+
+      setDataCache(newCache);
+      setCacheKey(newCacheKey);
+      return newCache;
+    } finally {
+      setIsPreloading(false);
+    }
+  };
+
+  // Fetch data when dependencies change
+  useEffect(() => {
+    const fetchData = async () => {
+      const newCacheKey = generateCacheKey(selectedGeometry, showBicyclist, showPedestrian);
+      
+      // Check if we have cached data for this selection
+      if (newCacheKey === cacheKey && dataCache.has(timeScale)) {
+        // Use cached data immediately
+        setCurrentData(dataCache.get(timeScale) || []);
+        setError(null);
+        return;
+      }
+
+      // Show loading and fetch new data
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        if (newCacheKey !== cacheKey) {
+          // Selection changed - preload all time scales
+          const newCache = await preloadAllTimeScales(selectedGeometry, showBicyclist, showPedestrian);
+          setCurrentData(newCache.get(timeScale) || []);
+        } else {
+          // Just time scale changed - load single scale
+          if (selectedGeometry) {
+            const result = await VolumeBreakdownDataService.queryVolumeBreakdown(
+              selectedGeometry, timeScale, showBicyclist, showPedestrian
+            );
+            const data = result.error ? VolumeBreakdownDataService.getDefaultData(timeScale) : result.data;
+            setCurrentData(data);
+            
+            // Update cache
+            const updatedCache = new Map(dataCache);
+            updatedCache.set(timeScale, data);
+            setDataCache(updatedCache);
+            
+            if (result.error) setError(result.error);
+          } else {
+            setCurrentData(VolumeBreakdownDataService.getDefaultData(timeScale));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching volume breakdown data:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error occurred');
+        setCurrentData(VolumeBreakdownDataService.getDefaultData(timeScale));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [selectedGeometry, timeScale, showBicyclist, showPedestrian]);
 
   const onEvents = useMemo(
     () => ({
@@ -66,16 +149,24 @@ export default function AggregatedVolumeBreakdown() {
     [],
   );
 
-  const currentData = chartData[timeScale];
+  // Format large numbers for y-axis (e.g., 60000 → 60K)
+  const formatYAxisNumber = (value: number): string => {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}M`;
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(0)}K`;
+    }
+    return value.toString();
+  };
 
   const option = useMemo(
     () => ({
       grid: {
-        left: '20px',
-        right: '0px',
+        left: '60px',
+        right: '20px',
         top: '20px',
-        bottom: '0px',
-        containLabel: true,
+        bottom: '40px',
+        containLabel: false,
       },
       xAxis: {
         type: 'category',
@@ -111,15 +202,16 @@ export default function AggregatedVolumeBreakdown() {
         },
         axisLabel: {
           color: '#6b7280',
-          fontSize: 14,
-          formatter: (value: number) => value.toLocaleString(),
+          fontSize: 12,
+          formatter: formatYAxisNumber,
+          margin: 8,
         },
         name: 'Avg Daily Traffic',
         nameLocation: 'middle',
-        nameGap: 35,
+        nameGap: 45,
         nameTextStyle: {
           color: '#6b7280',
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: 500,
         },
         splitLine: {
@@ -159,6 +251,21 @@ export default function AggregatedVolumeBreakdown() {
     [currentData, timeScale],
   );
 
+  // Memoize the chart component - always call hooks at the top level
+  const chartComponent = useMemo(
+    () => (
+      <div id="aggregated-volume-breakdown-chart">
+        <ReactECharts
+          option={option}
+          style={{ height: '300px', width: '100%' }}
+          opts={{ renderer: 'canvas' }}
+          onEvents={onEvents}
+        />
+      </div>
+    ),
+    [option, onEvents],
+  );
+
   return (
     <div id="aggregated-volume-breakdown-container" className={`rounded-lg border border-gray-200 bg-white p-4`}>
       <div id="aggregated-volume-breakdown-header" className="flex justify-between items-center">
@@ -172,17 +279,32 @@ export default function AggregatedVolumeBreakdown() {
               id={`aggregated-volume-breakdown-button-${scale.toLowerCase().replace(/\s/g, '-')}`}
               key={scale}
               onClick={() => setTimeScale(scale)}
+              disabled={isLoading}
               // We have to use !outline-none !border-none because Google Chrome does not respect the outline-none class on a hover or click
               className={`px-2 py-1 text-[.8rem] font-semibold rounded-md !outline-none !border-none focus:!outline-none focus:!ring-0 focus:!shadow-none hover:!outline-none hover:!border-none active:!outline-none active:!border-none transition-none ${
                 timeScale === scale
                   ? 'bg-blue-500 text-white'
-                  : 'bg-transparent text-gray-800 hover:bg-gray-200'
+                  : isLoading 
+                    ? 'bg-transparent text-gray-400 cursor-not-allowed'
+                    : 'bg-transparent text-gray-800 hover:bg-gray-200'
               }`}
             >
               {scale}
             </button>
           ))}
         </div>
+
+        
+        {error && (
+          <div id="aggregated-volume-breakdown-error" className="bg-red-50 border border-red-200 rounded-md p-3 mt-2">
+            <div className="text-sm text-red-800">
+              <strong>Data Error:</strong> {error}
+            </div>
+            <div className="text-xs text-red-600 mt-1">
+              Showing default data instead.
+            </div>
+          </div>
+        )}
         <div id="aggregated-volume-breakdown-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
         <p id="aggregated-volume-breakdown-description" className="w-full text-sm text-gray-600">
           Season- and weekday-adjusted average daily traffic per {timeScale.toLowerCase()}, aggregated for all years within selected timeframe
@@ -192,7 +314,7 @@ export default function AggregatedVolumeBreakdown() {
         </p>
 
         <div id="aggregated-volume-breakdown-chart-container" className="relative mt-1">
-          {hoveredBar && (
+          {hoveredBar && !isLoading && (
             <div
               id="volume-chart-tooltip"
               className="absolute -top-0 left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
@@ -201,18 +323,46 @@ export default function AggregatedVolumeBreakdown() {
             </div>
           )}
 
-          {useMemo(
-            () => (
-              <div id="aggregated-volume-breakdown-chart">
-                <ReactECharts
-                  option={option}
-                  style={{ height: '300px', width: '100%' }}
-                  opts={{ renderer: 'canvas' }}
-                  onEvents={onEvents}
-                />
+          {/* Loading overlay */}
+          {isLoading && (
+            <div 
+              id="aggregated-volume-breakdown-loading-overlay" 
+              className="absolute inset-0 bg-white bg-opacity-75 backdrop-blur-sm flex justify-center items-center z-20 rounded-md"
+            >
+              <div className="flex flex-col items-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-3"></div>
+                <span className="text-sm text-gray-700 font-medium">Loading {timeScale.toLowerCase()} data...</span>
+                <span className="text-xs text-gray-500 mt-1">Querying {selectedGeometry ? 'selected area' : 'default data'}</span>
               </div>
-            ),
-            [option, onEvents],
+            </div>
+          )}
+
+          {/* Background preloading indicator */}
+          {isPreloading && !isLoading && (
+            <div 
+              id="aggregated-volume-breakdown-preload-indicator" 
+              className="absolute top-2 right-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full flex items-center z-10"
+            >
+              <div className="animate-spin rounded-full h-3 w-3 border border-blue-400 border-t-transparent mr-1"></div>
+              Preloading...
+            </div>
+          )}
+
+          {currentData.length > 0 ? (
+            <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'}`}>
+              {chartComponent}
+            </div>
+          ) : (
+            <div 
+              id="aggregated-volume-breakdown-no-data" 
+              className="flex justify-center items-center"
+              style={{ height: '300px', width: '100%' }}
+            >
+              <div className="text-center">
+                <div className="text-gray-400 text-sm">No data available for selected area</div>
+                <div className="text-gray-300 text-xs mt-1">Try selecting a different area or time scale</div>
+              </div>
+            </div>
           )}
         </div>
       </div>

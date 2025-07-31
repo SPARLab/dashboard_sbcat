@@ -186,7 +186,11 @@ export default function NewVolumeRightSidebar({
                 spatialResult={volumeResult || null} 
                 isLoading={volumeLoading} 
               />
-              <AggregatedVolumeBreakdown />
+              <AggregatedVolumeBreakdown 
+                selectedGeometry={selectedGeometry}
+                showBicyclist={showBicyclist}
+                showPedestrian={showPedestrian}
+              />
               <YearToYearVolumeComparison />
               <TimelineSparkline
                 sites={timelineData}
