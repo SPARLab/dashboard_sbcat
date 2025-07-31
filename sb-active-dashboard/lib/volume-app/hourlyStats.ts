@@ -83,7 +83,7 @@ export async function queryHourlyCounts(
     return aggregateHourlyData(countsQuery.features);
 
   } catch (error) {
-    console.error("Error querying hourly counts:", error);
+    console.warn("HourlyStats: falling back to empty data (" + (error as any)?.message + ")");
     return getEmptyHourlyStats();
   }
 }

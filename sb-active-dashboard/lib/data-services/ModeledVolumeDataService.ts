@@ -34,30 +34,18 @@ export class ModeledVolumeDataService {
     this.initializeLayers();
   }
 
-  private initializeLayers() {
-    // Fast hexagon tile layer for visualization
-    this.hexagonLayer = new VectorTileLayer({
-      url: "https://spatialcenter.grit.ucsb.edu/portal/home/item.html?id=5d49a74a7ab44126903cee13d7828899",
-      title: "Modeled Volume Hexagons (Dillon)",
-      visible: false
-    });
+      private initializeLayers() {
+        // Fast hexagon tile layer for visualization (use portalItem to avoid ?id query parameter)
+        this.hexagonLayer = new VectorTileLayer({
+          portalItem: { id: "5d49a74a7ab44126903cee13d7828899" },
+          title: "Modeled Volume Hexagons (Dillon)",
+          visible: false
+        });
 
-    // ✅ Real line segment layer for detailed querying (Network layer)
-    this.lineSegmentLayer = new FeatureLayer({
-      url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Modeled_Volumes/FeatureServer/0",
-      title: "Modeled Volume Network (Line Segments)",
-      visible: false, // Keep invisible but queryable for performance
-      outFields: ["objectid", "edgeuid", "osmid", "streetname", "SHAPE__Length"]
-    });
-
-    // ✅ Traffic data table (ATPEvaluationModel)
-    this.trafficDataTable = new FeatureLayer({
-      url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Modeled_Volumes/FeatureServer/1",
-      title: "ATP Evaluation Model Data",
-      visible: false, // Table layer, no geometry to display
-      outFields: ["objectid", "count_type", "aadt", "safety_weight", "year", "strava_id"]
-    });
-    
+        // NOTE: Detailed network and traffic data layers are currently disabled
+        // until a reliable mapping between edgeuid and strava_id is provided.
+        this.lineSegmentLayer = null;
+        this.trafficDataTable = null;
       }
 
   /**
@@ -144,8 +132,7 @@ export class ModeledVolumeDataService {
       return this.processJoinedTrafficData(networkResult.features, dataResult.features, config);
 
     } catch (error) {
-      console.error("❌ Error querying modeled volume data:", error);
-      console.warn('⚠️ Falling back to simulated data');
+      console.info("ModeledVolumeDataService: Falling back to simulated data (" + (error as any)?.message + ")");
       
       return this.generateSimulatedTrafficLevelData(mapView, config);
     }
