@@ -12,14 +12,14 @@ import TimelineSparkline from "../components/right-sidebar/TimelineSparkline";
 import ModeBreakdown from "../components/right-sidebar/ModeBreakdown";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
-import { useSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
+import { useSpatialQuery, useVolumeSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
 
 interface NewVolumeRightSidebarProps {
   activeTab: string;
   showBicyclist: boolean;
   showPedestrian: boolean;
   modelCountsBy: string;
-  mapView?: __esri.MapView;
+  mapView?: __esri.MapView | null;
   selectedGeometry?: Polygon | null;
 }
 
@@ -33,23 +33,46 @@ export default function NewVolumeRightSidebar({
 }: NewVolumeRightSidebarProps) {
   const horizontalMargins = "mx-4";
 
-  // Get AADT layer from map view
+  // Get layers from map view
   const [aadtLayer, setAadtLayer] = useState<FeatureLayer | null>(null);
+  const [sitesLayer, setSitesLayer] = useState<FeatureLayer | null>(null);
+  const [aadtTable, setAadtTable] = useState<FeatureLayer | null>(null);
 
   useEffect(() => {
-    if (mapView) {
+    if (mapView && mapView.map) {
       // Find the AADT layer in the map
       const layer = mapView.map.layers.find(
         (layer) => layer.title === "AADT Count Sites"
       ) as FeatureLayer;
       setAadtLayer(layer || null);
+
+      // For volume app, we also need to access the Sites layer and AADT table directly
+      // These would typically be loaded from the feature service
+      if (layer) {
+        // Create direct references to the Sites and AADT tables
+        const sitesLayerUrl = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/0";
+        const aadtTableUrl = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/2";
+        
+        const sites = new FeatureLayer({ url: sitesLayerUrl });
+        const aadtTableLayer = new FeatureLayer({ url: aadtTableUrl });
+        
+        setSitesLayer(sites);
+        setAadtTable(aadtTableLayer);
+      }
     }
   }, [mapView]);
 
-  // Use spatial query hook
+  // Use spatial query hooks
   const { result: spatialResult, isLoading, error, areaDescription } = useSpatialQuery(
     aadtLayer,
-    selectedGeometry
+    selectedGeometry || null
+  );
+
+  // Use volume-specific spatial query for summary statistics
+  const { result: volumeResult, isLoading: volumeLoading } = useVolumeSpatialQuery(
+    sitesLayer,
+    aadtTable,
+    selectedGeometry || null
   );
 
   // Sample data for the timeline sparkline - this would come from your data source
@@ -162,7 +185,10 @@ export default function NewVolumeRightSidebar({
           <>
             <div className={`space-y-4 ${horizontalMargins} my-4`}>
               <LowDataCoverage />
-              <SummaryStatistics />
+              <SummaryStatistics 
+                spatialResult={volumeResult} 
+                isLoading={volumeLoading} 
+              />
               <AggregatedVolumeBreakdown />
               <YearToYearVolumeComparison />
               <TimelineSparkline

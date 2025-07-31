@@ -2,6 +2,19 @@ import React, { useState } from "react";
 import MoreInformationIconCostBenefitTool from "./MoreInformationIcon";
 import CollapseExpandIcon from "./CollapseExpandIcon";
 
+interface SpatialQueryResult {
+  totalCount: number;
+  medianPedestrianWeekdayAADT?: number;
+  medianPedestrianWeekendAADT?: number;
+  medianBikeWeekdayAADT?: number;
+  medianBikeWeekendAADT?: number;
+}
+
+interface SummaryStatisticsProps {
+  spatialResult?: SpatialQueryResult | null;
+  isLoading?: boolean;
+}
+
 const StatsRow = ({ label, value, tooltip, idPrefix }: { label: string, value: string | number, tooltip?: boolean, idPrefix: string }) => (
     <div className="grid grid-cols-[1fr,auto] items-center gap-2" id={`${idPrefix}-row`}>
         <div className="flex items-center" id={`${idPrefix}-label-container`}>
@@ -12,11 +25,25 @@ const StatsRow = ({ label, value, tooltip, idPrefix }: { label: string, value: s
     </div>
 );
 
-export default function SummaryStatistics() {
+export default function SummaryStatistics({ spatialResult, isLoading }: SummaryStatisticsProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     const toggleCollapse = () => {
         setIsCollapsed(!isCollapsed);
+    };
+
+    // Extract values from spatial result with defaults
+    const sitesSelected = spatialResult?.totalCount || 0;
+    const pedWeekdayAADT = spatialResult?.medianPedestrianWeekdayAADT || 0;
+    const pedWeekendAADT = spatialResult?.medianPedestrianWeekendAADT || 0;
+    const bikeWeekdayAADT = spatialResult?.medianBikeWeekdayAADT || 0;
+    const bikeWeekendAADT = spatialResult?.medianBikeWeekendAADT || 0;
+
+    // Format values for display
+    const formatValue = (value: number) => {
+        if (isLoading) return "Loading...";
+        if (value === 0) return "No data";
+        return Math.round(value).toLocaleString();
     };
 
   return (
@@ -35,21 +62,45 @@ export default function SummaryStatistics() {
         </div>
       <div id="summary-statistics-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-y-hidden ${isCollapsed ? 'max-h-0' : 'max-h-96'}`}>
           <div id="summary-statistics-content" className="space-y-2 text-sm">
-              <StatsRow idPrefix="sites-selected" label="Sites Selected" value={7} />
+              <StatsRow 
+                idPrefix="sites-selected" 
+                label="Sites Selected" 
+                value={isLoading ? "Loading..." : sitesSelected} 
+              />
 
               <div id="weekday-section" className="space-y-2">
                 <p id="weekday-label" className="font-medium text-gray-600">Weekday</p>
                 <div id="weekday-stats" className="pl-4 space-y-2">
-                    <StatsRow idPrefix="weekday-ped-cbt" label="Median Pedestrian CBT" value={102} tooltip />
-                    <StatsRow idPrefix="weekday-bike-cbt" label="Median Bike CBT" value={56} tooltip />
+                    <StatsRow 
+                      idPrefix="weekday-ped-aadt" 
+                      label="Median Pedestrian AADT" 
+                      value={formatValue(pedWeekdayAADT)} 
+                      tooltip 
+                    />
+                    <StatsRow 
+                      idPrefix="weekday-bike-aadt" 
+                      label="Median Bike AADT" 
+                      value={formatValue(bikeWeekdayAADT)} 
+                      tooltip 
+                    />
                 </div>
               </div>
 
               <div id="weekend-section" className="space-y-2">
                 <p id="weekend-label" className="font-medium text-gray-600">Weekend</p>
                 <div id="weekend-stats" className="pl-4 space-y-2">
-                    <StatsRow idPrefix="weekend-ped-cbt" label="Median Pedestrian CBT" value={89} tooltip />
-                    <StatsRow idPrefix="weekend-bike-cbt" label="Median Bike CBT" value={67} tooltip />
+                    <StatsRow 
+                      idPrefix="weekend-ped-aadt" 
+                      label="Median Pedestrian AADT" 
+                      value={formatValue(pedWeekendAADT)} 
+                      tooltip 
+                    />
+                    <StatsRow 
+                      idPrefix="weekend-bike-aadt" 
+                      label="Median Bike AADT" 
+                      value={formatValue(bikeWeekendAADT)} 
+                      tooltip 
+                    />
                 </div>
               </div>
           </div>
