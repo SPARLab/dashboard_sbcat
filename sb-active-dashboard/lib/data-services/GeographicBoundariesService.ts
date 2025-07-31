@@ -35,7 +35,11 @@ export class GeographicBoundariesService {
   private hoveredGraphic: Graphic | null = null;
   private selectedGraphic: Graphic | null = null;
   private interactivityHandlers: __esri.Handle[] = [];
+  private domHandlers: { element: HTMLElement, type: string, handler: EventListener }[] = [];
   private hitTestInProgress = false;
+  private isMouseOverMap = false;
+  private hoverCleanupTimeout: number | null = null;
+  private lastPointerPosition: { x: number, y: number } | null = null;
   
   private abortController: AbortController | null = null;
   
@@ -111,11 +115,31 @@ export class GeographicBoundariesService {
     this.cleanupInteractivity();
 
     const pointerMoveHandler = mapView.on("pointer-move", (event) => {
-        if (this.hitTestInProgress) return;
+        // Clear any pending hover cleanup since we have fresh mouse movement
+        this.clearHoverCleanupTimeout();
+        
+        // Store the current pointer position for boundary checking
+        this.lastPointerPosition = { x: event.x, y: event.y };
+        
+        if (!this.isMouseOverMap || this.hitTestInProgress) return;
+        
+        // Additional boundary check: ensure pointer is actually within map container
+        if (!this.isPointerWithinMapBounds(event)) {
+            this.scheduleHoverCleanup();
+            return;
+        }
+        
         this.hitTestInProgress = true;
 
         mapView.hitTest(event, { include: layers })
             .then(response => {
+                // Double-check we're still over the map when the async operation completes
+                if (!this.isMouseOverMap) {
+                    this.hitTestInProgress = false;
+                    this.scheduleHoverCleanup();
+                    return;
+                }
+                
                 const graphic = response.results.length > 0 && response.results[0].type === "graphic" 
                     ? response.results[0].graphic 
                     : null;
@@ -143,9 +167,55 @@ export class GeographicBoundariesService {
         { initial: true }
     );
 
+    if (mapView.container) {
+        const mouseEnterHandler = () => { 
+            this.isMouseOverMap = true;
+            this.clearHoverCleanupTimeout();
+        };
+        const mouseLeaveHandler = () => {
+            this.isMouseOverMap = false;
+            // Use debounced cleanup to prevent flicker from race conditions
+            this.scheduleHoverCleanup();
+        };
+        mapView.container.addEventListener("mouseenter", mouseEnterHandler);
+        mapView.container.addEventListener("mouseleave", mouseLeaveHandler);
+        this.domHandlers = [
+            { element: mapView.container, type: 'mouseenter', handler: mouseEnterHandler },
+            { element: mapView.container, type: 'mouseleave', handler: mouseLeaveHandler }
+        ];
+    }
+
     this.interactivityHandlers = [pointerMoveHandler, clickHandler, stationaryHandle];
   }
   
+  private clearHoverCleanupTimeout() {
+    if (this.hoverCleanupTimeout !== null) {
+      clearTimeout(this.hoverCleanupTimeout);
+      this.hoverCleanupTimeout = null;
+    }
+  }
+
+  private scheduleHoverCleanup() {
+    this.clearHoverCleanupTimeout();
+    // Small delay to handle race conditions between mouseleave and pending pointer-move events
+    this.hoverCleanupTimeout = window.setTimeout(() => {
+      this.handleHover(null);
+      this.hoverCleanupTimeout = null;
+    }, 16); // One frame at 60fps - minimal but sufficient delay
+  }
+
+  private isPointerWithinMapBounds(event: any): boolean {
+    if (!this.mapView?.container) return true;
+    
+    const rect = this.mapView.container.getBoundingClientRect();
+    const { clientX, clientY } = event.native || event;
+    
+    return clientX >= rect.left && 
+           clientX <= rect.right && 
+           clientY >= rect.top && 
+           clientY <= rect.bottom;
+  }
+
   private handleHover(newlyHovered: Graphic | null) {
     if (this.mapView?.container) {
       this.mapView.container.style.cursor = "default";
@@ -251,11 +321,16 @@ export class GeographicBoundariesService {
   private cleanupInteractivity() {
     this.interactivityHandlers.forEach(handler => handler.remove());
     this.interactivityHandlers = [];
+
+    this.domHandlers.forEach(({ element, type, handler }) => element.removeEventListener(type, handler));
+    this.domHandlers = [];
     
+    this.clearHoverCleanupTimeout();
     this.clearSelection();
     this.highlightLayer.removeAll();
     this.hoveredGraphic = null;
     this.selectedFeature = null;
+    this.lastPointerPosition = null;
     
     if (this.mapView?.container) {
       this.mapView.container.style.cursor = "default";
