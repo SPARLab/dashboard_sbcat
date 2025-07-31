@@ -33,6 +33,9 @@ export class GeographicBoundariesService {
   private hoveredGraphic: Graphic | null = null;
   private interactivityHandlers: __esri.Handle[] = [];
   private hitTestInProgress = false;
+  
+  // Store highlight handle for proper cleanup
+  private currentHighlight: __esri.Handle | null = null;
 
   private selectedSymbol = new SimpleFillSymbol({
     color: [0, 0, 0, 0], // Transparent fill
@@ -174,9 +177,15 @@ export class GeographicBoundariesService {
       }
   }
   
-  private handleSelection(clickedGraphic: Graphic) {
+  private async handleSelection(clickedGraphic: Graphic) {
       const clickedId = clickedGraphic.attributes.OBJECTID;
       const graphicsToRemove = [];
+
+      // Clear existing highlight
+      if (this.currentHighlight) {
+          this.currentHighlight.remove();
+          this.currentHighlight = null;
+      }
 
       // Consolidate graphics to be removed
       if (this.hoveredGraphic) {
@@ -193,14 +202,30 @@ export class GeographicBoundariesService {
       }
 
       // If the clicked graphic was not the one selected, or if nothing was selected,
-      // create and add the new selection graphic.
+      // use LayerView's built-in highlight for better zoom performance
       if (!this.selectedGraphic || this.selectedGraphic.attributes.OBJECTID !== clickedId) {
-          this.selectedGraphic = new Graphic({
-              geometry: clickedGraphic.geometry,
-              attributes: clickedGraphic.attributes,
-              symbol: this.selectedSymbol
-          });
-          this.highlightLayer.add(this.selectedGraphic);
+          try {
+              const sourceLayer = clickedGraphic.layer as FeatureLayer;
+              const layerView = await this.mapView!.whenLayerView(sourceLayer);
+              
+              // Set highlight options for blue outline
+              this.mapView!.highlightOptions = {
+                  color: [30, 144, 255, 1],
+                  fillOpacity: 0
+              };
+              
+              this.currentHighlight = layerView.highlight(clickedGraphic);
+              this.selectedGraphic = clickedGraphic;
+          } catch (error) {
+              console.error("Failed to highlight feature:", error);
+              // Fallback to graphic-based highlight
+              this.selectedGraphic = new Graphic({
+                  geometry: clickedGraphic.geometry,
+                  attributes: clickedGraphic.attributes,
+                  symbol: this.selectedSymbol
+              });
+              this.highlightLayer.add(this.selectedGraphic);
+          }
       } else {
           // The user clicked the currently selected graphic, so we are deselecting it.
           this.selectedGraphic = null;
@@ -210,6 +235,12 @@ export class GeographicBoundariesService {
   private cleanupInteractivity() {
     this.interactivityHandlers.forEach(handler => handler.remove());
     this.interactivityHandlers = [];
+    
+    if (this.currentHighlight) {
+        this.currentHighlight.remove();
+        this.currentHighlight = null;
+    }
+    
     this.highlightLayer.removeAll();
     this.selectedGraphic = null;
     this.hoveredGraphic = null;
