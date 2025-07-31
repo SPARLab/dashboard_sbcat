@@ -3,9 +3,13 @@ import NewVolumeSubHeader from "./layout/NewVolumeSubHeader";
 import NewVolumeLeftSidebar from "./layout/NewVolumeLeftSidebar";
 import NewVolumeRightSidebar from "./layout/NewVolumeRightSidebar";
 import NewVolumeMap from "./components/map/NewVolumeMap";
+import { useSelection } from "../../lib/hooks/useSelection";
 
 export default function NewVolumeApp() {
   const [activeTab, setActiveTab] = useState('raw-data');
+  
+  // Selection hook for polygon selection
+  const { selectedGeometry, onSelectionChange } = useSelection();
   
   // Map-related state to share between components
   const [showBicyclist, setShowBicyclist] = useState(true);
@@ -42,6 +46,7 @@ export default function NewVolumeApp() {
           modelCountsBy={modelCountsBy}
           onMapViewReady={handleMapViewReady}
           geographicLevel={geographicLevel}
+          onSelectionChange={onSelectionChange}
         />
         <NewVolumeRightSidebar 
           activeTab={activeTab}
@@ -49,6 +54,7 @@ export default function NewVolumeApp() {
           showPedestrian={showPedestrian}
           modelCountsBy={modelCountsBy}
           mapView={mapView}
+          selectedGeometry={selectedGeometry}
         />
       </div>
       {/* Footer */}

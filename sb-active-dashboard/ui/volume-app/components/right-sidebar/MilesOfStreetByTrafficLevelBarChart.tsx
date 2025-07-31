@@ -2,6 +2,7 @@
 import ReactECharts from 'echarts-for-react';
 import { useMemo, useState, useEffect } from 'react';
 import { ModeledVolumeChartDataService } from '../../../../lib/data-services/ModeledVolumeChartDataService';
+import Polygon from "@arcgis/core/geometry/Polygon";
 
 // Static fallback data for when real data isn't available
 const fallbackChartData = [
@@ -27,6 +28,7 @@ interface MilesOfStreetByTrafficLevelBarChartProps {
   showPedestrian?: boolean;
   modelCountsBy?: string;
   year?: number;
+  selectedGeometry?: Polygon | null;
 }
 
 interface HoveredBarData {
@@ -40,7 +42,8 @@ export default function MilesOfStreetByTrafficLevelBarChart({
   showBicyclist = true,
   showPedestrian = true,
   modelCountsBy = 'cost-benefit',
-  year = 2023
+  year = 2023,
+  selectedGeometry
 }: MilesOfStreetByTrafficLevelBarChartProps) {
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
   const [chartData, setChartData] = useState(fallbackChartData);
@@ -89,7 +92,7 @@ export default function MilesOfStreetByTrafficLevelBarChart({
       // Use fallback data for raw data or when no map view
       setChartData([]);
     }
-  }, [dataType, mapView, showBicyclist, showPedestrian, modelCountsBy, year]);
+  }, [dataType, mapView, showBicyclist, showPedestrian, modelCountsBy, year, selectedGeometry]);
 
   const onEvents = useMemo(
     () => ({
@@ -202,9 +205,20 @@ export default function MilesOfStreetByTrafficLevelBarChart({
       </div>
       <div className="w-full h-[1px] bg-gray-200"></div>
       <p className="w-full mt-1 text-sm text-gray-600">
-        Miles within network assigned to each category, based on current selection
+        Miles within network assigned to each category{selectedGeometry ? ', filtered by selected area' : ', based on current map view'}
         {dataType === 'raw-data' && <span className="text-gray-500"> (Estimated from count sites)</span>}
       </p>
+      
+      {/* Show data source indicator */}
+      <div className="w-full mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-md">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
+          <span className="text-xs font-medium text-amber-800">Simulated Data</span>
+        </div>
+        <p className="text-xs text-amber-700 mt-1">
+          Real traffic data integration is pending. Values shown are for demonstration purposes.
+        </p>
+      </div>
 
       {error && (
         <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">

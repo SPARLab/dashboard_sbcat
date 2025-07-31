@@ -11,6 +11,7 @@ import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 import FeatureEffect from "@arcgis/core/layers/support/FeatureEffect";
+import Polygon from "@arcgis/core/geometry/Polygon";
 
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 
@@ -44,6 +45,9 @@ export class GeographicBoundariesService {
   private abortController: AbortController | null = null;
   
   private selectedFeature: { objectId: number, layer: FeatureLayer } | null = null;
+  
+  // Selection change callback
+  private onSelectionChange: ((geometry: Polygon | null) => void) | null = null;
 
   private hoverSymbol = new SimpleFillSymbol({
     color: [0, 0, 0, 0],
@@ -83,6 +87,10 @@ export class GeographicBoundariesService {
 
   getBoundaryLayers(): (FeatureLayer | GraphicsLayer)[] {
     return [this.cityLayer, this.serviceAreaLayer, this.highlightLayer];
+  }
+  
+  setSelectionChangeCallback(callback: (geometry: Polygon | null) => void) {
+    this.onSelectionChange = callback;
   }
   
   async switchGeographicLevel(level: GeographicLevel['id'], mapView: MapView) {
@@ -249,6 +257,10 @@ export class GeographicBoundariesService {
     if (!clickedGraphic || clickedGraphic.attributes.OBJECTID === this.selectedFeature?.objectId) {
         this.clearSelection();
         this.selectedFeature = null;
+        // Notify that selection was cleared
+        if (this.onSelectionChange) {
+          this.onSelectionChange(null);
+        }
         return;
     }
 
@@ -268,6 +280,11 @@ export class GeographicBoundariesService {
     this.highlightLayer.add(this.selectedGraphic);
 
     this.refreshHighlight();
+    
+    // Notify about the new selection
+    if (this.onSelectionChange && clickedGraphic.geometry) {
+      this.onSelectionChange(clickedGraphic.geometry as Polygon);
+    }
   }
 
   private async refreshHighlight() {

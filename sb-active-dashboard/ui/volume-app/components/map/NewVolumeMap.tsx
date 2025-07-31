@@ -7,6 +7,7 @@ import { queryHourlyCounts, HourlyData } from "../../../../lib/volume-app/hourly
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import GroupLayer from "@arcgis/core/layers/GroupLayer";
 import { GeographicBoundariesService } from "../../../../lib/data-services/GeographicBoundariesService";
+import Polygon from "@arcgis/core/geometry/Polygon";
 
 interface NewVolumeMapProps {
   activeTab: string;
@@ -15,6 +16,7 @@ interface NewVolumeMapProps {
   modelCountsBy: string;
   onMapViewReady?: (mapView: __esri.MapView) => void;
   geographicLevel: string;
+  onSelectionChange?: (geometry: Polygon | null) => void;
 }
 
 export default function NewVolumeMap({ 
@@ -24,6 +26,7 @@ export default function NewVolumeMap({
   modelCountsBy,
   onMapViewReady,
   geographicLevel,
+  onSelectionChange,
 }: NewVolumeMapProps) {
   const mapViewRef = useRef<any>(null);
   const [viewReady, setViewReady] = useState(false);
@@ -33,7 +36,14 @@ export default function NewVolumeMap({
   const [hexagonLayer, setHexagonLayer] = useState<GroupLayer | null>(null);
   
   // Boundary service state
-  const [boundaryService] = useState(() => new GeographicBoundariesService());
+  const [boundaryService] = useState(() => {
+    const service = new GeographicBoundariesService();
+    // Set up selection callback if provided
+    if (onSelectionChange) {
+      service.setSelectionChangeCallback(onSelectionChange);
+    }
+    return service;
+  });
 
   // Hourly data for Cost Benefit Tool (AADT)
   const [hourlyData, setHourlyData] = useState<HourlyData[]>([]);
@@ -89,6 +99,13 @@ export default function NewVolumeMap({
       boundaryService.switchGeographicLevel(geographicLevel as any, mapViewRef.current);
     }
   }, [viewReady, boundaryService, geographicLevel]);
+
+  // Update selection callback when it changes
+  useEffect(() => {
+    if (onSelectionChange) {
+      boundaryService.setSelectionChangeCallback(onSelectionChange);
+    }
+  }, [boundaryService, onSelectionChange]);
 
   // Control layers based on tab and model counts selection
   useEffect(() => {

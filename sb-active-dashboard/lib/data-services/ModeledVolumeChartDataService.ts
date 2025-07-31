@@ -5,6 +5,7 @@
 
 import { ModeledVolumeDataService } from './ModeledVolumeDataService';
 import MapView from "@arcgis/core/views/MapView";
+import Geometry from "@arcgis/core/geometry/Geometry";
 
 interface ChartDataConfig {
   dataSource: 'dillon' | 'lily';
@@ -38,37 +39,39 @@ export class ModeledVolumeChartDataService {
    */
   async getTrafficLevelBreakdownData(
     mapView: MapView,
-    config: ChartDataConfig
+    config: ChartDataConfig,
+    geometry?: Geometry
   ): Promise<TrafficLevelBreakdownData> {
     try {
-      // Get raw traffic level data
+      // Get raw traffic level data - always falls back to simulated data currently
+      // Real data integration pending due to missing edgeuid/strava_id mapping
       const rawData = await this.volumeDataService.getTrafficLevelData(mapView, config);
       
-      // Calculate totals and percentages
-      const totalMiles = rawData.totalMiles.reduce((sum, miles) => sum + miles, 0);
-      const percentages = rawData.totalMiles.map(miles => 
+      // Calculate totals and percentages (using simulated data)
+      const totalMiles = rawData.totalMiles?.reduce((sum, miles) => sum + miles, 0) || 0;
+      const percentages = rawData.totalMiles?.map(miles => 
         totalMiles > 0 ? (miles / totalMiles) * 100 : 0
-      );
+      ) || [];
 
       return {
-        categories: rawData.categories,
-        totalMiles: rawData.totalMiles,
+        categories: rawData.categories || [],
+        totalMiles: rawData.totalMiles || [],
         percentages,
         details: {
           low: {
-            miles: rawData.details.low.miles,
-            percentage: percentages[0],
-            segments: rawData.details.low.segments
+            miles: rawData.details?.low.miles || 0,
+            percentage: percentages[0] || 0,
+            segments: rawData.details?.low.segments || 0
           },
           medium: {
-            miles: rawData.details.medium.miles,
-            percentage: percentages[1],
-            segments: rawData.details.medium.segments
+            miles: rawData.details?.medium.miles || 0,
+            percentage: percentages[1] || 0,
+            segments: rawData.details?.medium.segments || 0
           },
           high: {
-            miles: rawData.details.high.miles,
-            percentage: percentages[2],
-            segments: rawData.details.high.segments
+            miles: rawData.details?.high.miles || 0,
+            percentage: percentages[2] || 0,
+            segments: rawData.details?.high.segments || 0
           }
         },
         totalNetworkMiles: totalMiles
@@ -97,7 +100,8 @@ export class ModeledVolumeChartDataService {
    */
   async getSummaryStatistics(
     mapView: MapView,
-    config: ChartDataConfig
+    config: ChartDataConfig,
+    geometry?: Geometry
   ): Promise<{
     totalNetworkMiles: number;
     avgDailyBikes: number;
@@ -106,7 +110,7 @@ export class ModeledVolumeChartDataService {
     dataQuality: 'High' | 'Medium' | 'Low';
   }> {
     try {
-      const trafficData = await this.getTrafficLevelBreakdownData(mapView, config);
+      const trafficData = await this.getTrafficLevelBreakdownData(mapView, config, geometry);
       
       return {
         totalNetworkMiles: trafficData.totalNetworkMiles,

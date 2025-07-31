@@ -6,6 +6,7 @@
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import VectorTileLayer from "@arcgis/core/layers/VectorTileLayer";
 import MapView from "@arcgis/core/views/MapView";
+import Geometry from "@arcgis/core/geometry/Geometry";
 
 interface ModeledDataConfig {
   dataSource: 'dillon' | 'lily';
@@ -46,7 +47,7 @@ export class ModeledVolumeDataService {
       url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Modeled_Volumes/FeatureServer/0",
       title: "Modeled Volume Network (Line Segments)",
       visible: false, // Keep invisible but queryable for performance
-      outFields: ["objectid", "edgeuid", "osmid", "streetName", "SHAPE__Length"]
+      outFields: ["objectid", "edgeuid", "osmid", "streetname", "SHAPE__Length"]
     });
 
     // ✅ Traffic data table (ATPEvaluationModel)
@@ -93,6 +94,19 @@ export class ModeledVolumeDataService {
     mapView: MapView, 
     config: ModeledDataConfig
   ): Promise<TrafficLevelData> {
+    return this.getTrafficLevelDataWithGeometry(mapView, config, mapView.extent);
+  }
+
+
+
+  /**
+   * Get traffic level breakdown data for a specific geometry (e.g., selected polygon)
+   */
+  async getTrafficLevelDataWithGeometry(
+    mapView: MapView, 
+    config: ModeledDataConfig,
+    geometry: Geometry
+  ): Promise<TrafficLevelData> {
 
     if (!this.lineSegmentLayer || !this.trafficDataTable) {
       console.warn('⚠️ Required layers not available - using simulation data');
@@ -101,12 +115,14 @@ export class ModeledVolumeDataService {
 
     try {
       
-      // Step 1: Query line segments in the current map extent
+      // Step 1: Query line segments within the provided geometry
       const networkQuery = this.lineSegmentLayer.createQuery();
-      networkQuery.geometry = mapView.extent;
+      networkQuery.geometry = geometry;
       networkQuery.spatialRelationship = "intersects";
-      networkQuery.outFields = ["objectid", "edgeuid", "osmid", "streetName", "SHAPE__Length"];
+      networkQuery.outFields = ["objectid", "edgeuid", "osmid", "streetname", "SHAPE__Length"];
       networkQuery.returnGeometry = true;
+      networkQuery.num = 5000; // Set explicit limit higher than default
+      networkQuery.start = 0; // Start from beginning
 
       const networkResult = await this.lineSegmentLayer.queryFeatures(networkQuery);
 
