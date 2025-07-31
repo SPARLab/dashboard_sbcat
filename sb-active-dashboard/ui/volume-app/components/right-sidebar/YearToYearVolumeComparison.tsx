@@ -4,11 +4,19 @@ import { useMemo, useState } from 'react';
 import MoreInformationIcon from './MoreInformationIcon';
 import CollapseExpandIcon from './CollapseExpandIcon';
 
+// Helper function to format hour as 12-hour time with AM/PM
+const formatHour = (hour: number): string => {
+  if (hour === 0) return '12 AM';
+  if (hour === 12) return '12 PM';
+  if (hour < 12) return `${hour} AM`;
+  return `${hour - 12} PM`;
+};
+
 // Sample data for different time scales comparing two years
 const chartData = {
   Hour: {
-    2023: Array.from({ length: 24 }, (_, i) => ({ name: `${i}`, value: Math.floor(Math.random() * 50) + 100 })),
-    2024: Array.from({ length: 24 }, (_, i) => ({ name: `${i}`, value: Math.floor(Math.random() * 50) + 95 })),
+    2023: Array.from({ length: 24 }, (_, i) => ({ name: formatHour(i), value: Math.floor(Math.random() * 50) + 100 })),
+    2024: Array.from({ length: 24 }, (_, i) => ({ name: formatHour(i), value: Math.floor(Math.random() * 50) + 95 })),
   },
   Day: {
     2023: [

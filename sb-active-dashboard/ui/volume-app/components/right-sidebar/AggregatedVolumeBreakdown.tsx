@@ -340,14 +340,14 @@ export default function AggregatedVolumeBreakdown({
           </div>
         )}
         <div id="aggregated-volume-breakdown-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
-        <p id="aggregated-volume-breakdown-description" className="w-full text-sm text-gray-600">
+        <div id="aggregated-volume-breakdown-description" className="w-full text-sm text-gray-600">
           {timeScale === 'Hour' 
             ? `Average hourly traffic patterns across selected sites` 
             : `Average daily traffic aggregated by ${timeScale.toLowerCase()} across selected sites`}
           <span id="aggregated-volume-breakdown-info-icon-container" className="ml-1 inline-flex align-middle">
             <Tooltip text={getCalculationExplanation(timeScale)} align="right" />
           </span>
-        </p>
+        </div>
 
         <div id="aggregated-volume-breakdown-chart-container" className="relative mt-1">
           {hoveredBar && !isLoading && (
@@ -355,7 +355,7 @@ export default function AggregatedVolumeBreakdown({
               id="volume-chart-tooltip"
               className="absolute -top-0 left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
             >
-              {`${hoveredBar.value.toLocaleString()} Pedestrians & Bicyclists`}
+              {`${hoveredBar.value.toLocaleString()} Pedestrians & Bicyclists (${hoveredBar.name})`}
             </div>
           )}
 
