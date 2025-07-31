@@ -10,6 +10,7 @@ import MapView from "@arcgis/core/views/MapView";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
+import FeatureEffect from "@arcgis/core/layers/support/FeatureEffect";
 
 const BOUNDARY_LAYER_URLS = {
   CITIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/25", // Incorporated Places
@@ -29,52 +30,43 @@ export class GeographicBoundariesService {
   private mapView: MapView | null = null;
   
   // --- Interactivity State ---
-  private selectedGraphic: Graphic | null = null;
   private hoveredGraphic: Graphic | null = null;
+  private selectedGraphic: Graphic | null = null;
   private interactivityHandlers: __esri.Handle[] = [];
   private hitTestInProgress = false;
   
-  // Store highlight handle for proper cleanup
-  private currentHighlight: __esri.Handle | null = null;
+  // Track selected feature and highlight
+  private selectedFeatureId: number | null = null;
 
-  private selectedSymbol = new SimpleFillSymbol({
-    color: [0, 0, 0, 0], // Transparent fill
-    outline: new SimpleLineSymbol({ color: [30, 144, 255, 1], width: 3 })
-  });
-  
   private hoverSymbol = new SimpleFillSymbol({
     color: [0, 0, 0, 0], // Transparent fill
-    outline: new SimpleLineSymbol({ color: [255, 255, 0, 1], width: 3 })
+    outline: new SimpleLineSymbol({ color: [255, 255, 0, 1], width: 4 })
+  });
+
+  private selectionSymbol = new SimpleFillSymbol({
+    color: [0, 0, 0, 0], // Transparent fill
+    outline: new SimpleLineSymbol({ color: [30, 144, 255, 1], width: 4 })
   });
 
   constructor() {
-    this.cityLayer = new FeatureLayer({
-      url: BOUNDARY_LAYER_URLS.CITIES,
-      title: "Cities & Towns",
-      visible: false,
-      popupEnabled: false,
-      outFields: ["OBJECTID", "NAME", "NAMELSAD"],
-      renderer: new SimpleRenderer({
-        symbol: new SimpleFillSymbol({
-          color: [0, 0, 0, 0],
-          outline: new SimpleLineSymbol({ color: [70, 130, 180, 0.8], width: 2 })
-        })
-      })
-    });
-
-    this.serviceAreaLayer = new FeatureLayer({
-        url: BOUNDARY_LAYER_URLS.SERVICE_AREAS,
-        title: "Census Designated Places",
+    const createBoundaryLayer = (url: string, title: string) => {
+      return new FeatureLayer({
+        url,
+        title,
         visible: false,
         popupEnabled: false,
-        outFields: ["OBJECTID", "NAME", "NAMELSAD"],
+        outFields: ["OBJECTID", "NAME"],
         renderer: new SimpleRenderer({
-            symbol: new SimpleFillSymbol({
-                color: [0, 0, 0, 0],
-                outline: new SimpleLineSymbol({ color: [70, 130, 180, 0.8], width: 2 })
-            })
+          symbol: new SimpleFillSymbol({
+            color: [0, 0, 0, 0],
+            outline: new SimpleLineSymbol({ color: [70, 130, 180, 0.8], width: 2 })
+          })
         })
-    });
+      });
+    };
+    
+    this.cityLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.CITIES, "Cities & Towns");
+    this.serviceAreaLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.SERVICE_AREAS, "Census Designated Places");
 
     this.highlightLayer = new GraphicsLayer({
         title: "Boundary Highlights",
@@ -82,10 +74,6 @@ export class GeographicBoundariesService {
     });
   }
 
-  /**
-   * Returns all layers managed by the service. The calling component
-   * is responsible for adding them to the map.
-   */
   getBoundaryLayers(): (FeatureLayer | GraphicsLayer)[] {
     return [this.cityLayer, this.serviceAreaLayer, this.highlightLayer];
   }
@@ -94,27 +82,28 @@ export class GeographicBoundariesService {
     this.hideAllBoundaryLayers();
     this.mapView = mapView;
 
-    if (level === 'city') {
-        this.cityLayer.visible = true;
-        this.setupCityInteractivity(mapView, [this.cityLayer]);
-    } else if (level === 'city-service-area') {
-        this.cityLayer.visible = true;
-        this.serviceAreaLayer.visible = true;
-        this.setupCityInteractivity(mapView, [this.cityLayer, this.serviceAreaLayer]);
+    const layers: FeatureLayer[] = [];
+    if (level === 'city' || level === 'city-service-area') {
+      this.cityLayer.visible = true;
+      layers.push(this.cityLayer);
+    }
+    if (level === 'city-service-area') {
+      this.serviceAreaLayer.visible = true;
+      layers.push(this.serviceAreaLayer);
+    }
+
+    if (layers.length > 0) {
+      this.setupInteractivity(mapView, layers);
     }
   }
   
   private hideAllBoundaryLayers() {
     this.cleanupInteractivity();
-    if (this.cityLayer) {
-      this.cityLayer.visible = false;
-    }
-    if (this.serviceAreaLayer) {
-        this.serviceAreaLayer.visible = false;
-    }
+    this.cityLayer.visible = false;
+    this.serviceAreaLayer.visible = false;
   }
   
-  private setupCityInteractivity(mapView: MapView, layers: FeatureLayer[]) {
+  private setupInteractivity(mapView: MapView, layers: FeatureLayer[]) {
     this.cleanupInteractivity();
 
     const pointerMoveHandler = mapView.on("pointer-move", (event) => {
@@ -136,113 +125,84 @@ export class GeographicBoundariesService {
     });
 
     const clickHandler = mapView.on("click", (event) => {
-        if (this.hoveredGraphic) {
-            this.handleSelection(this.hoveredGraphic);
-        } else {
-            mapView.hitTest(event, { include: layers }).then(response => {
-                if (response.results.length > 0 && response.results[0].type === "graphic") {
-                    this.handleSelection(response.results[0].graphic);
-                }
-            });
-        }
+      mapView.hitTest(event, { include: layers }).then(response => {
+          const graphic = response.results.length > 0 && response.results[0].type === "graphic"
+              ? response.results[0].graphic as Graphic
+              : null;
+          this.handleSelection(graphic);
+      });
     });
 
     this.interactivityHandlers = [pointerMoveHandler, clickHandler];
   }
   
   private handleHover(newlyHovered: Graphic | null) {
-      const isSameHover = this.hoveredGraphic?.attributes.OBJECTID === newlyHovered?.attributes.OBJECTID;
-      if (isSameHover) return;
-      
-      if (this.hoveredGraphic) {
-          this.highlightLayer.remove(this.hoveredGraphic);
-          this.hoveredGraphic = null;
-      }
-      
-      if (this.mapView && this.mapView.container) {
-        this.mapView.container.style.cursor = "default";
-      }
-      
-      const isSelected = newlyHovered?.attributes.OBJECTID === this.selectedGraphic?.attributes.OBJECTID;
-      if (newlyHovered && !isSelected) {
-          this.hoveredGraphic = new Graphic({
-              geometry: newlyHovered.geometry,
-              attributes: newlyHovered.attributes,
-              symbol: this.hoverSymbol
-          });
-          this.highlightLayer.add(this.hoveredGraphic);
-          if (this.mapView && this.mapView.container) {
-            this.mapView.container.style.cursor = "pointer";
-          }
-      }
+    if (this.mapView?.container) {
+      this.mapView.container.style.cursor = "default";
+    }
+
+    if (this.hoveredGraphic) {
+      this.highlightLayer.remove(this.hoveredGraphic);
+      this.hoveredGraphic = null;
+    }
+    
+    const isSelected = newlyHovered?.attributes.OBJECTID === this.selectedFeatureId;
+    if (newlyHovered && !isSelected) {
+        this.hoveredGraphic = new Graphic({
+            geometry: newlyHovered.geometry,
+            attributes: newlyHovered.attributes,
+            symbol: this.hoverSymbol
+        });
+        this.highlightLayer.add(this.hoveredGraphic);
+        if (this.mapView?.container) {
+          this.mapView.container.style.cursor = "pointer";
+        }
+    }
   }
   
-  private async handleSelection(clickedGraphic: Graphic) {
-      const clickedId = clickedGraphic.attributes.OBJECTID;
-      const graphicsToRemove = [];
-
-      // Clear existing highlight
-      if (this.currentHighlight) {
-          this.currentHighlight.remove();
-          this.currentHighlight = null;
-      }
-
-      // Consolidate graphics to be removed
+  private async handleSelection(clickedGraphic: Graphic | null) {
+      // Clear any temporary hover graphics
       if (this.hoveredGraphic) {
-          graphicsToRemove.push(this.hoveredGraphic);
-          this.hoveredGraphic = null;
-      }
-      if (this.selectedGraphic) {
-          graphicsToRemove.push(this.selectedGraphic);
-      }
-      
-      // Perform a single, batched removal
-      if (graphicsToRemove.length > 0) {
-          this.highlightLayer.removeMany(graphicsToRemove);
+        this.highlightLayer.remove(this.hoveredGraphic);
+        this.hoveredGraphic = null;
       }
 
-      // If the clicked graphic was not the one selected, or if nothing was selected,
-      // use LayerView's built-in highlight for better zoom performance
-      if (!this.selectedGraphic || this.selectedGraphic.attributes.OBJECTID !== clickedId) {
-          try {
-              const sourceLayer = clickedGraphic.layer as FeatureLayer;
-              const layerView = await this.mapView!.whenLayerView(sourceLayer);
-              
-              // Set highlight options for blue outline
-              this.mapView!.highlightOptions = {
-                  color: [30, 144, 255, 1],
-                  fillOpacity: 0
-              };
-              
-              this.currentHighlight = layerView.highlight(clickedGraphic);
-              this.selectedGraphic = clickedGraphic;
-          } catch (error) {
-              console.error("Failed to highlight feature:", error);
-              // Fallback to graphic-based highlight
-              this.selectedGraphic = new Graphic({
-                  geometry: clickedGraphic.geometry,
-                  attributes: clickedGraphic.attributes,
-                  symbol: this.selectedSymbol
-              });
-              this.highlightLayer.add(this.selectedGraphic);
-          }
-      } else {
-          // The user clicked the currently selected graphic, so we are deselecting it.
-          this.selectedGraphic = null;
+      const clickedId = clickedGraphic?.attributes.OBJECTID;
+
+      // Deselect if clicking the same feature or clicking off features
+      if (!clickedGraphic || this.selectedFeatureId === clickedId) {
+          this.clearSelection();
+          return;
       }
+
+      // A new feature is selected
+      this.clearSelection(); // Clear previous selection first
+      this.selectedFeatureId = clickedId;
+
+      if (clickedGraphic) {
+        this.selectedGraphic = new Graphic({
+            geometry: clickedGraphic.geometry,
+            attributes: clickedGraphic.attributes,
+            symbol: this.selectionSymbol
+        });
+        this.highlightLayer.add(this.selectedGraphic);
+      }
+  }
+
+  private clearSelection() {
+    if (this.selectedGraphic) {
+      this.highlightLayer.remove(this.selectedGraphic);
+      this.selectedGraphic = null;
+    }
+    this.selectedFeatureId = null;
   }
 
   private cleanupInteractivity() {
     this.interactivityHandlers.forEach(handler => handler.remove());
     this.interactivityHandlers = [];
     
-    if (this.currentHighlight) {
-        this.currentHighlight.remove();
-        this.currentHighlight = null;
-    }
-    
+    this.clearSelection();
     this.highlightLayer.removeAll();
-    this.selectedGraphic = null;
     this.hoveredGraphic = null;
     
     if (this.mapView?.container) {
