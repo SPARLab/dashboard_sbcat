@@ -14,6 +14,8 @@ interface NewVolumeLeftSidebarProps {
   setShowPedestrian: (show: boolean) => void;
   modelCountsBy: string;
   setModelCountsBy: (type: string) => void;
+  geographicLevel: string;
+  onGeographicLevelChange: (level: string) => void;
 }
 
 export default function NewVolumeLeftSidebar({ 
@@ -23,7 +25,9 @@ export default function NewVolumeLeftSidebar({
   showPedestrian,
   setShowPedestrian,
   modelCountsBy,
-  setModelCountsBy
+  setModelCountsBy,
+  geographicLevel,
+  onGeographicLevelChange,
 }: NewVolumeLeftSidebarProps) {
   return (
     <div id="volume-filters-sidebar" className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
@@ -47,7 +51,10 @@ export default function NewVolumeLeftSidebar({
       <hr className="border-gray-200" />
       <DateRangeSection />
       <hr className="border-gray-200" />
-      <GeographicLevelSection />
+      <GeographicLevelSection 
+        geographicLevel={geographicLevel}
+        onGeographicLevelChange={onGeographicLevelChange}
+      />
     </div>
   );
-} 
+}

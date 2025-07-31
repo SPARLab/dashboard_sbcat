@@ -1,11 +1,17 @@
-import React, { useState } from "react";
+import React from "react";
 
-export default function GeographicLevelSection() {
-  const [geographicLevel, setGeographicLevel] = useState('census-tract');
+interface GeographicLevelSectionProps {
+  geographicLevel: string;
+  onGeographicLevelChange: (level: string) => void;
+}
 
+export default function GeographicLevelSection({
+  geographicLevel,
+  onGeographicLevelChange,
+}: GeographicLevelSectionProps) {
   const geographicOptions = [
     { id: 'county', label: 'County', icon: '/icons/region-icon.svg' },
-    { id: 'city', label: 'City / Service Area', icon: '/icons/city-service-area-icon.svg' },
+    { id: 'city-service-area', label: 'City / Service Area', icon: '/icons/city-service-area-icon.svg' },
     { id: 'census-tract', label: 'Census Tract', icon: '/icons/census-tract-icon.svg' },
     { id: 'hexagons', label: 'Hexagons', icon: '/icons/hexagons-icon.svg' },
     { id: 'custom', label: 'Custom Draw Tool', icon: '/icons/custom-draw-tool-icon.svg' }
@@ -20,7 +26,7 @@ export default function GeographicLevelSection() {
             <button
               key={option.id}
               id={`geographic-${option.id}-button`}
-              onClick={() => setGeographicLevel(option.id)}
+              onClick={() => onGeographicLevelChange(option.id)}
               className={`w-full flex items-center justify-start px-3 py-2 text-sm rounded border transition-colors duration-200 focus:outline-none active:outline-none ${
                 geographicLevel === option.id
                   ? 'bg-blue-50 border-blue-500 text-blue-700'
@@ -39,4 +45,4 @@ export default function GeographicLevelSection() {
       </div>
     </div>
   );
-} 
+}

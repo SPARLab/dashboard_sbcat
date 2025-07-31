@@ -12,16 +12,18 @@ import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 
 const BOUNDARY_LAYER_URLS = {
-  CITIES: "https://carto.nationalmap.gov/arcgis/rest/services/govunits/MapServer/24",
+  CITIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/25", // Incorporated Places
+  SERVICE_AREAS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/26" // Census Designated Places
 };
 
 interface GeographicLevel {
-  id: 'city' | 'county' | 'census-tract' | 'hexagons' | 'custom';
+  id: 'city' | 'county' | 'census-tract' | 'hexagons' | 'custom' | 'city-service-area';
   name: string;
 }
 
 export class GeographicBoundariesService {
   private cityLayer: FeatureLayer;
+  private serviceAreaLayer: FeatureLayer;
   private highlightLayer: GraphicsLayer;
   
   private mapView: MapView | null = null;
@@ -57,6 +59,20 @@ export class GeographicBoundariesService {
       })
     });
 
+    this.serviceAreaLayer = new FeatureLayer({
+        url: BOUNDARY_LAYER_URLS.SERVICE_AREAS,
+        title: "Census Designated Places",
+        visible: false,
+        popupEnabled: false,
+        outFields: ["OBJECTID", "NAME", "NAMELSAD"],
+        renderer: new SimpleRenderer({
+            symbol: new SimpleFillSymbol({
+                color: [0, 0, 0, 0],
+                outline: new SimpleLineSymbol({ color: [70, 130, 180, 0.8], width: 2 })
+            })
+        })
+    });
+
     this.highlightLayer = new GraphicsLayer({
         title: "Boundary Highlights",
         listMode: "hide" // Hide this layer from the layer list widget
@@ -68,7 +84,7 @@ export class GeographicBoundariesService {
    * is responsible for adding them to the map.
    */
   getBoundaryLayers(): (FeatureLayer | GraphicsLayer)[] {
-    return [this.cityLayer, this.highlightLayer];
+    return [this.cityLayer, this.serviceAreaLayer, this.highlightLayer];
   }
   
   async switchGeographicLevel(level: GeographicLevel['id'], mapView: MapView) {
@@ -77,7 +93,11 @@ export class GeographicBoundariesService {
 
     if (level === 'city') {
         this.cityLayer.visible = true;
-        this.setupCityInteractivity(mapView);
+        this.setupCityInteractivity(mapView, [this.cityLayer]);
+    } else if (level === 'city-service-area') {
+        this.cityLayer.visible = true;
+        this.serviceAreaLayer.visible = true;
+        this.setupCityInteractivity(mapView, [this.cityLayer, this.serviceAreaLayer]);
     }
   }
   
@@ -86,16 +106,19 @@ export class GeographicBoundariesService {
     if (this.cityLayer) {
       this.cityLayer.visible = false;
     }
+    if (this.serviceAreaLayer) {
+        this.serviceAreaLayer.visible = false;
+    }
   }
   
-  private setupCityInteractivity(mapView: MapView) {
+  private setupCityInteractivity(mapView: MapView, layers: FeatureLayer[]) {
     this.cleanupInteractivity();
 
     const pointerMoveHandler = mapView.on("pointer-move", (event) => {
         if (this.hitTestInProgress) return;
         this.hitTestInProgress = true;
 
-        mapView.hitTest(event, { include: [this.cityLayer] })
+        mapView.hitTest(event, { include: layers })
             .then(response => {
                 const graphic = response.results.length > 0 && response.results[0].type === "graphic" 
                     ? response.results[0].graphic 
@@ -113,7 +136,7 @@ export class GeographicBoundariesService {
         if (this.hoveredGraphic) {
             this.handleSelection(this.hoveredGraphic);
         } else {
-            mapView.hitTest(event, { include: [this.cityLayer] }).then(response => {
+            mapView.hitTest(event, { include: layers }).then(response => {
                 if (response.results.length > 0 && response.results[0].type === "graphic") {
                     this.handleSelection(response.results[0].graphic);
                 }

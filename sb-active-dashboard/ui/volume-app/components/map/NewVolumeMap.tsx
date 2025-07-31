@@ -14,6 +14,7 @@ interface NewVolumeMapProps {
   showPedestrian: boolean;
   modelCountsBy: string;
   onMapViewReady?: (mapView: __esri.MapView) => void;
+  geographicLevel: string;
 }
 
 export default function NewVolumeMap({ 
@@ -21,7 +22,8 @@ export default function NewVolumeMap({
   showBicyclist, 
   showPedestrian, 
   modelCountsBy,
-  onMapViewReady
+  onMapViewReady,
+  geographicLevel,
 }: NewVolumeMapProps) {
   const mapViewRef = useRef<any>(null);
   const [viewReady, setViewReady] = useState(false);
@@ -69,13 +71,6 @@ export default function NewVolumeMap({
           const boundaryLayers = boundaryService.getBoundaryLayers();
           boundaryLayers.forEach(layer => mapViewRef.current.map.add(layer));
           
-          // Switch to city level to enable interactive boundaries
-          try {
-            await boundaryService.switchGeographicLevel('city', mapViewRef.current);
-          } catch (boundaryError: any) {
-            console.warn('City boundaries loaded without default selection:', boundaryError.message);
-          }
-          
           // Store layer references
           setAadtLayer(aadt);
           setHexagonLayer(hexagon);
@@ -88,6 +83,12 @@ export default function NewVolumeMap({
       loadLayers();
     }
   }, [viewReady, boundaryService]);
+
+  useEffect(() => {
+    if (viewReady && boundaryService && geographicLevel && mapViewRef.current) {
+      boundaryService.switchGeographicLevel(geographicLevel as any, mapViewRef.current);
+    }
+  }, [viewReady, boundaryService, geographicLevel]);
 
   // Control layers based on tab and model counts selection
   useEffect(() => {
@@ -202,4 +203,4 @@ export default function NewVolumeMap({
       </div>
     </div>
   );
-} 
+}

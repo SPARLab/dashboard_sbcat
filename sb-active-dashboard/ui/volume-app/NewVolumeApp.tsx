@@ -12,6 +12,7 @@ export default function NewVolumeApp() {
   const [showPedestrian, setShowPedestrian] = useState(true);
   const [modelCountsBy, setModelCountsBy] = useState<string>("cost-benefit");
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
+  const [geographicLevel, setGeographicLevel] = useState('census-tract');
 
   // Handle map view ready from map component
   const handleMapViewReady = (view: __esri.MapView) => {
@@ -31,6 +32,8 @@ export default function NewVolumeApp() {
           setShowPedestrian={setShowPedestrian}
           modelCountsBy={modelCountsBy}
           setModelCountsBy={setModelCountsBy}
+          geographicLevel={geographicLevel}
+          onGeographicLevelChange={setGeographicLevel}
         />
         <NewVolumeMap 
           activeTab={activeTab}
@@ -38,6 +41,7 @@ export default function NewVolumeApp() {
           showPedestrian={showPedestrian}
           modelCountsBy={modelCountsBy}
           onMapViewReady={handleMapViewReady}
+          geographicLevel={geographicLevel}
         />
         <NewVolumeRightSidebar 
           activeTab={activeTab}
@@ -57,4 +61,4 @@ export default function NewVolumeApp() {
       </div>
     </div>
   );
-} 
+}
