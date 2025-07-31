@@ -118,46 +118,119 @@ export class VolumeBreakdownDataService {
 
   /**
    * Aggregate count data by time scale
+   * Properly handles hourly data by first aggregating to daily totals, then to target time scale
    */
   private static aggregateByTimeScale(countsData: any[], timeScale: TimeScale): VolumeBreakdownData[] {
-    const aggregation: { [key: string]: number } = {};
+    // Filter out suspicious data points
+    const filteredData = countsData.filter(record => {
+      const counts = record.counts || 0;
+      // Filter out obviously bad data (negative, extremely high, or zero counts)
+      return counts > 0 && counts < 10000; // Adjust threshold as needed
+    });
 
-    countsData.forEach(record => {
+    console.log(`🔍 Data Quality Check for ${timeScale}:`, {
+      originalRecords: countsData.length,
+      filteredRecords: filteredData.length,
+      removedRecords: countsData.length - filteredData.length
+    });
+
+    // For Hour scale, we can work directly with hourly data
+    if (timeScale === 'Hour') {
+      const hourlyAggregation: { [key: string]: { total: number, count: number } } = {};
+      
+      filteredData.forEach(record => {
+        const timestamp = new Date(record.timestamp);
+        const counts = record.counts || 0;
+        const key = timestamp.getHours().toString();
+        
+        if (!hourlyAggregation[key]) {
+          hourlyAggregation[key] = { total: 0, count: 0 };
+        }
+        
+        hourlyAggregation[key].total += counts;
+        hourlyAggregation[key].count += 1;
+      });
+
+      const result = Object.entries(hourlyAggregation).map(([name, data]) => {
+        const averageValue = data.count > 0 ? Math.round(data.total / data.count) : 0;
+        console.log(`📊 Hour - ${name}: ${data.count} records, avg: ${averageValue}`);
+        return { name, value: averageValue };
+      });
+      
+      return this.sortByTimeScale(result, timeScale);
+    }
+
+    // For all other scales, first aggregate hourly data to daily totals
+    const dailyTotals: { [dateKey: string]: { [timeKey: string]: number } } = {};
+    
+    filteredData.forEach(record => {
       const timestamp = new Date(record.timestamp);
       const counts = record.counts || 0;
+      const siteId = record.site_id;
       
-      let key: string;
+      // Create unique date key (site + date)
+      const dateStr = timestamp.toISOString().split('T')[0]; // YYYY-MM-DD
+      const dateKey = `${siteId}_${dateStr}`;
       
+      // Determine time scale key
+      let timeKey: string;
       switch (timeScale) {
-        case 'Hour':
-          key = timestamp.getHours().toString();
-          break;
         case 'Day':
           const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-          key = dayNames[timestamp.getDay()];
+          timeKey = dayNames[timestamp.getDay()];
           break;
-
         case 'Weekday vs Weekend':
           const dayOfWeek = timestamp.getDay();
-          key = dayOfWeek === 0 || dayOfWeek === 6 ? 'Weekend' : 'Weekday';
+          timeKey = dayOfWeek === 0 || dayOfWeek === 6 ? 'Weekend' : 'Weekday';
           break;
         case 'Month':
           const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          key = monthNames[timestamp.getMonth()];
+          timeKey = monthNames[timestamp.getMonth()];
           break;
         case 'Year':
-          key = timestamp.getFullYear().toString();
+          timeKey = timestamp.getFullYear().toString();
           break;
         default:
-          key = 'Unknown';
+          timeKey = 'Unknown';
       }
       
-      aggregation[key] = (aggregation[key] || 0) + counts;
+      if (!dailyTotals[dateKey]) {
+        dailyTotals[dateKey] = {};
+      }
+      if (!dailyTotals[dateKey][timeKey]) {
+        dailyTotals[dateKey][timeKey] = 0;
+      }
+      
+      // Sum hourly counts to get daily total for this site-date-timekey combination
+      dailyTotals[dateKey][timeKey] += counts;
     });
 
-    // Convert to array and sort appropriately
-    const result = Object.entries(aggregation).map(([name, value]) => ({ name, value }));
+    // Now aggregate daily totals by time scale
+    const timeScaleAggregation: { [key: string]: { total: number, count: number } } = {};
+    
+    Object.entries(dailyTotals).forEach(([dateKey, timeKeys]) => {
+      Object.entries(timeKeys).forEach(([timeKey, dailyTotal]) => {
+        if (!timeScaleAggregation[timeKey]) {
+          timeScaleAggregation[timeKey] = { total: 0, count: 0 };
+        }
+        
+        timeScaleAggregation[timeKey].total += dailyTotal;
+        timeScaleAggregation[timeKey].count += 1;
+      });
+    });
+
+    // Calculate average daily traffic for each time period
+    const result = Object.entries(timeScaleAggregation).map(([name, data]) => {
+      const averageDailyTraffic = data.count > 0 ? Math.round(data.total / data.count) : 0;
+      
+      console.log(`📊 ${timeScale} - ${name}: ${data.count} site-days, avg daily: ${averageDailyTraffic}`);
+      
+      return { 
+        name, 
+        value: averageDailyTraffic 
+      };
+    });
     
     return this.sortByTimeScale(result, timeScale);
   }

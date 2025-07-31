@@ -2,9 +2,9 @@
 import ReactECharts from 'echarts-for-react';
 import { useMemo, useState, useEffect } from 'react';
 import Polygon from "@arcgis/core/geometry/Polygon";
-import MoreInformationIcon from './MoreInformationIcon';
 import CollapseExpandIcon from './CollapseExpandIcon';
 import { VolumeBreakdownDataService, TimeScale, VolumeBreakdownData } from '../../../../lib/data-services/VolumeBreakdownDataService';
+import Tooltip from '../../../components/Tooltip';
 const timeScales: TimeScale[] = ['Hour', 'Day', 'Weekday vs Weekend', 'Month', 'Year'];
 
 interface HoveredBarData {
@@ -43,6 +43,7 @@ export default function AggregatedVolumeBreakdown({
   const generateCacheKey = (geometry: Polygon | null, bike: boolean, ped: boolean): string => {
     if (!geometry) return 'default';
     const bounds = geometry.extent;
+    if (!bounds) return 'default';
     return `${bounds.xmin}_${bounds.ymin}_${bounds.xmax}_${bounds.ymax}_${bike}_${ped}`;
   };
 
@@ -159,6 +160,39 @@ export default function AggregatedVolumeBreakdown({
     return value.toString();
   };
 
+  // Get dynamic y-axis label based on time scale
+  const getYAxisLabel = (scale: TimeScale): string => {
+    switch (scale) {
+      case 'Hour':
+        return 'Avg Hourly Traffic';
+      default:
+        return 'Avg Daily Traffic';
+    }
+  };
+
+  // Get detailed calculation explanation for tooltips
+  const getCalculationExplanation = (scale: TimeScale): string => {
+    switch (scale) {
+      case 'Hour':
+        return 'Averages hourly counts across all sites. Shows typical traffic by hour.';
+      
+      case 'Day':
+        return 'Sums hourly counts to daily totals, then averages by day of week.';
+      
+      case 'Weekday vs Weekend':
+        return 'Daily totals averaged by Weekday (Mon-Fri) vs Weekend (Sat-Sun).';
+      
+      case 'Month':
+        return 'Sums hourly counts to daily totals, then averages by month.';
+      
+      case 'Year':
+        return 'Sums hourly counts to daily totals, then averages by year.';
+      
+      default:
+        return 'Calculation varies by time scale.';
+    }
+  };
+
   const option = useMemo(
     () => ({
       grid: {
@@ -206,7 +240,7 @@ export default function AggregatedVolumeBreakdown({
           formatter: formatYAxisNumber,
           margin: 8,
         },
-        name: 'Avg Daily Traffic',
+        name: getYAxisLabel(timeScale),
         nameLocation: 'middle',
         nameGap: 45,
         nameTextStyle: {
@@ -307,9 +341,11 @@ export default function AggregatedVolumeBreakdown({
         )}
         <div id="aggregated-volume-breakdown-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
         <p id="aggregated-volume-breakdown-description" className="w-full text-sm text-gray-600">
-          Season- and weekday-adjusted average daily traffic per {timeScale.toLowerCase()}, aggregated for all years within selected timeframe
+          {timeScale === 'Hour' 
+            ? `Average hourly traffic patterns across selected sites` 
+            : `Average daily traffic aggregated by ${timeScale.toLowerCase()} across selected sites`}
           <span id="aggregated-volume-breakdown-info-icon-container" className="ml-1 inline-flex align-middle">
-            <MoreInformationIcon />
+            <Tooltip text={getCalculationExplanation(timeScale)} align="right" />
           </span>
         </p>
 
