@@ -96,10 +96,10 @@ export default function Tooltip({ text, children, className = "", align = 'cente
         onMouseLeave={() => setShowTooltip(false)}
       >
         {children || (
-          <div className="bg-[rgba(191,191,191,0.25)] border-[#4d4d4d] border-[0.714px] border-solid flex items-center justify-center p-0.5 relative rounded-[8.571px] size-2.5">
+          <div className="bg-[rgba(191,191,191,0.25)] border-[#4d4d4d] border-[0.714px] border-solid flex items-center justify-center p-0.5 relative rounded-[8.571px] size-4">
             <img 
               alt="More information" 
-              className="block max-w-none size-2.5" 
+              className="block max-w-none size-4" 
               src={tooltipInfoIcon} 
             />
           </div>
