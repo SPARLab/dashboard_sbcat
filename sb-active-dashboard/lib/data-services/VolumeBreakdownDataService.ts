@@ -16,7 +16,7 @@ export interface VolumeBreakdownResult {
   error: string | null;
 }
 
-export type TimeScale = 'Hour' | 'Day' | 'Week' | 'Weekday vs Weekend' | 'Month' | 'Year';
+export type TimeScale = 'Hour' | 'Day' | 'Weekday vs Weekend' | 'Month' | 'Year';
 
 /**
  * Service for querying and aggregating raw volume count data for breakdown charts
@@ -136,11 +136,7 @@ export class VolumeBreakdownDataService {
           const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
           key = dayNames[timestamp.getDay()];
           break;
-        case 'Week':
-          // Get week number of the year
-          const weekNumber = this.getWeekNumber(timestamp);
-          key = `Week ${weekNumber}`;
-          break;
+
         case 'Weekday vs Weekend':
           const dayOfWeek = timestamp.getDay();
           key = dayOfWeek === 0 || dayOfWeek === 6 ? 'Weekend' : 'Weekday';
@@ -182,26 +178,12 @@ export class VolumeBreakdownDataService {
         return data.sort((a, b) => monthOrder.indexOf(a.name) - monthOrder.indexOf(b.name));
       case 'Year':
         return data.sort((a, b) => parseInt(a.name) - parseInt(b.name));
-      case 'Week':
-        return data.sort((a, b) => {
-          const weekA = parseInt(a.name.replace('Week ', ''));
-          const weekB = parseInt(b.name.replace('Week ', ''));
-          return weekA - weekB;
-        });
+
       case 'Weekday vs Weekend':
         return data.sort((a, b) => a.name === 'Weekday' ? -1 : 1);
       default:
         return data;
     }
-  }
-
-  /**
-   * Get week number for a given date
-   */
-  private static getWeekNumber(date: Date): number {
-    const firstDay = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date.getTime() - firstDay.getTime()) / 86400000;
-    return Math.ceil((pastDaysOfYear + firstDay.getDay() + 1) / 7);
   }
 
   /**
@@ -256,11 +238,7 @@ export class VolumeBreakdownDataService {
           name: `${new Date().getFullYear() - i}`, 
           value: Math.floor(Math.random() * 1000) + 500 
         })).reverse();
-      case 'Week':
-        return Array.from({ length: 52 }, (_, i) => ({ 
-          name: `Week ${i + 1}`, 
-          value: Math.floor(Math.random() * 200) + 100 
-        }));
+
       default:
         return [];
     }

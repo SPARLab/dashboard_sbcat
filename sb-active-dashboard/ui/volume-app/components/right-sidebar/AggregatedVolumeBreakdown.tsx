@@ -5,7 +5,7 @@ import Polygon from "@arcgis/core/geometry/Polygon";
 import MoreInformationIcon from './MoreInformationIcon';
 import CollapseExpandIcon from './CollapseExpandIcon';
 import { VolumeBreakdownDataService, TimeScale, VolumeBreakdownData } from '../../../../lib/data-services/VolumeBreakdownDataService';
-const timeScales: TimeScale[] = ['Hour', 'Day', 'Week', 'Weekday vs Weekend', 'Month', 'Year'];
+const timeScales: TimeScale[] = ['Hour', 'Day', 'Weekday vs Weekend', 'Month', 'Year'];
 
 interface HoveredBarData {
   value: number;
