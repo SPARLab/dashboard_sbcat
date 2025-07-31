@@ -47,18 +47,22 @@ export default function NewVolumeRightSidebar({
       setAadtLayer(layer || null);
 
       // For volume app, we also need to access the Sites layer and AADT table directly
-      // These would typically be loaded from the feature service
-      if (layer) {
-        // Create direct references to the Sites and AADT tables
-        const sitesLayerUrl = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/0";
-        const aadtTableUrl = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/2";
-        
-        const sites = new FeatureLayer({ url: sitesLayerUrl });
-        const aadtTableLayer = new FeatureLayer({ url: aadtTableUrl });
-        
-        setSitesLayer(sites);
-        setAadtTable(aadtTableLayer);
-      }
+      // Create direct references to the Sites and AADT tables
+      const sitesLayerUrl = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/0";
+      const aadtTableUrl = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/2";
+      
+      const sites = new FeatureLayer({ url: sitesLayerUrl });
+      const aadtTableLayer = new FeatureLayer({ url: aadtTableUrl });
+      
+      console.log('🔗 Creating layer references:', {
+        sitesLayerUrl,
+        aadtTableUrl,
+        sitesLayer: !!sites,
+        aadtTableLayer: !!aadtTableLayer
+      });
+      
+      setSitesLayer(sites);
+      setAadtTable(aadtTableLayer);
     }
   }, [mapView]);
 
@@ -69,11 +73,23 @@ export default function NewVolumeRightSidebar({
   );
 
   // Use volume-specific spatial query for summary statistics
-  const { result: volumeResult, isLoading: volumeLoading } = useVolumeSpatialQuery(
+  const { result: volumeResult, isLoading: volumeLoading, error: volumeError } = useVolumeSpatialQuery(
     sitesLayer,
     aadtTable,
     selectedGeometry || null
   );
+
+  // Debug logging - only when there's a selection
+  if (selectedGeometry) {
+    console.log('🔍 Volume Spatial Query Debug:', {
+      sitesLayer: !!sitesLayer,
+      aadtTable: !!aadtTable,
+      selectedGeometry: !!selectedGeometry,
+      volumeResult: !!volumeResult,
+      volumeLoading,
+      volumeError
+    });
+  }
 
   // Sample data for the timeline sparkline - this would come from your data source
   const timelineData = [
@@ -186,7 +202,7 @@ export default function NewVolumeRightSidebar({
             <div className={`space-y-4 ${horizontalMargins} my-4`}>
               <LowDataCoverage />
               <SummaryStatistics 
-                spatialResult={volumeResult} 
+                spatialResult={volumeResult || null} 
                 isLoading={volumeLoading} 
               />
               <AggregatedVolumeBreakdown />

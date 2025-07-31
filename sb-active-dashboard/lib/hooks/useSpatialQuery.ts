@@ -108,12 +108,13 @@ export const useVolumeSpatialQuery = (
           aadtTable, 
           selectedGeometry
         );
+        console.log('🔍 Volume spatial query successful:', queryResult.totalCount, 'sites found');
         setResult(queryResult);
         
         const description = getSelectedAreaDescription(selectedGeometry, queryResult);
         setAreaDescription(description);
       } catch (err) {
-        console.error('Volume spatial query failed:', err);
+        console.error('🔍 Volume spatial query failed:', err);
         setError('Failed to query count sites within selected area');
         setResult(null);
         setAreaDescription(null);

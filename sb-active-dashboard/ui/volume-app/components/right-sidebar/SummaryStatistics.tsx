@@ -15,6 +15,12 @@ interface SummaryStatisticsProps {
   isLoading?: boolean;
 }
 
+// Set default props to ensure backward compatibility
+const defaultProps: SummaryStatisticsProps = {
+  spatialResult: null,
+  isLoading: false,
+};
+
 const StatsRow = ({ label, value, tooltip, idPrefix }: { label: string, value: string | number, tooltip?: boolean, idPrefix: string }) => (
     <div className="grid grid-cols-[1fr,auto] items-center gap-2" id={`${idPrefix}-row`}>
         <div className="flex items-center" id={`${idPrefix}-label-container`}>
@@ -25,7 +31,10 @@ const StatsRow = ({ label, value, tooltip, idPrefix }: { label: string, value: s
     </div>
 );
 
-export default function SummaryStatistics({ spatialResult, isLoading }: SummaryStatisticsProps) {
+export default function SummaryStatistics({ 
+  spatialResult = null, 
+  isLoading = false 
+}: SummaryStatisticsProps = defaultProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     const toggleCollapse = () => {
@@ -46,6 +55,17 @@ export default function SummaryStatistics({ spatialResult, isLoading }: SummaryS
         return Math.round(value).toLocaleString();
     };
 
+    // Debug: Log when we have actual data
+    if (spatialResult) {
+        console.log('📊 SummaryStatistics has data:', {
+            sitesSelected,
+            pedWeekdayAADT,
+            pedWeekendAADT,
+            bikeWeekdayAADT,
+            bikeWeekendAADT
+        });
+    }
+
   return (
     <div
       className="bg-white border border-gray-200 rounded-md p-4"
@@ -65,7 +85,7 @@ export default function SummaryStatistics({ spatialResult, isLoading }: SummaryS
               <StatsRow 
                 idPrefix="sites-selected" 
                 label="Sites Selected" 
-                value={isLoading ? "Loading..." : sitesSelected} 
+                value={isLoading ? "Loading..." : (sitesSelected || "Click a region")} 
               />
 
               <div id="weekday-section" className="space-y-2">
@@ -74,13 +94,13 @@ export default function SummaryStatistics({ spatialResult, isLoading }: SummaryS
                     <StatsRow 
                       idPrefix="weekday-ped-aadt" 
                       label="Median Pedestrian AADT" 
-                      value={formatValue(pedWeekdayAADT)} 
+                      value={spatialResult ? formatValue(pedWeekdayAADT) : "Select area"} 
                       tooltip 
                     />
                     <StatsRow 
                       idPrefix="weekday-bike-aadt" 
                       label="Median Bike AADT" 
-                      value={formatValue(bikeWeekdayAADT)} 
+                      value={spatialResult ? formatValue(bikeWeekdayAADT) : "Select area"} 
                       tooltip 
                     />
                 </div>
@@ -92,13 +112,13 @@ export default function SummaryStatistics({ spatialResult, isLoading }: SummaryS
                     <StatsRow 
                       idPrefix="weekend-ped-aadt" 
                       label="Median Pedestrian AADT" 
-                      value={formatValue(pedWeekendAADT)} 
+                      value={spatialResult ? formatValue(pedWeekendAADT) : "Select area"} 
                       tooltip 
                     />
                     <StatsRow 
                       idPrefix="weekend-bike-aadt" 
                       label="Median Bike AADT" 
-                      value={formatValue(bikeWeekendAADT)} 
+                      value={spatialResult ? formatValue(bikeWeekendAADT) : "Select area"} 
                       tooltip 
                     />
                 </div>
