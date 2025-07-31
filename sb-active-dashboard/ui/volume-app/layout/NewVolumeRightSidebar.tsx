@@ -191,7 +191,11 @@ export default function NewVolumeRightSidebar({
                 showBicyclist={showBicyclist}
                 showPedestrian={showPedestrian}
               />
-              <YearToYearVolumeComparison />
+              <YearToYearVolumeComparison 
+                selectedGeometry={selectedGeometry}
+                showBicyclist={showBicyclist}
+                showPedestrian={showPedestrian}
+              />
               <TimelineSparkline
                 sites={timelineData}
                 startYear={2022}
