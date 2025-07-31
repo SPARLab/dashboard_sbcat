@@ -54,13 +54,6 @@ export default function NewVolumeRightSidebar({
       const sites = new FeatureLayer({ url: sitesLayerUrl });
       const aadtTableLayer = new FeatureLayer({ url: aadtTableUrl });
       
-      console.log('🔗 Creating layer references:', {
-        sitesLayerUrl,
-        aadtTableUrl,
-        sitesLayer: !!sites,
-        aadtTableLayer: !!aadtTableLayer
-      });
-      
       setSitesLayer(sites);
       setAadtTable(aadtTableLayer);
     }
@@ -78,18 +71,6 @@ export default function NewVolumeRightSidebar({
     aadtTable,
     selectedGeometry || null
   );
-
-  // Debug logging - only when there's a selection
-  if (selectedGeometry) {
-    console.log('🔍 Volume Spatial Query Debug:', {
-      sitesLayer: !!sitesLayer,
-      aadtTable: !!aadtTable,
-      selectedGeometry: !!selectedGeometry,
-      volumeResult: !!volumeResult,
-      volumeLoading,
-      volumeError
-    });
-  }
 
   // Sample data for the timeline sparkline - this would come from your data source
   const timelineData = [

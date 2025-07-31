@@ -15,12 +15,6 @@ interface SummaryStatisticsProps {
   isLoading?: boolean;
 }
 
-// Set default props to ensure backward compatibility
-const defaultProps: SummaryStatisticsProps = {
-  spatialResult: null,
-  isLoading: false,
-};
-
 const StatsRow = ({ label, value, tooltip, idPrefix }: { label: string, value: string | number, tooltip?: boolean, idPrefix: string }) => (
     <div className="grid grid-cols-[1fr,auto] items-center gap-2" id={`${idPrefix}-row`}>
         <div className="flex items-center" id={`${idPrefix}-label-container`}>
@@ -34,7 +28,7 @@ const StatsRow = ({ label, value, tooltip, idPrefix }: { label: string, value: s
 export default function SummaryStatistics({ 
   spatialResult = null, 
   isLoading = false 
-}: SummaryStatisticsProps = defaultProps) {
+}: SummaryStatisticsProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     const toggleCollapse = () => {
@@ -54,17 +48,6 @@ export default function SummaryStatistics({
         if (value === 0) return "No data";
         return Math.round(value).toLocaleString();
     };
-
-    // Debug: Log when we have actual data
-    if (spatialResult) {
-        console.log('📊 SummaryStatistics has data:', {
-            sitesSelected,
-            pedWeekdayAADT,
-            pedWeekendAADT,
-            bikeWeekdayAADT,
-            bikeWeekendAADT
-        });
-    }
 
   return (
     <div
