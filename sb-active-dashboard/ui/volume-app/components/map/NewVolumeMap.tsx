@@ -71,12 +71,7 @@ export default function NewVolumeMap({
           
           // Switch to city level to enable interactive boundaries
           try {
-            const result = await boundaryService.switchGeographicLevel('city', mapViewRef.current);
-            if (result.success) {
-
-            } else {
-              console.warn('⚠️ City boundaries warning:', result.warning);
-            }
+            await boundaryService.switchGeographicLevel('city', mapViewRef.current);
           } catch (boundaryError: any) {
             console.warn('City boundaries loaded without default selection:', boundaryError.message);
           }

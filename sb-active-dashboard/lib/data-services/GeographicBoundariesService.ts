@@ -1,136 +1,106 @@
 /**
- * Geographic Boundaries Service
- * Handles region, city, census tract, and other geographic boundary layers
+ * Geographic Boundaries Service - High-Performance Edition
+ * This version uses a dedicated GraphicsLayer for highlighting, which is the most
+ * performant method for complex, interactive feature layers.
  */
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import Graphic from "@arcgis/core/Graphic";
 import MapView from "@arcgis/core/views/MapView";
-import Point from "@arcgis/core/geometry/Point";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
-import UniqueValueRenderer from "@arcgis/core/renderers/UniqueValueRenderer";
 
 const BOUNDARY_LAYER_URLS = {
   CITIES: "https://carto.nationalmap.gov/arcgis/rest/services/govunits/MapServer/24",
-  // Other URLs are omitted for brevity but would be here in a real app
 };
 
 interface GeographicLevel {
-  id: 'county' | 'city' | 'census-tract' | 'hexagons' | 'custom';
+  id: 'city' | 'county' | 'census-tract' | 'hexagons' | 'custom';
   name: string;
-  layer?: FeatureLayer;
-}
-
-interface SelectedArea {
-  id: string;
-  name: string;
-  geometry: __esri.Geometry;
-  level: string;
 }
 
 export class GeographicBoundariesService {
-  private cityLayer: FeatureLayer | null = null;
-  // Other layer properties omitted for brevity
+  private cityLayer: FeatureLayer;
+  private highlightLayer: GraphicsLayer;
   
-  private currentLevel: GeographicLevel['id'] = 'city';
-  private selectedArea: SelectedArea | null = null;
   private mapView: MapView | null = null;
   
-  // --- New High-Performance Interactivity State ---
-  private cityLayerRenderer: UniqueValueRenderer | null = null;
-  private selectedFeatureId: number | string | null = null;
-  private hoveredFeatureId: number | string | null = null;
+  // --- Interactivity State ---
+  private selectedGraphic: Graphic | null = null;
+  private hoveredGraphic: Graphic | null = null;
   private interactivityHandlers: __esri.Handle[] = [];
   private hitTestInProgress = false;
-  // ---
-
-  private defaultSymbol = new SimpleFillSymbol({
-    color: [0, 0, 0, 0],
-    outline: new SimpleLineSymbol({ color: [70, 130, 180, 0.8], width: 2 })
-  });
 
   private selectedSymbol = new SimpleFillSymbol({
-    color: [0, 0, 0, 0],
+    color: [0, 0, 0, 0], // Transparent fill
     outline: new SimpleLineSymbol({ color: [30, 144, 255, 1], width: 3 })
   });
   
   private hoverSymbol = new SimpleFillSymbol({
-    color: [0, 0, 0, 0],
+    color: [0, 0, 0, 0], // Transparent fill
     outline: new SimpleLineSymbol({ color: [255, 255, 0, 1], width: 3 })
   });
 
   constructor() {
-    this.initializeLayers();
+    this.cityLayer = new FeatureLayer({
+      url: BOUNDARY_LAYER_URLS.CITIES,
+      title: "Cities & Towns",
+      visible: false,
+      popupEnabled: false,
+      outFields: ["OBJECTID", "NAME", "NAMELSAD"],
+      renderer: new SimpleRenderer({
+        symbol: new SimpleFillSymbol({
+          color: [0, 0, 0, 0],
+          outline: new SimpleLineSymbol({ color: [70, 130, 180, 0.8], width: 2 })
+        })
+      })
+    });
+
+    this.highlightLayer = new GraphicsLayer({
+        title: "Boundary Highlights",
+        listMode: "hide" // Hide this layer from the layer list widget
+    });
   }
 
-  private initializeLayers() {
-    try {
-      if (BOUNDARY_LAYER_URLS.CITIES) {
-        this.cityLayer = new FeatureLayer({
-          url: BOUNDARY_LAYER_URLS.CITIES,
-          title: "Cities & Towns",
-          visible: false,
-          popupEnabled: false,
-          outFields: ["OBJECTID", "NAME", "NAMELSAD"],
-          // Initial renderer is simple; it will be replaced by the interactive one.
-          renderer: new SimpleRenderer({ symbol: this.defaultSymbol })
-        });
-      }
-      console.log("Geographic Boundaries Service: Boundary layers initialized successfully");
-    } catch (error) {
-      console.error("Geographic Boundaries Service: Error initializing layers:", error);
-    }
-  }
-
-  getBoundaryLayers(): FeatureLayer[] {
-    const layers: FeatureLayer[] = [];
-    if (this.cityLayer) layers.push(this.cityLayer);
-    return layers;
+  /**
+   * Returns all layers managed by the service. The calling component
+   * is responsible for adding them to the map.
+   */
+  getBoundaryLayers(): (FeatureLayer | GraphicsLayer)[] {
+    return [this.cityLayer, this.highlightLayer];
   }
   
   async switchGeographicLevel(level: GeographicLevel['id'], mapView: MapView) {
-    this.currentLevel = level;
     this.hideAllBoundaryLayers();
     this.mapView = mapView;
 
-    if (level === 'city' && this.cityLayer) {
+    if (level === 'city') {
         this.cityLayer.visible = true;
         this.setupCityInteractivity(mapView);
-        // Additional logic for default selection can be added here
     }
   }
   
   private hideAllBoundaryLayers() {
     this.cleanupInteractivity();
-    if (this.cityLayer) this.cityLayer.visible = false;
+    if (this.cityLayer) {
+      this.cityLayer.visible = false;
+    }
   }
   
   private setupCityInteractivity(mapView: MapView) {
-    if (!this.cityLayer) return;
     this.cleanupInteractivity();
-
-    // Create the renderer ONCE. This is the key to performance.
-    this.cityLayerRenderer = new UniqueValueRenderer({
-        field: "OBJECTID",
-        defaultSymbol: this.defaultSymbol,
-        uniqueValueInfos: [],
-    });
-    this.cityLayer.renderer = this.cityLayerRenderer;
 
     const pointerMoveHandler = mapView.on("pointer-move", (event) => {
         if (this.hitTestInProgress) return;
         this.hitTestInProgress = true;
 
-        mapView.hitTest(event, { include: [this.cityLayer!] })
+        mapView.hitTest(event, { include: [this.cityLayer] })
             .then(response => {
-                const newHoveredFeature = response.results.length > 0 ? response.results[0].graphic : null;
-                const newHoveredId = newHoveredFeature?.attributes.OBJECTID || null;
-
-                if (this.hoveredFeatureId !== newHoveredId) {
-                    this.hoveredFeatureId = newHoveredId;
-                    this.updateRenderer();
-                }
-                mapView.container.style.cursor = newHoveredId ? "pointer" : "default";
+                const graphic = response.results.length > 0 && response.results[0].type === "graphic" 
+                    ? response.results[0].graphic 
+                    : null;
+                this.handleHover(graphic);
                 this.hitTestInProgress = false;
             })
             .catch(err => {
@@ -140,17 +110,12 @@ export class GeographicBoundariesService {
     });
 
     const clickHandler = mapView.on("click", (event) => {
-        if (this.hoveredFeatureId) {
-            this.selectedFeatureId = this.hoveredFeatureId;
-            this.hoveredFeatureId = null; // Clear hover on selection
-            this.updateRenderer();
+        if (this.hoveredGraphic) {
+            this.handleSelection(this.hoveredGraphic);
         } else {
-            // Fallback for clicks without a prior hover
-            mapView.hitTest(event, { include: [this.cityLayer!] }).then((hit) => {
-                if (hit.results.length > 0) {
-                    this.selectedFeatureId = hit.results[0].graphic.attributes.OBJECTID;
-                    this.hoveredFeatureId = null;
-                    this.updateRenderer();
+            mapView.hitTest(event, { include: [this.cityLayer] }).then(response => {
+                if (response.results.length > 0 && response.results[0].type === "graphic") {
+                    this.handleSelection(response.results[0].graphic);
                 }
             });
         }
@@ -158,52 +123,76 @@ export class GeographicBoundariesService {
 
     this.interactivityHandlers = [pointerMoveHandler, clickHandler];
   }
+  
+  private handleHover(newlyHovered: Graphic | null) {
+      const isSameHover = this.hoveredGraphic?.attributes.OBJECTID === newlyHovered?.attributes.OBJECTID;
+      if (isSameHover) return;
+      
+      if (this.hoveredGraphic) {
+          this.highlightLayer.remove(this.hoveredGraphic);
+          this.hoveredGraphic = null;
+      }
+      
+      if (this.mapView && this.mapView.container) {
+        this.mapView.container.style.cursor = "default";
+      }
+      
+      const isSelected = newlyHovered?.attributes.OBJECTID === this.selectedGraphic?.attributes.OBJECTID;
+      if (newlyHovered && !isSelected) {
+          this.hoveredGraphic = new Graphic({
+              geometry: newlyHovered.geometry,
+              attributes: newlyHovered.attributes,
+              symbol: this.hoverSymbol
+          });
+          this.highlightLayer.add(this.hoveredGraphic);
+          if (this.mapView && this.mapView.container) {
+            this.mapView.container.style.cursor = "pointer";
+          }
+      }
+  }
+  
+  private handleSelection(clickedGraphic: Graphic) {
+      const clickedId = clickedGraphic.attributes.OBJECTID;
+      const graphicsToRemove = [];
+
+      // Consolidate graphics to be removed
+      if (this.hoveredGraphic) {
+          graphicsToRemove.push(this.hoveredGraphic);
+          this.hoveredGraphic = null;
+      }
+      if (this.selectedGraphic) {
+          graphicsToRemove.push(this.selectedGraphic);
+      }
+      
+      // Perform a single, batched removal
+      if (graphicsToRemove.length > 0) {
+          this.highlightLayer.removeMany(graphicsToRemove);
+      }
+
+      // If the clicked graphic was not the one selected, or if nothing was selected,
+      // create and add the new selection graphic.
+      if (!this.selectedGraphic || this.selectedGraphic.attributes.OBJECTID !== clickedId) {
+          this.selectedGraphic = new Graphic({
+              geometry: clickedGraphic.geometry,
+              attributes: clickedGraphic.attributes,
+              symbol: this.selectedSymbol
+          });
+          this.highlightLayer.add(this.selectedGraphic);
+      } else {
+          // The user clicked the currently selected graphic, so we are deselecting it.
+          this.selectedGraphic = null;
+      }
+  }
 
   private cleanupInteractivity() {
     this.interactivityHandlers.forEach(handler => handler.remove());
     this.interactivityHandlers = [];
-    this.selectedFeatureId = null;
-    this.hoveredFeatureId = null;
+    this.highlightLayer.removeAll();
+    this.selectedGraphic = null;
+    this.hoveredGraphic = null;
     
     if (this.mapView?.container) {
       this.mapView.container.style.cursor = "default";
     }
-    // Reset to a simple renderer when not interactive
-    if (this.cityLayer) {
-        this.cityLayer.renderer = new SimpleRenderer({ symbol: this.defaultSymbol });
-    }
-  }
-  
-  /**
-   * Updates the renderer by modifying its uniqueValueInfos and then assigning
-   * a clone of itself back to the layer to trigger a redraw. This is much
-   * faster than creating a new renderer from scratch on each interaction.
-   */
-  private updateRenderer() {
-    if (!this.cityLayer || !this.cityLayerRenderer) return;
-
-    const infos: any[] = [];
-    
-    // Selected features get styled first.
-    if (this.selectedFeatureId) {
-      infos.push({
-        value: this.selectedFeatureId,
-        symbol: this.selectedSymbol,
-      });
-    }
-
-    // Hovered features are styled only if they are not also selected.
-    if (this.hoveredFeatureId && this.hoveredFeatureId !== this.selectedFeatureId) {
-      infos.push({
-        value: this.hoveredFeatureId,
-        symbol: this.hoverSymbol,
-      });
-    }
-
-    // Mutate the existing renderer's properties.
-    this.cityLayerRenderer.uniqueValueInfos = infos;
-    
-    // Assign a clone to the layer to trigger a fast redraw.
-    this.cityLayer.renderer = this.cityLayerRenderer.clone();
   }
 }
