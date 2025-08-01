@@ -122,11 +122,11 @@ export class YearToYearComparisonDataService {
       return [];
     }
 
-    // Add year filter
-    const yearStart = new Date(year, 0, 1).getTime();
-    const yearEnd = new Date(year + 1, 0, 1).getTime();
+    // Add year filter - use ISO date strings instead of Unix timestamps
+    const yearStart = new Date(year, 0, 1).toISOString();
+    const yearEnd = new Date(year + 1, 0, 1).toISOString();
 
-    const whereClause = `site_id IN (${siteIds.join(',')}) AND (${countTypeConditions.join(' OR ')}) AND timestamp >= ${yearStart} AND timestamp < ${yearEnd}`;
+    const whereClause = `site_id IN (${siteIds.join(',')}) AND (${countTypeConditions.join(' OR ')}) AND timestamp >= '${yearStart}' AND timestamp < '${yearEnd}'`;
 
     const query = countsLayer.createQuery();
     query.where = whereClause;
