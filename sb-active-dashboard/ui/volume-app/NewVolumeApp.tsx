@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import NewVolumeSubHeader from "./layout/NewVolumeSubHeader";
 import NewVolumeLeftSidebar from "./layout/NewVolumeLeftSidebar";
 import NewVolumeRightSidebar from "./layout/NewVolumeRightSidebar";
@@ -16,13 +16,20 @@ export default function NewVolumeApp() {
   const [showPedestrian, setShowPedestrian] = useState(true);
   const [modelCountsBy, setModelCountsBy] = useState<string>("cost-benefit");
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
-  const [geographicLevel, setGeographicLevel] = useState('census-tract');
+  const [geographicLevel, setGeographicLevel] = useState('city-service-area');
   
   // Date range state for timeline and filtering
   const [dateRange, setDateRange] = useState({
     startDate: new Date(2023, 0, 1),
     endDate: new Date(2023, 11, 31)
   });
+
+  // Auto-switch to City/Service Area when on Raw Data tab
+  useEffect(() => {
+    if (activeTab === 'raw-data') {
+      setGeographicLevel('city-service-area');
+    }
+  }, [activeTab]);
 
   // Handle map view ready from map component
   const handleMapViewReady = (view: __esri.MapView) => {
