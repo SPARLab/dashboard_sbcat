@@ -190,25 +190,23 @@ export default function NewVolumeMap({
 
   // Handle count site highlighting
   useEffect(() => {
+    // IMMEDIATELY clear any existing highlight and close popup when selection changes
+    if (highlightGraphicRef.current && mapViewRef.current?.graphics) {
+      mapViewRef.current.graphics.remove(highlightGraphicRef.current);
+      highlightGraphicRef.current = null;
+    }
+    if (mapViewRef.current?.popup) {
+      mapViewRef.current.popup.visible = false;
+    }
+
+    // If no site selected or prerequisites not met, stop here
     if (!viewReady || !mapViewRef.current || !aadtLayer || !selectedCountSite) {
-      // Clear any existing highlight and close popup
-      if (highlightGraphicRef.current && mapViewRef.current?.graphics) {
-        mapViewRef.current.graphics.remove(highlightGraphicRef.current);
-        highlightGraphicRef.current = null;
-      }
-      if (mapViewRef.current?.popup) {
-        mapViewRef.current.popup.visible = false;
-      }
       return;
     }
 
     const highlightCountSite = async () => {
       try {
-        // Remove any existing highlight graphic first
-        if (highlightGraphicRef.current && mapViewRef.current.graphics) {
-          mapViewRef.current.graphics.remove(highlightGraphicRef.current);
-          highlightGraphicRef.current = null;
-        }
+        // Note: highlight was already cleared above for immediate feedback
 
         // Query the AADT layer for the selected count site by name
         const query = aadtLayer.createQuery();
