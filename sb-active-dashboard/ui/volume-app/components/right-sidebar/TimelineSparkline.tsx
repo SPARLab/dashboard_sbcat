@@ -8,6 +8,8 @@ interface TimelineSparklineProps {
   startDate: Date;
   endDate: Date;
   dateRange: string;
+  selectedSiteId?: string | null;
+  onSiteSelect?: (siteId: string | null) => void;
 }
 
 interface ConfidenceData {
@@ -26,7 +28,9 @@ export default function TimelineSparkline({
   sites,
   startDate,
   endDate,
-  dateRange
+  dateRange,
+  selectedSiteId,
+  onSiteSelect
 }: TimelineSparklineProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [confidenceData, setConfidenceData] = useState<ConfidenceData | null>(null);
@@ -56,7 +60,9 @@ export default function TimelineSparkline({
         endDate={endDate}
         dateRange={dateRange}
         isCollapsed={isCollapsed}
+        selectedSiteId={selectedSiteId}
         onConfidenceUpdate={handleConfidenceUpdate}
+        onSiteSelect={onSiteSelect}
       />
     </div>
   );

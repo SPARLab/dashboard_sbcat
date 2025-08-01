@@ -11,6 +11,9 @@ export default function NewVolumeApp() {
   // Selection hook for polygon selection
   const { selectedGeometry, onSelectionChange } = useSelection();
   
+  // Count site selection state
+  const [selectedCountSite, setSelectedCountSite] = useState<string | null>(null);
+  
   // Map-related state to share between components
   const [showBicyclist, setShowBicyclist] = useState(true);
   const [showPedestrian, setShowPedestrian] = useState(true);
@@ -62,6 +65,7 @@ export default function NewVolumeApp() {
           onMapViewReady={handleMapViewReady}
           geographicLevel={geographicLevel}
           onSelectionChange={onSelectionChange}
+          selectedCountSite={selectedCountSite}
         />
         <NewVolumeRightSidebar 
           activeTab={activeTab}
@@ -71,6 +75,8 @@ export default function NewVolumeApp() {
           mapView={mapView}
           selectedGeometry={selectedGeometry}
           dateRange={dateRange}
+          selectedCountSite={selectedCountSite}
+          onCountSiteSelect={setSelectedCountSite}
         />
       </div>
       {/* Footer */}

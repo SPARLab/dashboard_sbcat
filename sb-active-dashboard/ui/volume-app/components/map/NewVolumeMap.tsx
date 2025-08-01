@@ -8,6 +8,8 @@ import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import GroupLayer from "@arcgis/core/layers/GroupLayer";
 import { GeographicBoundariesService } from "../../../../lib/data-services/GeographicBoundariesService";
 import Polygon from "@arcgis/core/geometry/Polygon";
+import Graphic from "@arcgis/core/Graphic";
+import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 
 interface NewVolumeMapProps {
   activeTab: string;
@@ -17,6 +19,7 @@ interface NewVolumeMapProps {
   onMapViewReady?: (mapView: __esri.MapView) => void;
   geographicLevel: string;
   onSelectionChange?: (geometry: Polygon | null) => void;
+  selectedCountSite?: string | null;
 }
 
 export default function NewVolumeMap({ 
@@ -27,6 +30,7 @@ export default function NewVolumeMap({
   onMapViewReady,
   geographicLevel,
   onSelectionChange,
+  selectedCountSite,
 }: NewVolumeMapProps) {
   const mapViewRef = useRef<any>(null);
   const [viewReady, setViewReady] = useState(false);
@@ -47,6 +51,9 @@ export default function NewVolumeMap({
 
   // Hourly data for Cost Benefit Tool (AADT)
   const [hourlyData, setHourlyData] = useState<HourlyData[]>([]);
+  
+  // State for highlighting selected count site
+  const [highlightGraphic, setHighlightGraphic] = useState<Graphic | null>(null);
 
   // Handler to set map center/zoom when view is ready
   const handleArcgisViewReadyChange = (event: any) => {
@@ -180,6 +187,74 @@ export default function NewVolumeMap({
       }
     };
   }, [viewReady, activeTab, showBicyclist, showPedestrian]);
+
+  // Handle count site highlighting
+  useEffect(() => {
+    if (!viewReady || !mapViewRef.current || !aadtLayer || !selectedCountSite) {
+      // Clear any existing highlight
+      if (highlightGraphic && mapViewRef.current?.graphics) {
+        mapViewRef.current.graphics.remove(highlightGraphic);
+        setHighlightGraphic(null);
+      }
+      return;
+    }
+
+    const highlightCountSite = async () => {
+      try {
+        // Query the AADT layer for the selected count site by name
+        const query = aadtLayer.createQuery();
+        query.where = `name = '${selectedCountSite}'`;
+        query.outFields = ["*"];
+        query.returnGeometry = true;
+
+        const results = await aadtLayer.queryFeatures(query);
+        
+        if (results.features.length > 0) {
+          const feature = results.features[0];
+          
+          // Remove any existing highlight graphic
+          if (highlightGraphic) {
+            mapViewRef.current.graphics.remove(highlightGraphic);
+          }
+          
+          // Create a highlight graphic with a distinct symbol
+          const highlightSymbol = new SimpleMarkerSymbol({
+            size: 16,
+            color: [0, 150, 255, 0.8], // Bright blue
+            outline: {
+              width: 3,
+              color: [255, 255, 255, 1] // White outline
+            }
+          });
+          
+          const graphic = new Graphic({
+            geometry: feature.geometry,
+            symbol: highlightSymbol
+          });
+          
+          // Add the highlight graphic to the map
+          mapViewRef.current.graphics.add(graphic);
+          setHighlightGraphic(graphic);
+          
+          // Zoom to the selected count site
+          mapViewRef.current.goTo({
+            target: feature.geometry,
+            zoom: 15
+          });
+          
+          // Show popup for the selected site
+          mapViewRef.current.popup.open({
+            features: [feature],
+            location: feature.geometry
+          });
+        }
+      } catch (error) {
+        console.error("Error highlighting count site:", error);
+      }
+    };
+
+    highlightCountSite();
+  }, [viewReady, aadtLayer, selectedCountSite, highlightGraphic]);
 
   return (
     <div id="volume-map-container" className="flex-1 bg-gray-200 relative">

@@ -21,8 +21,9 @@ interface TimelineSparklineChartProps {
   endDate: Date;
   dateRange: string;
   isCollapsed: boolean;
-  selectedSiteId?: string;
+  selectedSiteId?: string | null;
   onConfidenceUpdate: (data: ConfidenceData) => void;
+  onSiteSelect?: (siteId: string | null) => void;
 }
 
 // Confidence level configurations
@@ -105,7 +106,8 @@ export default function TimelineSparklineChart({
   dateRange,
   isCollapsed,
   selectedSiteId,
-  onConfidenceUpdate
+  onConfidenceUpdate,
+  onSiteSelect
 }: TimelineSparklineChartProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
@@ -160,7 +162,7 @@ export default function TimelineSparklineChart({
         <div id="timeline-sparkline-chart-no-data-overflow-container" className="overflow-hidden">
           <div id="timeline-sparkline-chart-no-data-padding-container" className="px-4 pb-4">
             <div id="timeline-sparkline-chart-no-data-message-container" className="pt-4 mb-4 flex items-center justify-center min-h-60">
-              <p id="timeline-sparkline-chart-no-data-message" className="text-sm font-bold text-gray-900 text-center">
+              <p id="timeline-sparkline-chart-no-data-message" className="text-sm font-medium text-gray-900 text-center">
                 No count site data available for the selected region for the selected timeframe.
               </p>
             </div>
@@ -212,6 +214,7 @@ export default function TimelineSparklineChart({
               variant="compact"
               idPrefix="timeline-sparkline-chart"
               selectedSiteId={selectedSiteId}
+              onSiteSelect={onSiteSelect}
             />
           </div>
         </div>

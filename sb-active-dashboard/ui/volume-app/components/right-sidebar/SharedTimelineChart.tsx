@@ -27,7 +27,8 @@ export interface SharedTimelineChartProps {
   variant?: 'compact' | 'standard';
   className?: string;
   idPrefix?: string;
-  selectedSiteId?: string;
+  selectedSiteId?: string | null;
+  onSiteSelect?: (siteId: string | null) => void;
 }
 
 const VARIANTS: Record<'compact' | 'standard', TimelineChartVariant> = {
@@ -51,7 +52,8 @@ export default function SharedTimelineChart({
   variant = 'standard',
   className = '',
   idPrefix = 'timeline-chart',
-  selectedSiteId
+  selectedSiteId,
+  onSiteSelect
 }: SharedTimelineChartProps) {
   const styles = VARIANTS[variant];
 
@@ -84,14 +86,15 @@ export default function SharedTimelineChart({
       {/* Timeline Rows */}
       <div id={`${idPrefix}-rows`} className={styles.rowSpacing}>
         {sites.map((site) => {
-          const isSelected = selectedSiteId === site.id;
+          const isSelected = selectedSiteId === site.name;
           return (
             <div
               id={`${idPrefix}-row-${site.id}`}
               key={site.id}
-              className={`group relative flex items-center transition-colors duration-200 rounded-sm px-1 py-0.5 cursor-default ${
+              className={`group relative flex items-center transition-colors duration-200 rounded-sm px-1 py-0.5 cursor-pointer ${
                 isSelected ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-100'
               }`}
+              onClick={() => onSiteSelect?.(isSelected ? null : site.name)}
             >
               {/* Site Label */}
               <div

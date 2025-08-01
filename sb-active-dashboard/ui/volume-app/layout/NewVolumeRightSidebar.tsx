@@ -28,6 +28,8 @@ interface NewVolumeRightSidebarProps {
   mapView?: __esri.MapView | null;
   selectedGeometry?: Polygon | null;
   dateRange: DateRangeValue;
+  selectedCountSite?: string | null;
+  onCountSiteSelect?: (siteId: string | null) => void;
 }
 
 export default function NewVolumeRightSidebar({ 
@@ -37,7 +39,9 @@ export default function NewVolumeRightSidebar({
   modelCountsBy,
   mapView,
   selectedGeometry,
-  dateRange
+  dateRange,
+  selectedCountSite,
+  onCountSiteSelect
 }: NewVolumeRightSidebarProps) {
   const horizontalMargins = "mx-4";
 
@@ -226,6 +230,8 @@ export default function NewVolumeRightSidebar({
                 startDate={dateRange.startDate}
                 endDate={dateRange.endDate}
                 dateRange={`${dateRange.startDate.toLocaleDateString()} - ${dateRange.endDate.toLocaleDateString()}`}
+                selectedSiteId={selectedCountSite}
+                onSiteSelect={onCountSiteSelect}
               />
               <HighestVolume />
               <ModeBreakdown />
