@@ -15,7 +15,7 @@ export interface TimelineChartVariant {
   barHeight: 'h-3' | 'h-4';
   rowSpacing: 'space-y-1' | 'space-y-2';
   barColor: 'bg-gray-800' | 'bg-slate-800';
-  siteLabelWidth: 'w-12';
+  siteLabelWidth: 'w-16' | 'w-20';
 }
 
 export interface SharedTimelineChartProps {
@@ -24,6 +24,7 @@ export interface SharedTimelineChartProps {
   variant?: 'compact' | 'standard';
   className?: string;
   idPrefix?: string;
+  selectedSiteId?: string;
 }
 
 const VARIANTS: Record<'compact' | 'standard', TimelineChartVariant> = {
@@ -31,13 +32,13 @@ const VARIANTS: Record<'compact' | 'standard', TimelineChartVariant> = {
     barHeight: 'h-3',
     rowSpacing: 'space-y-1',
     barColor: 'bg-gray-800',
-    siteLabelWidth: 'w-12'
+    siteLabelWidth: 'w-16'
   },
   standard: {
     barHeight: 'h-4',
     rowSpacing: 'space-y-2', 
     barColor: 'bg-slate-800',
-    siteLabelWidth: 'w-12'
+    siteLabelWidth: 'w-20'
   }
 };
 
@@ -46,7 +47,8 @@ export default function SharedTimelineChart({
   years,
   variant = 'standard',
   className = '',
-  idPrefix = 'timeline-chart'
+  idPrefix = 'timeline-chart',
+  selectedSiteId
 }: SharedTimelineChartProps) {
   const styles = VARIANTS[variant];
 
@@ -74,40 +76,52 @@ export default function SharedTimelineChart({
 
       {/* Timeline Rows */}
       <div id={`${idPrefix}-rows`} className={styles.rowSpacing}>
-        {sites.map((site) => (
-          <div
-            id={`${idPrefix}-row-${site.id}`}
-            key={site.id}
-            className="flex items-center"
-          >
-            {/* Site Label */}
+        {sites.map((site) => {
+          const isSelected = selectedSiteId === site.id;
+          return (
             <div
-              id={`${idPrefix}-site-label-${site.id}`}
-              className={`${styles.siteLabelWidth} text-xs text-gray-600 font-medium`}
+              id={`${idPrefix}-row-${site.id}`}
+              key={site.id}
+              className={`flex items-center transition-colors duration-200 rounded-sm px-1 py-0.5 ${
+                isSelected ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-100'
+              }`}
+              title={site.name} // Tooltip for full site name
             >
-              {site.name}
-            </div>
+              {/* Site Label */}
+              <div
+                id={`${idPrefix}-site-label-${site.id}`}
+                className={`${styles.siteLabelWidth} text-xs font-medium ${
+                  isSelected ? 'text-blue-800' : 'text-gray-600'
+                }`}
+              >
+                {site.name}
+              </div>
 
-            {/* Timeline Bar Container */}
-            <div
-              id={`${idPrefix}-bar-container-${site.id}`}
-              className={`flex-1 relative ${styles.barHeight} bg-gray-100 rounded-sm`}
-            >
-              {/* Data Period Bars */}
-              {site.dataPeriods.map((period, index) => (
-                <div
-                  id={`${idPrefix}-data-period-${site.id}-${index}`}
-                  key={index}
-                  className={`absolute top-0 h-full ${styles.barColor} rounded-sm`}
-                  style={{
-                    left: `${period.start}%`,
-                    width: `${period.end - period.start}%`,
-                  }}
-                />
-              ))}
+              {/* Timeline Bar Container */}
+              <div
+                id={`${idPrefix}-bar-container-${site.id}`}
+                className={`flex-1 relative ${styles.barHeight} rounded-sm ml-2 ${
+                  isSelected ? 'bg-blue-50' : 'bg-gray-100'
+                }`}
+              >
+                {/* Data Period Bars */}
+                {site.dataPeriods.map((period, index) => (
+                  <div
+                    id={`${idPrefix}-data-period-${site.id}-${index}`}
+                    key={index}
+                    className={`absolute top-0 h-full rounded-sm ${
+                      isSelected ? 'bg-blue-600' : styles.barColor
+                    }`}
+                    style={{
+                      left: `${period.start}%`,
+                      width: `${period.end - period.start}%`,
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

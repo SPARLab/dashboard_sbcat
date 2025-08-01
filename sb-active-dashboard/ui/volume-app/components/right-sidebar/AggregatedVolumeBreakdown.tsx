@@ -273,7 +273,7 @@ export default function AggregatedVolumeBreakdown({
           data: currentData.map((item) => ({
             value: item.value,
             itemStyle: {
-              color: '#757474',
+              color: '#3b82f6',
               borderRadius: [4, 4, 0, 0], 
             },
           })),
