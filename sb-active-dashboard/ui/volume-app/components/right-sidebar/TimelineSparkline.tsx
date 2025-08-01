@@ -44,7 +44,7 @@ export default function TimelineSparkline({
   }, []);
 
   return (
-    <div id="timeline-sparkline-container" className="border border-gray-200 rounded-lg overflow-hidden">
+    <div id="timeline-sparkline-container" className="border border-gray-200 rounded-lg overflow-hidden overflow-x-hidden">
       {confidenceData && (
         <TimelineSparklineHeader
           confidence={confidenceData.confidence}

@@ -179,8 +179,8 @@ export default function TimelineSparklineChart({
         isCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'
       }`}
     >
-      <div id="timeline-sparkline-chart-overflow-container" className="overflow-hidden">
-        <div id="timeline-sparkline-chart-padding-container" className="px-4 pb-4">
+      <div id="timeline-sparkline-chart-overflow-container" className="overflow-hidden overflow-x-hidden">
+        <div id="timeline-sparkline-chart-padding-container" className="px-4 pb-4 overflow-x-hidden">
           {/* Chart Title */}
           <div id="timeline-sparkline-chart-title-container" className="pt-4 mb-4">
             <h3
@@ -202,7 +202,7 @@ export default function TimelineSparklineChart({
           <div 
             ref={scrollContainerRef}
             id="timeline-sparkline-chart-scrollable-container" 
-            className="max-h-60 overflow-y-auto border border-gray-200 rounded-md p-3 custom-scrollbar"
+            className="max-h-60 overflow-y-auto overflow-x-hidden border border-gray-200 rounded-md p-3 custom-scrollbar"
             style={{
               scrollbarWidth: 'thin',
               scrollbarColor: '#d1d5db transparent'

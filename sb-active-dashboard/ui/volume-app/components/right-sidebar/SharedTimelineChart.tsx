@@ -61,7 +61,7 @@ export default function SharedTimelineChart({
     <>
       <div 
         id={`${idPrefix}-container`} 
-        className={className}
+        className={`w-full ${className}`}
       >
       {/* Year Labels */}
       <div id={`${idPrefix}-year-labels-container`} className="flex items-center mb-2">
@@ -70,7 +70,7 @@ export default function SharedTimelineChart({
         </div>
         <div 
           id={`${idPrefix}-year-labels`}
-          className="flex-1 flex justify-between text-xs text-gray-500"
+          className="flex-1 flex justify-between text-xs text-gray-500 min-w-0"
         >
           {years.map((year, index) => (
             <span
@@ -84,7 +84,7 @@ export default function SharedTimelineChart({
       </div>
 
       {/* Timeline Rows */}
-      <div id={`${idPrefix}-rows`} className={styles.rowSpacing}>
+      <div id={`${idPrefix}-rows`} className={`${styles.rowSpacing} w-full`}>
         {sites.map((site) => {
           const isSelected = selectedSiteId === site.name;
           return (
