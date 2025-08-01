@@ -10,6 +10,7 @@ interface TimelineSparklineProps {
   dateRange: string;
   selectedSiteId?: string | null;
   onSiteSelect?: (siteId: string | null) => void;
+  onConfidenceUpdate?: (data: ConfidenceData) => void;
 }
 
 interface ConfidenceData {
@@ -30,7 +31,8 @@ export default function TimelineSparkline({
   endDate,
   dateRange,
   selectedSiteId,
-  onSiteSelect
+  onSiteSelect,
+  onConfidenceUpdate
 }: TimelineSparklineProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [confidenceData, setConfidenceData] = useState<ConfidenceData | null>(null);
@@ -41,7 +43,8 @@ export default function TimelineSparkline({
 
   const handleConfidenceUpdate = useCallback((data: ConfidenceData) => {
     setConfidenceData(data);
-  }, []);
+    onConfidenceUpdate?.(data);
+  }, [onConfidenceUpdate]);
 
   return (
     <div id="timeline-sparkline-container" className="border border-gray-200 rounded-lg overflow-hidden overflow-x-hidden">

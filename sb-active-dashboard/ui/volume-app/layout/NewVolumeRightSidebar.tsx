@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import TrendsHeader from "../components/right-sidebar/TrendsHeader";
 import MilesOfStreetByTrafficLevelBarChart from "../components/right-sidebar/MilesOfStreetByTrafficLevelBarChart";
 import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
@@ -18,6 +18,20 @@ import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDa
 interface DateRangeValue {
   startDate: Date;
   endDate: Date;
+}
+
+interface ConfidenceLevel {
+  level: 'high' | 'medium' | 'low';
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  icon: React.ReactNode;
+}
+
+interface ConfidenceData {
+  confidence: ConfidenceLevel;
+  contributingSites: number;
+  totalSites: number;
 }
 
 interface NewVolumeRightSidebarProps {
@@ -102,6 +116,21 @@ export default function NewVolumeRightSidebar({
   // State for timeline data
   const [timelineData, setTimelineData] = useState<any[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
+
+  // State for confidence data from timeline sparkline
+  const [confidenceData, setConfidenceData] = useState<ConfidenceData | null>(null);
+
+  // Callback to handle confidence updates from timeline sparkline
+  const handleConfidenceUpdate = useCallback((data: ConfidenceData) => {
+    setConfidenceData(data);
+  }, []);
+
+  // Reset confidence data when no geometry is selected
+  useEffect(() => {
+    if (!selectedGeometry) {
+      setConfidenceData(null);
+    }
+  }, [selectedGeometry]);
 
   // Create volume chart data service instance
   const [volumeChartDataService, setVolumeChartDataService] = useState<VolumeChartDataService | null>(null);
@@ -188,7 +217,12 @@ export default function NewVolumeRightSidebar({
         {activeTab === 'raw-data' && (
           <>
             <div className={`space-y-4 ${horizontalMargins} my-4`}>
-              <LowDataCoverage />
+              <LowDataCoverage 
+                confidence={confidenceData?.confidence}
+                contributingSites={confidenceData?.contributingSites}
+                totalSites={confidenceData?.totalSites}
+                hasData={timelineData.length > 0}
+              />
               <SummaryStatistics 
                 spatialResult={volumeResult || null} 
                 isLoading={volumeLoading} 
@@ -210,6 +244,7 @@ export default function NewVolumeRightSidebar({
                 dateRange={`${dateRange.startDate.toLocaleDateString()} - ${dateRange.endDate.toLocaleDateString()}`}
                 selectedSiteId={selectedCountSite}
                 onSiteSelect={onCountSiteSelect}
+                onConfidenceUpdate={handleConfidenceUpdate}
               />
               <HighestVolume 
                 mapView={mapView}
