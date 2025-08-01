@@ -52,8 +52,8 @@ export default function NewVolumeMap({
   // Hourly data for Cost Benefit Tool (AADT)
   const [hourlyData, setHourlyData] = useState<HourlyData[]>([]);
   
-  // State for highlighting selected count site
-  const [highlightGraphic, setHighlightGraphic] = useState<Graphic | null>(null);
+  // Ref for highlighting selected count site (using ref to avoid dependency issues)
+  const highlightGraphicRef = useRef<Graphic | null>(null);
 
   // Handler to set map center/zoom when view is ready
   const handleArcgisViewReadyChange = (event: any) => {
@@ -191,16 +191,25 @@ export default function NewVolumeMap({
   // Handle count site highlighting
   useEffect(() => {
     if (!viewReady || !mapViewRef.current || !aadtLayer || !selectedCountSite) {
-      // Clear any existing highlight
-      if (highlightGraphic && mapViewRef.current?.graphics) {
-        mapViewRef.current.graphics.remove(highlightGraphic);
-        setHighlightGraphic(null);
+      // Clear any existing highlight and close popup
+      if (highlightGraphicRef.current && mapViewRef.current?.graphics) {
+        mapViewRef.current.graphics.remove(highlightGraphicRef.current);
+        highlightGraphicRef.current = null;
+      }
+      if (mapViewRef.current?.popup) {
+        mapViewRef.current.popup.visible = false;
       }
       return;
     }
 
     const highlightCountSite = async () => {
       try {
+        // Remove any existing highlight graphic first
+        if (highlightGraphicRef.current && mapViewRef.current.graphics) {
+          mapViewRef.current.graphics.remove(highlightGraphicRef.current);
+          highlightGraphicRef.current = null;
+        }
+
         // Query the AADT layer for the selected count site by name
         const query = aadtLayer.createQuery();
         query.where = `name = '${selectedCountSite}'`;
@@ -211,11 +220,6 @@ export default function NewVolumeMap({
         
         if (results.features.length > 0) {
           const feature = results.features[0];
-          
-          // Remove any existing highlight graphic
-          if (highlightGraphic) {
-            mapViewRef.current.graphics.remove(highlightGraphic);
-          }
           
           // Create a highlight graphic with a distinct symbol
           const highlightSymbol = new SimpleMarkerSymbol({
@@ -233,20 +237,26 @@ export default function NewVolumeMap({
           });
           
           // Add the highlight graphic to the map
-          mapViewRef.current.graphics.add(graphic);
-          setHighlightGraphic(graphic);
+          if (mapViewRef.current.graphics) {
+            mapViewRef.current.graphics.add(graphic);
+            highlightGraphicRef.current = graphic;
+          }
           
-          // Zoom to the selected count site
-          mapViewRef.current.goTo({
+          // Zoom to the selected count site and then show popup
+          await mapViewRef.current.goTo({
             target: feature.geometry,
             zoom: 15
           });
           
-          // Show popup for the selected site
-          mapViewRef.current.popup.open({
-            features: [feature],
-            location: feature.geometry
-          });
+          // Add a small delay to ensure zoom completes, then show popup
+          setTimeout(() => {
+            if (mapViewRef.current) {
+              mapViewRef.current.popup.open({
+                features: [feature],
+                location: feature.geometry
+              });
+            }
+          }, 300);
         }
       } catch (error) {
         console.error("Error highlighting count site:", error);
@@ -254,7 +264,7 @@ export default function NewVolumeMap({
     };
 
     highlightCountSite();
-  }, [viewReady, aadtLayer, selectedCountSite, highlightGraphic]);
+  }, [viewReady, aadtLayer, selectedCountSite]); // Removed highlightGraphic from dependencies to prevent infinite loop
 
   return (
     <div id="volume-map-container" className="flex-1 bg-gray-200 relative">
