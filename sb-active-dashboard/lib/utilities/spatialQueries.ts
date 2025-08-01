@@ -64,18 +64,17 @@ export async function queryAADTWithinPolygon(
     const query = aadtLayer.createQuery();
     query.geometry = selectedPolygon;
     query.spatialRelationship = "intersects";
-    query.outFields = ["OBJECTID", "name", "locality", "all_aadt", "weekday_aadt", "weekend_aadt"];
+    query.outFields = ["objectid"];
     query.returnGeometry = false;
 
     const results = await aadtLayer.queryFeatures(query);
     
     const aadtFeatures: AADTFeature[] = results.features.map(feature => ({
-      objectId: feature.attributes.OBJECTID,
-      name: feature.attributes.name || "Unknown",
-      locality: feature.attributes.locality || "Unknown",
-      all_aadt: feature.attributes.all_aadt || 0,
-      weekday_aadt: feature.attributes.weekday_aadt || 0,
-      weekend_aadt: feature.attributes.weekend_aadt || 0,
+      objectId: feature.attributes.objectid,
+      name: "Unknown",
+      all_aadt: 0,
+      weekday_aadt: 0,
+      weekend_aadt: 0,
     }));
 
     const totalAADT = aadtFeatures.reduce((sum, feature) => sum + feature.all_aadt, 0);

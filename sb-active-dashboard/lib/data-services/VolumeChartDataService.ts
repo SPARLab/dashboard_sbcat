@@ -94,28 +94,134 @@ export class VolumeChartDataService {
   }
 
   /**
+   * Helper method to query all features from a layer in parallel, bypassing record limits.
+   */
+  private async queryAllFeaturesInParallel(layer: __esri.FeatureLayer, query: __esri.Query): Promise<__esri.Graphic[]> {
+    const maxRecordCount = 1000; // Safe value for ArcGIS Server feature queries
+
+    // 1. Get all object IDs that match the original query
+    const allObjectIds = await layer.queryObjectIds(query);
+    
+    if (!allObjectIds || allObjectIds.length === 0) {
+        return [];
+    }
+
+    // 2. Split IDs into chunks
+    const idChunks: number[][] = [];
+    for (let i = 0; i < allObjectIds.length; i += maxRecordCount) {
+        idChunks.push(allObjectIds.slice(i, i + maxRecordCount));
+    }
+
+    // 3. Create feature query promises for each chunk
+    const featureQueryPromises = idChunks.map(chunk => {
+        const featureQuery = query.clone();
+        featureQuery.objectIds = chunk;
+        return layer.queryFeatures(featureQuery);
+    });
+
+    // 4. Run in parallel and combine results
+    const featureSets = await Promise.all(featureQueryPromises);
+    const allFeatures = featureSets.flatMap(featureSet => featureSet.features);
+    
+    return allFeatures;
+  }
+
+  /**
    * Get data for TimelineSparkline chart component
    */
   async getTimelineSparklineData(
     mapView: MapView,
     filters: any,
-    timeSpan: { start: Date; end: Date }
+    timeSpan: { start: Date; end: Date },
+    selectedGeometry?: __esri.Geometry | null
   ): Promise<TimelineSparklineData> {
-    // TODO: Implement timeline data fetching
-    // This would query count data to find when each site has data
-    const mockData = [
-      {
-        siteId: 1,
-        siteName: "Site 1",
-        dataPeriods: [
-          { start: new Date(2020, 0, 1), end: new Date(2020, 5, 1) },
-          { start: new Date(2021, 0, 1), end: new Date(2021, 11, 31) }
-        ]
+    try {
+      if (!selectedGeometry) {
+        return { sites: [] };
       }
-    ];
 
-    const sites = TimeSeriesPrepService.prepareTimelineSparklineData(mockData, timeSpan);
-    return { sites };
+      // Step 1: Get sites within the selected geometry
+      const sitesQuery = this.sitesLayer.createQuery();
+      sitesQuery.geometry = selectedGeometry;
+      sitesQuery.spatialRelationship = "intersects";
+      sitesQuery.outFields = ["id", "name"];
+      sitesQuery.returnGeometry = false;
+
+      const sitesResult = await this.sitesLayer.queryFeatures(sitesQuery);
+      
+      console.log('Step 1: Sites in polygon', sitesResult.features.map(f => f.attributes));
+      
+      if (sitesResult.features.length === 0) {
+        return { sites: [] };
+      }
+      
+      const siteIds = sitesResult.features.map(f => f.attributes.id);
+      const siteMetadata = sitesResult.features.reduce((acc, feature) => {
+        acc[feature.attributes.id] = feature.attributes;
+        return acc;
+      }, {} as Record<number, {id: number, name: string}>);
+      console.log('Step 1b: Site metadata', siteMetadata);
+
+      // Step 2: Get count data for these sites within the date range using paginated helper
+      const countsQuery = this.countsLayer.createQuery();
+      const startDate = timeSpan.start.toISOString().split('T')[0];
+      const endDate = timeSpan.end.toISOString().split('T')[0];
+      
+      countsQuery.where = `site_id IN (${siteIds.join(',')}) AND timestamp >= DATE '${startDate}' AND timestamp <= DATE '${endDate}'`;
+      countsQuery.outFields = ["site_id", "timestamp"];
+      countsQuery.returnGeometry = false;
+
+      const countsResultFeatures = await this.queryAllFeaturesInParallel(this.countsLayer, countsQuery);
+      console.log('Step 2: Counts data from server', countsResultFeatures.map(f => f.attributes));
+
+      // Step 3: Group count data by site to find data periods
+      const countsBySite = countsResultFeatures.reduce((acc, feature) => {
+        const siteId = feature.attributes.site_id;
+        const countDate = new Date(feature.attributes.timestamp);
+        
+        if (!acc[siteId]) {
+          acc[siteId] = [];
+        }
+        acc[siteId].push(countDate);
+        return acc;
+      }, {} as Record<number, Date[]>);
+      console.log('Step 3: Counts grouped by site', countsBySite);
+
+      // Step 4: Convert to timeline format, including sites with no data in the period
+      const timelineData = sitesResult.features.map((siteFeature, index) => {
+        const siteId = siteFeature.attributes.id;
+        const siteName = siteMetadata[siteId]?.name || `Site ${siteId}`;
+        const countDates = countsBySite[siteId] || [];
+        
+        countDates.sort((a, b) => a.getTime() - b.getTime());
+        
+        const dataPeriods = [];
+        if (countDates.length > 0) {
+          // TODO: Enhance this to find gaps and create multiple periods
+          dataPeriods.push({
+            start: countDates[0],
+            end: countDates[countDates.length - 1]
+          });
+        }
+
+        const result = {
+          siteId: siteId,
+          siteName: siteName,
+          siteLabel: `Site ${index + 1}`,
+          dataPeriods
+        };
+        
+        return result;
+      });
+      console.log('Step 4: Final timeline data', timelineData);
+
+      const sites = TimeSeriesPrepService.prepareTimelineSparklineData(timelineData, timeSpan);
+      return { sites };
+      
+    } catch (error) {
+      console.error('Error fetching timeline data:', error);
+      return { sites: [] };
+    }
   }
 
   /**

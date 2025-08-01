@@ -5,8 +5,8 @@ import { type SiteData } from "./SharedTimelineChart";
 
 interface TimelineSparklineProps {
   sites: SiteData[];
-  startYear: number;
-  endYear: number;
+  startDate: Date;
+  endDate: Date;
   dateRange: string;
 }
 
@@ -24,8 +24,8 @@ interface ConfidenceData {
 
 export default function TimelineSparkline({
   sites,
-  startYear,
-  endYear,
+  startDate,
+  endDate,
   dateRange
 }: TimelineSparklineProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -52,8 +52,8 @@ export default function TimelineSparkline({
       )}
       <TimelineSparklineChart
         sites={sites}
-        startYear={startYear}
-        endYear={endYear}
+        startDate={startDate}
+        endDate={endDate}
         dateRange={dateRange}
         isCollapsed={isCollapsed}
         onConfidenceUpdate={handleConfidenceUpdate}

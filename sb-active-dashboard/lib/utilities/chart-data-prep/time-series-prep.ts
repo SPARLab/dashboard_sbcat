@@ -102,12 +102,14 @@ export class TimeSeriesPrepService {
     siteData: Array<{
       siteId: number;
       siteName: string;
+      siteLabel: string;
       dataPeriods: Array<{ start: Date; end: Date }>;
     }>,
     totalTimeSpan: { start: Date; end: Date }
   ): Array<{
     id: string;
     name: string;
+    label: string;
     dataPeriods: Array<{ start: number; end: number }>; // Normalized 0-100
   }> {
     const totalSpanMs = totalTimeSpan.end.getTime() - totalTimeSpan.start.getTime();
@@ -115,6 +117,7 @@ export class TimeSeriesPrepService {
     return siteData.map(site => ({
       id: `site${site.siteId}`,
       name: site.siteName,
+      label: site.siteLabel,
       dataPeriods: site.dataPeriods.map(period => {
         const startPercent = ((period.start.getTime() - totalTimeSpan.start.getTime()) / totalSpanMs) * 100;
         const endPercent = ((period.end.getTime() - totalTimeSpan.start.getTime()) / totalSpanMs) * 100;

@@ -6,6 +6,11 @@ import DateRangeSection from "../../components/filters/DateRangeSection";
 import GeographicLevelSection from "../../components/filters/GeographicLevelSection";
 import ModeledDataAdditionalSection from "../components/left-sidebar/ModeledDataAdditionalSection";
 
+interface DateRangeValue {
+  startDate: Date;
+  endDate: Date;
+}
+
 interface NewVolumeLeftSidebarProps {
   activeTab: string;
   showBicyclist: boolean;
@@ -16,6 +21,8 @@ interface NewVolumeLeftSidebarProps {
   setModelCountsBy: (type: string) => void;
   geographicLevel: string;
   onGeographicLevelChange: (level: string) => void;
+  dateRange: DateRangeValue;
+  onDateRangeChange: (dateRange: DateRangeValue) => void;
 }
 
 export default function NewVolumeLeftSidebar({ 
@@ -28,6 +35,8 @@ export default function NewVolumeLeftSidebar({
   setModelCountsBy,
   geographicLevel,
   onGeographicLevelChange,
+  dateRange,
+  onDateRangeChange,
 }: NewVolumeLeftSidebarProps) {
   return (
     <div id="volume-filters-sidebar" className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
@@ -49,7 +58,10 @@ export default function NewVolumeLeftSidebar({
         setShowPedestrian={setShowPedestrian}
       />
       <hr className="border-gray-200" />
-      <DateRangeSection />
+      <DateRangeSection 
+        dateRange={dateRange}
+        onDateRangeChange={onDateRangeChange}
+      />
       <hr className="border-gray-200" />
       <GeographicLevelSection 
         geographicLevel={geographicLevel}

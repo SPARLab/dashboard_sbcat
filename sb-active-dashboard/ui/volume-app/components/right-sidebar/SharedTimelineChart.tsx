@@ -1,5 +1,7 @@
 import React from "react";
 
+// No custom CSS needed anymore - arrow removed for cleaner design
+
 export interface DataPeriod {
   start: number; // percentage from start of timeline
   end: number;   // percentage from start of timeline
@@ -8,6 +10,7 @@ export interface DataPeriod {
 export interface SiteData {
   id: string;
   name: string;
+  label: string;
   dataPeriods: DataPeriod[];
 }
 
@@ -53,7 +56,11 @@ export default function SharedTimelineChart({
   const styles = VARIANTS[variant];
 
   return (
-    <div id={`${idPrefix}-container`} className={className}>
+    <>
+      <div 
+        id={`${idPrefix}-container`} 
+        className={className}
+      >
       {/* Year Labels */}
       <div id={`${idPrefix}-year-labels-container`} className="flex items-center mb-2">
         <div className={`${styles.siteLabelWidth} shrink-0`}>
@@ -82,18 +89,22 @@ export default function SharedTimelineChart({
             <div
               id={`${idPrefix}-row-${site.id}`}
               key={site.id}
-              className={`flex items-center transition-colors duration-200 rounded-sm px-1 py-0.5 ${
+              className={`group relative flex items-center transition-colors duration-200 rounded-sm px-1 py-0.5 cursor-default ${
                 isSelected ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-100'
               }`}
-              title={site.name} // Tooltip for full site name
             >
               {/* Site Label */}
               <div
                 id={`${idPrefix}-site-label-${site.id}`}
-                className={`${styles.siteLabelWidth} text-xs font-medium ${
+                className={`${styles.siteLabelWidth} text-xs font-medium truncate ${
                   isSelected ? 'text-blue-800' : 'text-gray-600'
                 }`}
               >
+                {site.label}
+              </div>
+              
+              {/* Custom fast tooltip */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-100 border border-gray-300 text-gray-900 text-xs rounded whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-100 ease-in-out z-50 shadow-sm">
                 {site.name}
               </div>
 
@@ -124,5 +135,6 @@ export default function SharedTimelineChart({
         })}
       </div>
     </div>
+    </>
   );
 } 

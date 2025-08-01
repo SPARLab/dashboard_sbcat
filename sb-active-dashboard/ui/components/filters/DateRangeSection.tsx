@@ -194,11 +194,21 @@ const CalendarPortal = React.memo(
   }
 );
 
-function DateRangeSection() {
+interface DateRangeValue {
+  startDate: Date;
+  endDate: Date;
+}
+
+interface DateRangeSectionProps {
+  dateRange: DateRangeValue;
+  onDateRangeChange: (dateRange: DateRangeValue) => void;
+}
+
+function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProps) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selection, setSelection] = useState({
-    startDate: new Date(2023, 0, 1),
-    endDate: new Date(2023, 11, 31),
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
     key: 'selection'
   });
   const [focusedRange, setFocusedRange] = useState<[number, 0 | 1]>([0, 0]);
@@ -208,11 +218,26 @@ function DateRangeSection() {
 
   const calendarIcon = "http://localhost:3845/assets/1be83d6e0c00a3e729a68de2ad961591d68c608d.svg";
 
+  // Sync internal selection state when external dateRange prop changes
+  useEffect(() => {
+    setSelection({
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+      key: 'selection'
+    });
+  }, [dateRange]);
+
   const handleSelect = useCallback((ranges: RangeKeyDict) => {
     if (ranges.selection) {
-      setSelection(prev => ({...prev, ...ranges.selection}));
+      const newSelection = {...selection, ...ranges.selection};
+      setSelection(newSelection);
+      // Update parent state
+      onDateRangeChange({
+        startDate: newSelection.startDate,
+        endDate: newSelection.endDate
+      });
     }
-  }, []);
+  }, [selection, onDateRangeChange]);
 
   const openCalendar = useCallback(() => {
     setShowCalendar(true);
@@ -248,12 +273,17 @@ function DateRangeSection() {
     const days = Math.round((percent / 100) * totalDays);
     const newDate = new Date(startOfYear.getTime() + days * 24 * 60 * 60 * 1000);
 
+    let newSelection = { ...selection };
     if (isDragging === 'start' && newDate <= selection.endDate) {
-      setSelection(prev => ({ ...prev, startDate: newDate }));
+      newSelection = { ...selection, startDate: newDate };
+      setSelection(newSelection);
+      onDateRangeChange({ startDate: newSelection.startDate, endDate: newSelection.endDate });
     } else if (isDragging === 'end' && newDate >= selection.startDate) {
-      setSelection(prev => ({ ...prev, endDate: newDate }));
+      newSelection = { ...selection, endDate: newDate };
+      setSelection(newSelection);
+      onDateRangeChange({ startDate: newSelection.startDate, endDate: newSelection.endDate });
     }
-  }, [isDragging, totalDays, startOfYear, selection.startDate, selection.endDate]);
+  }, [isDragging, totalDays, startOfYear, selection.startDate, selection.endDate, onDateRangeChange]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(null);

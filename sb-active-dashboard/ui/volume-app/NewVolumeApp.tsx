@@ -17,6 +17,12 @@ export default function NewVolumeApp() {
   const [modelCountsBy, setModelCountsBy] = useState<string>("cost-benefit");
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const [geographicLevel, setGeographicLevel] = useState('census-tract');
+  
+  // Date range state for timeline and filtering
+  const [dateRange, setDateRange] = useState({
+    startDate: new Date(2023, 0, 1),
+    endDate: new Date(2023, 11, 31)
+  });
 
   // Handle map view ready from map component
   const handleMapViewReady = (view: __esri.MapView) => {
@@ -38,6 +44,8 @@ export default function NewVolumeApp() {
           setModelCountsBy={setModelCountsBy}
           geographicLevel={geographicLevel}
           onGeographicLevelChange={setGeographicLevel}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
         />
         <NewVolumeMap 
           activeTab={activeTab}
@@ -55,6 +63,7 @@ export default function NewVolumeApp() {
           modelCountsBy={modelCountsBy}
           mapView={mapView}
           selectedGeometry={selectedGeometry}
+          dateRange={dateRange}
         />
       </div>
       {/* Footer */}

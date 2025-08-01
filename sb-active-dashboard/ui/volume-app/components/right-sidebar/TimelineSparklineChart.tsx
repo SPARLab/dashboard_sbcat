@@ -17,8 +17,8 @@ interface ConfidenceData {
 
 interface TimelineSparklineChartProps {
   sites: SiteData[];
-  startYear: number;
-  endYear: number;
+  startDate: Date;
+  endDate: Date;
   dateRange: string;
   isCollapsed: boolean;
   selectedSiteId?: string;
@@ -100,48 +100,24 @@ function calculateConfidence(sites: SiteData[]): ConfidenceData {
 
 export default function TimelineSparklineChart({
   sites,
-  startYear,
-  endYear,
+  startDate,
+  endDate,
   dateRange,
   isCollapsed,
   selectedSiteId,
   onConfidenceUpdate
 }: TimelineSparklineChartProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  // Generate year labels
+  
+  // Generate year labels from date range
   const years = [];
+  const startYear = startDate.getFullYear();
+  const endYear = endDate.getFullYear();
   for (let year = startYear; year <= endYear; year++) {
     years.push(year);
   }
 
-  // TODO: Remove this test data generation once real data integration is complete
-  // Generate additional test sites for scrolling demonstration (if less than 15 sites provided)
-  const testSites = useMemo(() => {
-    if (sites.length >= 15) return sites;
-    
-    return [
-      // Ensure existing sites have proper naming for demo
-      ...sites.map((site, i) => ({
-        ...site,
-        name: `Site ${i + 1}`
-      })),
-      // Add additional test sites with varying data contribution for confidence demo
-      ...Array.from({ length: 20 }, (_, i) => {
-        const siteIndex = i + sites.length + 1;
-        // Create some sites without data to demonstrate different confidence levels
-        const hasData = siteIndex <= 17; // 17 out of ~27 sites will have data (63% - medium confidence)
-        
-        return {
-          id: `test-site-${siteIndex}`,
-          name: `Site ${siteIndex}`,
-          dataPeriods: hasData ? [
-            { start: 15 + (i * 3) % 30, end: 35 + (i * 3) % 20 }, // Deterministic positioning
-            { start: 60 + (i * 2) % 20, end: 75 + (i * 2) % 15 }
-          ] : []
-        };
-      })
-    ];
-  }, [sites]); // Only recalculate when sites prop changes
+  // Use real data from props only - no test data fallback
 
   // Auto-scroll to selected site
   useEffect(() => {
@@ -164,14 +140,41 @@ export default function TimelineSparklineChart({
 
   // Calculate confidence data, memoized to prevent unnecessary recalculations
   const confidenceData = useMemo(() => {
-    return calculateConfidence(testSites);
-  }, [testSites]);
+    return calculateConfidence(sites);
+  }, [sites]);
 
   // Update parent component when confidence data changes
   useEffect(() => {
     onConfidenceUpdate(confidenceData);
   }, [confidenceData, onConfidenceUpdate]);
 
+  // Handle case with no sites
+  if (!sites || sites.length === 0) {
+    return (
+      <div id="timeline-sparkline-chart-no-data" className="text-center py-8 px-4">
+        <svg 
+          className="mx-auto h-12 w-12 text-gray-400" 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor" 
+          aria-hidden="true"
+        >
+          <path 
+            vectorEffect="non-scaling-stroke" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            strokeWidth={2} 
+            d="M9 17v-6l-2 2M9 11V5l2-2M9 11h6" 
+          />
+        </svg>
+        <h3 className="mt-2 text-sm font-medium text-gray-900">No count data available</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          There is no count site data for the selected area and timeframe.
+        </p>
+      </div>
+    );
+  }
+  
   return (
     <div
       id="timeline-sparkline-chart"
@@ -209,15 +212,15 @@ export default function TimelineSparklineChart({
             }}
           >
             <SharedTimelineChart
-              sites={testSites}
+              sites={sites}
               years={years}
               variant="compact"
               idPrefix="timeline-sparkline-chart"
-              selectedSiteId={selectedSiteId || (testSites.length > 5 ? testSites[5].id : undefined)} // Demo: select 6th site for demonstration
+              selectedSiteId={selectedSiteId}
             />
           </div>
         </div>
       </div>
     </div>
   );
-} 
+}

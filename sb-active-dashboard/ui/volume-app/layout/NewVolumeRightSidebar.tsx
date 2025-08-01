@@ -13,6 +13,12 @@ import ModeBreakdown from "../components/right-sidebar/ModeBreakdown";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import { useSpatialQuery, useVolumeSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
+import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDataService";
+
+interface DateRangeValue {
+  startDate: Date;
+  endDate: Date;
+}
 
 interface NewVolumeRightSidebarProps {
   activeTab: string;
@@ -21,6 +27,7 @@ interface NewVolumeRightSidebarProps {
   modelCountsBy: string;
   mapView?: __esri.MapView | null;
   selectedGeometry?: Polygon | null;
+  dateRange: DateRangeValue;
 }
 
 export default function NewVolumeRightSidebar({ 
@@ -29,34 +36,51 @@ export default function NewVolumeRightSidebar({
   showPedestrian,
   modelCountsBy,
   mapView,
-  selectedGeometry
+  selectedGeometry,
+  dateRange
 }: NewVolumeRightSidebarProps) {
   const horizontalMargins = "mx-4";
 
-  // Get layers from map view
+  // Initialize layers
+  const [sitesLayer] = useState(() => new FeatureLayer({
+    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/0",
+    title: "Count Sites"
+  }));
+  const [countsLayer] = useState(() => new FeatureLayer({
+    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/1",
+    title: "Counts"
+  }));
+  const [aadtTable] = useState(() => new FeatureLayer({
+    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/2",
+    title: "AADT Table"
+  }));
   const [aadtLayer, setAadtLayer] = useState<FeatureLayer | null>(null);
-  const [sitesLayer, setSitesLayer] = useState<FeatureLayer | null>(null);
-  const [aadtTable, setAadtTable] = useState<FeatureLayer | null>(null);
 
+  // Find the AADT layer from the map once the map is loaded
   useEffect(() => {
-    if (mapView && mapView.map) {
-      // Find the AADT layer in the map
-      const layer = mapView.map.layers.find(
-        (layer) => layer.title === "AADT Count Sites"
-      ) as FeatureLayer;
-      setAadtLayer(layer || null);
+    if (!mapView) return;
 
-      // For volume app, we also need to access the Sites layer and AADT table directly
-      // Create direct references to the Sites and AADT tables
-      const sitesLayerUrl = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/0";
-      const aadtTableUrl = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/2";
-      
-      const sites = new FeatureLayer({ url: sitesLayerUrl });
-      const aadtTableLayer = new FeatureLayer({ url: aadtTableUrl });
-      
-      setSitesLayer(sites);
-      setAadtTable(aadtTableLayer);
+    // Check if layer is already there
+    const existingLayer = mapView.map.allLayers.find(l => l.title === "AADT Count Sites") as FeatureLayer;
+    if (existingLayer) {
+      console.log('✅ AADT layer found immediately');
+      setAadtLayer(existingLayer);
+      return;
     }
+
+    // If not, listen for layer changes
+    console.log('... AADT layer not found, listening for changes...');
+    const handle = mapView.map.allLayers.on("change", (event) => {
+        const addedLayer = event.added.find((l: any) => l.title === "AADT Count Sites");
+        if (addedLayer) {
+            console.log('✅ AADT layer found after change event');
+            setAadtLayer(addedLayer as FeatureLayer);
+            handle.remove();
+        }
+    });
+
+    return () => handle.remove();
+
   }, [mapView]);
 
   // Use spatial query hooks
@@ -72,63 +96,64 @@ export default function NewVolumeRightSidebar({
     selectedGeometry || null
   );
 
-  // Sample data for the timeline sparkline - this would come from your data source
-  const timelineData = [
-    {
-      id: "site1",
-      name: "Site 1",
-      dataPeriods: [
-        { start: 0, end: 35 },
-        { start: 45, end: 55 },
-        { start: 65, end: 85 },
-        { start: 90, end: 95 }
-      ]
-    },
-    {
-      id: "site2", 
-      name: "Site 2",
-      dataPeriods: [
-        { start: 10, end: 25 },
-        { start: 40, end: 50 }
-      ]
-    },
-    {
-      id: "site3",
-      name: "Site 3", 
-      dataPeriods: [
-        { start: 0, end: 45 },
-        { start: 60, end: 100 }
-      ]
-    },
-    {
-      id: "site4",
-      name: "Site 4",
-      dataPeriods: [
-        { start: 5, end: 95 }
-      ]
-    },
-    {
-      id: "site5",
-      name: "Site 5",
-      dataPeriods: [
-        { start: 0, end: 15 },
-        { start: 25, end: 35 },
-        { start: 45, end: 55 },
-        { start: 65, end: 75 },
-        { start: 85, end: 95 }
-      ]
-    },
-    {
-      id: "site6",
-      name: "Site 6",
-      dataPeriods: []
-    },
-    {
-      id: "site7", 
-      name: "Site 7",
-      dataPeriods: []
+  // State for timeline data
+  const [timelineData, setTimelineData] = useState<any[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+
+  // Fetch timeline data when selectedGeometry, dateRange, or filters change
+  useEffect(() => {
+    console.log('🔄 Timeline useEffect triggered:', {
+      hasMapView: !!mapView,
+      hasSelectedGeometry: !!selectedGeometry,
+      hasSitesLayer: !!sitesLayer,
+      hasAadtTable: !!aadtTable,
+      hasAadtLayer: !!aadtLayer,
+      dateRange,
+      showBicyclist,
+      showPedestrian
+    });
+
+    if (!mapView || !selectedGeometry || !sitesLayer || !aadtTable || !aadtLayer) {
+      console.log('❌ Missing required dependencies, clearing timeline data');
+      setTimelineData([]);
+      return;
     }
-  ];
+
+    const fetchTimelineData = async () => {
+      console.log('📡 Fetching timeline data for selected geometry...');
+      setTimelineLoading(true);
+      try {
+        const volumeService = new VolumeChartDataService(sitesLayer, countsLayer, aadtLayer!);
+        const filters = {
+          showBicyclist,
+          showPedestrian,
+        };
+        const timeSpan = {
+          start: dateRange.startDate,
+          end: dateRange.endDate
+        };
+        
+        const result = await volumeService.getTimelineSparklineData(
+          mapView,
+          filters,
+          timeSpan,
+          selectedGeometry
+        );
+        
+        console.log('✅ Timeline data received:', result);
+        setTimelineData(result.sites || []);
+      } catch (error) {
+        console.error('❌ Error fetching timeline data:', error);
+        setTimelineData([]);
+      } finally {
+        setTimelineLoading(false);
+      }
+    };
+
+    fetchTimelineData();
+  }, [mapView, selectedGeometry, sitesLayer, aadtTable, aadtLayer, dateRange, showBicyclist, showPedestrian]);
+
+
 
   return (
     <div id="volume-trends-sidebar" className="w-[412px] bg-white border-l border-gray-200 overflow-y-auto no-scrollbar">
@@ -170,7 +195,7 @@ export default function NewVolumeRightSidebar({
           <MilesOfStreetByTrafficLevelBarChart 
             dataType={activeTab} 
             horizontalMargins={horizontalMargins}
-            mapView={mapView}
+            mapView={mapView || undefined}
             showBicyclist={showBicyclist}
             showPedestrian={showPedestrian}
             modelCountsBy={modelCountsBy}
@@ -198,9 +223,9 @@ export default function NewVolumeRightSidebar({
               />
               <TimelineSparkline
                 sites={timelineData}
-                startYear={2022}
-                endYear={2025}
-                dateRange="Jan 1, 2022 - Dec 31, 2025"
+                startDate={dateRange.startDate}
+                endDate={dateRange.endDate}
+                dateRange={`${dateRange.startDate.toLocaleDateString()} - ${dateRange.endDate.toLocaleDateString()}`}
               />
               <HighestVolume />
               <ModeBreakdown />
