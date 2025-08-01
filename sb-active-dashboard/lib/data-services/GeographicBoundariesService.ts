@@ -46,8 +46,8 @@ export class GeographicBoundariesService {
   
   private selectedFeature: { objectId: number, layer: FeatureLayer } | null = null;
   
-  // Selection change callback
-  private onSelectionChange: ((geometry: Polygon | null) => void) | null = null;
+  // Selection change callback - supports both legacy and new format
+  private onSelectionChange: ((data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void) | null = null;
 
   private hoverSymbol = new SimpleFillSymbol({
     color: [0, 0, 0, 0],
@@ -89,7 +89,7 @@ export class GeographicBoundariesService {
     return [this.cityLayer, this.serviceAreaLayer, this.highlightLayer];
   }
   
-  setSelectionChangeCallback(callback: (geometry: Polygon | null) => void) {
+  setSelectionChangeCallback(callback: (data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void) {
     this.onSelectionChange = callback;
   }
   
@@ -281,9 +281,13 @@ export class GeographicBoundariesService {
 
     this.refreshHighlight();
     
-    // Notify about the new selection
+    // Notify about the new selection with area name
     if (this.onSelectionChange && clickedGraphic.geometry) {
-      this.onSelectionChange(clickedGraphic.geometry as Polygon);
+      const areaName = clickedGraphic.attributes.NAME || null;
+      this.onSelectionChange({
+        geometry: clickedGraphic.geometry as Polygon,
+        areaName: areaName
+      });
     }
   }
 

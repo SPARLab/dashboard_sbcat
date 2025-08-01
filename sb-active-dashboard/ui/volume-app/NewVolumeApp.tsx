@@ -9,7 +9,7 @@ export default function NewVolumeApp() {
   const [activeTab, setActiveTab] = useState('raw-data');
   
   // Selection hook for polygon selection
-  const { selectedGeometry, onSelectionChange } = useSelection();
+  const { selectedGeometry, selectedAreaName, onSelectionChange } = useSelection();
   
   // Count site selection state
   const [selectedCountSite, setSelectedCountSite] = useState<string | null>(null);
@@ -74,6 +74,7 @@ export default function NewVolumeApp() {
           modelCountsBy={modelCountsBy}
           mapView={mapView}
           selectedGeometry={selectedGeometry}
+          selectedAreaName={selectedAreaName}
           dateRange={dateRange}
           selectedCountSite={selectedCountSite}
           onCountSiteSelect={setSelectedCountSite}

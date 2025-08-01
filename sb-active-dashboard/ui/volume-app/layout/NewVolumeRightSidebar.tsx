@@ -27,6 +27,7 @@ interface NewVolumeRightSidebarProps {
   modelCountsBy: string;
   mapView?: __esri.MapView | null;
   selectedGeometry?: Polygon | null;
+  selectedAreaName?: string | null;
   dateRange: DateRangeValue;
   selectedCountSite?: string | null;
   onCountSiteSelect?: (siteId: string | null) => void;
@@ -39,6 +40,7 @@ export default function NewVolumeRightSidebar({
   modelCountsBy,
   mapView,
   selectedGeometry,
+  selectedAreaName,
   dateRange,
   selectedCountSite,
   onCountSiteSelect
@@ -158,27 +160,10 @@ export default function NewVolumeRightSidebar({
         <TrendsHeader activeTab={activeTab} horizontalMargins={horizontalMargins} />
         {selectedGeometry && (
           <div id="selection-indicator" className={`${horizontalMargins} mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg`}>
-            <h4 className="text-sm font-medium text-blue-900 mb-2">Selected Area</h4>
-            {isLoading && (
-              <p className="text-xs text-blue-700 mb-1">Loading area data...</p>
-            )}
-            {error && (
-              <p className="text-xs text-red-600 mb-1">Error: {error}</p>
-            )}
-            {areaDescription && !isLoading && !error && (
-              <p className="text-xs text-blue-700 mb-2">{areaDescription}</p>
-            )}
-            {spatialResult && spatialResult.totalCount > 0 && (
-              <div className="text-xs text-blue-700 space-y-1">
-                <div className="flex justify-between">
-                  <span>Total AADT:</span>
-                  <span className="font-medium">{spatialResult.totalAADT.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Average AADT:</span>
-                  <span className="font-medium">{spatialResult.averageAADT.toLocaleString()}</span>
-                </div>
-              </div>
+            {selectedAreaName ? (
+              <p className="text-sm text-blue-700 font-medium mb-2">{selectedAreaName}</p>
+            ) : (
+              <p className="text-xs text-blue-700 mb-2">Custom selected area</p>
             )}
             <p className="text-xs text-blue-600 mt-2 italic">
               Click elsewhere to clear selection.
