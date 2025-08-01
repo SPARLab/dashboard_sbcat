@@ -151,26 +151,21 @@ export default function TimelineSparklineChart({
   // Handle case with no sites
   if (!sites || sites.length === 0) {
     return (
-      <div id="timeline-sparkline-chart-no-data" className="text-center py-8 px-4">
-        <svg 
-          className="mx-auto h-12 w-12 text-gray-400" 
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor" 
-          aria-hidden="true"
-        >
-          <path 
-            vectorEffect="non-scaling-stroke" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M9 17v-6l-2 2M9 11V5l2-2M9 11h6" 
-          />
-        </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No count data available</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          There is no count site data for the selected area and timeframe.
-        </p>
+      <div
+        id="timeline-sparkline-chart-no-data"
+        className={`grid bg-white rounded-b-lg transition-[grid-template-rows] ease-in-out duration-500 ${
+          isCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'
+        }`}
+      >
+        <div id="timeline-sparkline-chart-no-data-overflow-container" className="overflow-hidden">
+          <div id="timeline-sparkline-chart-no-data-padding-container" className="px-4 pb-4">
+            <div id="timeline-sparkline-chart-no-data-message-container" className="pt-4 mb-4 flex items-center justify-center min-h-60">
+              <p id="timeline-sparkline-chart-no-data-message" className="text-sm font-bold text-gray-900 text-center">
+                No count site data available for the selected region for the selected timeframe.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
