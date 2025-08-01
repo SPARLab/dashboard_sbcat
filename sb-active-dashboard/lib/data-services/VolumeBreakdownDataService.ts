@@ -128,12 +128,6 @@ export class VolumeBreakdownDataService {
       return counts > 0 && counts < 10000; // Adjust threshold as needed
     });
 
-    console.log(`🔍 Data Quality Check for ${timeScale}:`, {
-      originalRecords: countsData.length,
-      filteredRecords: filteredData.length,
-      removedRecords: countsData.length - filteredData.length
-    });
-
     // For Hour scale, we can work directly with hourly data
     if (timeScale === 'Hour') {
       const hourlyAggregation: { [key: string]: { total: number, count: number } } = {};
@@ -153,7 +147,6 @@ export class VolumeBreakdownDataService {
 
       const result = Object.entries(hourlyAggregation).map(([name, data]) => {
         const averageValue = data.count > 0 ? Math.round(data.total / data.count) : 0;
-        console.log(`📊 Hour - ${name}: ${data.count} records, avg: ${averageValue}`);
         return { name, value: averageValue };
       });
       
@@ -223,8 +216,6 @@ export class VolumeBreakdownDataService {
     // Calculate average daily traffic for each time period
     const result = Object.entries(timeScaleAggregation).map(([name, data]) => {
       const averageDailyTraffic = data.count > 0 ? Math.round(data.total / data.count) : 0;
-      
-      console.log(`📊 ${timeScale} - ${name}: ${data.count} site-days, avg daily: ${averageDailyTraffic}`);
       
       return { 
         name, 

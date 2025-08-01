@@ -147,12 +147,6 @@ export class YearToYearComparisonDataService {
       return counts > 0 && counts < 10000;
     });
 
-    console.log(`🔍 Year-to-Year Data Quality Check for ${timeScale}:`, {
-      originalRecords: countsData.length,
-      filteredRecords: filteredData.length,
-      removedRecords: countsData.length - filteredData.length
-    });
-
     // For Hour scale, work directly with hourly data
     if (timeScale === 'Hour') {
       const hourlyAggregation: { [key: string]: { total: number, count: number } } = {};
