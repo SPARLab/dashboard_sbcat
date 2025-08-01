@@ -101,9 +101,19 @@ export default function NewVolumeRightSidebar({
   const [timelineData, setTimelineData] = useState<any[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
 
+  // Create volume chart data service instance
+  const [volumeChartDataService, setVolumeChartDataService] = useState<VolumeChartDataService | null>(null);
+
+  // Initialize volume chart data service when layers are ready
+  useEffect(() => {
+    if (sitesLayer && countsLayer && aadtTable) {
+      setVolumeChartDataService(new VolumeChartDataService(sitesLayer, countsLayer, aadtTable));
+    }
+  }, [sitesLayer, countsLayer, aadtTable]);
+
   // Fetch timeline data when selectedGeometry, dateRange, or filters change
   useEffect(() => {
-    if (!mapView || !selectedGeometry || !sitesLayer || !aadtTable || !aadtLayer) {
+    if (!mapView || !selectedGeometry || !sitesLayer || !aadtTable) {
       setTimelineData([]);
       return;
     }
@@ -111,7 +121,7 @@ export default function NewVolumeRightSidebar({
     const fetchTimelineData = async () => {
       setTimelineLoading(true);
       try {
-        const volumeService = new VolumeChartDataService(sitesLayer, countsLayer, aadtLayer!);
+        const volumeService = new VolumeChartDataService(sitesLayer, countsLayer, aadtTable);
         const filters = {
           showBicyclist,
           showPedestrian,
@@ -138,7 +148,7 @@ export default function NewVolumeRightSidebar({
     };
 
     fetchTimelineData();
-  }, [mapView, selectedGeometry, sitesLayer, aadtTable, aadtLayer, dateRange, showBicyclist, showPedestrian]);
+  }, [mapView, selectedGeometry, sitesLayer, aadtTable, dateRange, showBicyclist, showPedestrian]);
 
 
 
@@ -225,7 +235,17 @@ export default function NewVolumeRightSidebar({
                 showPedestrian={showPedestrian}
                 selectedGeometry={selectedGeometry}
               />
-              <ModeBreakdown />
+              <ModeBreakdown 
+                selectedGeometry={selectedGeometry}
+                showBicyclist={showBicyclist}
+                showPedestrian={showPedestrian}
+                volumeChartDataService={volumeChartDataService || undefined}
+                mapView={mapView || undefined}
+                filters={{
+                  showBicyclist,
+                  showPedestrian,
+                }}
+              />
             </div>
           </>
         )}

@@ -15,7 +15,8 @@ export class CountSiteProcessingService {
     sitesLayer: __esri.FeatureLayer,
     aadtLayer: __esri.FeatureLayer,
     mapView: __esri.MapView,
-    filters: any
+    filters: any,
+    selectedGeometry?: __esri.Geometry | null
   ): Promise<{
     totalSites: number;
     bikeSites: number;
@@ -23,8 +24,8 @@ export class CountSiteProcessingService {
     avgDailyVolume: number;
     totalDailyVolume: number;
   }> {
-    // Get sites in current extent
-    const siteIds = await SpatialUtilService.getSiteIdsInExtent(sitesLayer, mapView);
+    // Get sites in current extent or selected geometry
+    const siteIds = await SpatialUtilService.getSiteIdsInExtent(sitesLayer, mapView, selectedGeometry);
     
     if (siteIds.length === 0) {
       return {
@@ -106,7 +107,7 @@ export class CountSiteProcessingService {
         return [];
       }
 
-      // Get site metadata
+      // Get site metadata  
       const sitesQuery = sitesLayer.createQuery();
       sitesQuery.where = `id IN (${siteIds.join(',')})`;
       sitesQuery.outFields = ["id", "name"];

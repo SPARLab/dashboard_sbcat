@@ -38,7 +38,7 @@ interface TimelineSparklineData {
   }>;
 }
 
-interface ModeBreakdownData {
+export interface ModeBreakdownData {
   bicycle: { count: number; percentage: number };
   pedestrian: { count: number; percentage: number };
   total: number;
@@ -64,13 +64,15 @@ export class VolumeChartDataService {
    */
   async getSummaryStatistics(
     mapView: MapView,
-    filters: any
+    filters: any,
+    selectedGeometry?: __esri.Geometry | null
   ): Promise<SummaryStatsData> {
     return CountSiteProcessingService.getSummaryStatistics(
       this.sitesLayer,
       this.aadtLayer,
       mapView,
-      filters
+      filters,
+      selectedGeometry
     );
   }
 
@@ -231,10 +233,11 @@ export class VolumeChartDataService {
    */
   async getModeBreakdownData(
     mapView: MapView,
-    filters: any
+    filters: any,
+    selectedGeometry?: __esri.Geometry | null
   ): Promise<ModeBreakdownData> {
     // Get summary stats first
-    const summary = await this.getSummaryStatistics(mapView, filters);
+    const summary = await this.getSummaryStatistics(mapView, filters, selectedGeometry);
     
     const bicycle = summary.bikeSites;
     const pedestrian = summary.pedSites;
