@@ -170,6 +170,17 @@ export default function AggregatedVolumeBreakdown({
     }
   };
 
+  // Format hour names for display (e.g., "5" -> "5 a.m.")
+  const formatHourName = (hourName: string): string => {
+    const hour = parseInt(hourName);
+    if (isNaN(hour)) return hourName;
+    
+    if (hour === 0) return '12 AM';
+    if (hour < 12) return `${hour} AM`;
+    if (hour === 12) return '12 PM';
+    return `${hour - 12} PM`;
+  };
+
   // Get detailed calculation explanation for tooltips
   const getCalculationExplanation = (scale: TimeScale): string => {
     switch (scale) {
@@ -204,7 +215,7 @@ export default function AggregatedVolumeBreakdown({
       },
       xAxis: {
         type: 'category',
-        data: currentData.map(item => item.name),
+        data: currentData.map(item => timeScale === 'Hour' ? formatHourName(item.name) : item.name),
         axisLine: {
           show: true,
           lineStyle: {
@@ -355,7 +366,7 @@ export default function AggregatedVolumeBreakdown({
               id="volume-chart-tooltip"
               className="absolute -top-0 left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
             >
-              {`${hoveredBar.value.toLocaleString()} Pedestrians & Bicyclists (${hoveredBar.name})`}
+              {`${hoveredBar.value.toLocaleString()} Pedestrians & Bicyclists (${timeScale === 'Hour' ? formatHourName(hoveredBar.name) : hoveredBar.name})`}
             </div>
           )}
 

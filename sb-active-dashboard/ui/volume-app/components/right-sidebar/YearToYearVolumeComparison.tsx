@@ -157,13 +157,26 @@ export default function YearToYearVolumeComparison({
     [],
   );
 
+  // Format hour names for display (e.g., "5" -> "5 AM")
+  const formatHourName = (hourName: string): string => {
+    const hour = parseInt(hourName);
+    if (isNaN(hour)) return hourName;
+ 
+    console.log("We are hitting this function")
+    
+    if (hour === 0) return '12 AM';
+    if (hour < 12) return `${hour} AM`;
+    if (hour === 12) return '12 PM';
+    return `${hour - 12} PM`;
+  };
+
   // Filter out data points where both years have zero values (missing data)
   const filteredData = currentData.filter(item => item.year2023 > 0 || item.year2024 > 0);
   
   // Determine if we should use bar chart or line chart
   const useBarChart = timeScale === 'Weekday vs Weekend' || timeScale === 'Year';
   const isYearView = timeScale === 'Year';
-  const categories = isYearView ? ['2023', '2024'] : filteredData.map(item => item.name);
+  const categories = isYearView ? ['2023', '2024'] : filteredData.map(item => timeScale === 'Hour' ? formatHourName(item.name) : item.name);
   
   // Extract data for both years - for line charts, use null for missing data to maintain alignment
   const currentData2023 = useBarChart ? 
@@ -429,7 +442,7 @@ export default function YearToYearVolumeComparison({
     }
   };
 
-  // Get detailed calculation explanation for tooltips
+    // Get detailed calculation explanation for tooltips
   const getCalculationExplanation = (scale: TimeScale): string => {
     switch (scale) {
       case 'Hour':
