@@ -201,8 +201,6 @@ export default function NewVolumeRightSidebar({
                 startYear={2022}
                 endYear={2025}
                 dateRange="Jan 1, 2022 - Dec 31, 2025"
-                confidenceLevel="Medium confidence"
-                contributingSites="5 out of 7 selected sites"
               />
               <HighestVolume />
               <ModeBreakdown />

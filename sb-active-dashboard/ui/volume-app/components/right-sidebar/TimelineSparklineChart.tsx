@@ -1,5 +1,19 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import SharedTimelineChart, { type SiteData } from "./SharedTimelineChart";
+
+interface ConfidenceLevel {
+  level: 'high' | 'medium' | 'low';
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  icon: React.ReactNode;
+}
+
+interface ConfidenceData {
+  confidence: ConfidenceLevel;
+  contributingSites: number;
+  totalSites: number;
+}
 
 interface TimelineSparklineChartProps {
   sites: SiteData[];
@@ -8,6 +22,80 @@ interface TimelineSparklineChartProps {
   dateRange: string;
   isCollapsed: boolean;
   selectedSiteId?: string;
+  onConfidenceUpdate: (data: ConfidenceData) => void;
+}
+
+// Confidence level configurations
+const CONFIDENCE_LEVELS: Record<'high' | 'medium' | 'low', ConfidenceLevel> = {
+  high: {
+    level: 'high',
+    color: 'text-green-700',
+    bgColor: 'bg-green-50',
+    borderColor: 'border-green-200',
+    icon: (
+      <svg viewBox="0 0 16 16" className="w-full h-full text-green-500">
+        <path
+          fill="currentColor"
+          d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
+        />
+      </svg>
+    )
+  },
+  medium: {
+    level: 'medium',
+    color: 'text-amber-700',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    icon: (
+      <svg viewBox="0 0 16 16" className="w-full h-full text-amber-500">
+        <path
+          fill="currentColor"
+          d="M8.982 1.566a1.13 1.13 0 0 0-1.964 0L.165 13.233c-.457.778.091 1.767.982 1.767h13.706c.89 0 1.439-.99.982-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"
+        />
+      </svg>
+    )
+  },
+  low: {
+    level: 'low',
+    color: 'text-red-700',
+    bgColor: 'bg-red-50',
+    borderColor: 'border-red-200',
+    icon: (
+      <svg viewBox="0 0 16 16" className="w-full h-full text-red-500">
+        <path
+          fill="currentColor"
+          d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"
+        />
+        <path
+          fill="currentColor" 
+          d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"
+        />
+      </svg>
+    )
+  }
+};
+
+// Calculate confidence level based on data contribution ratio
+function calculateConfidence(sites: SiteData[]): ConfidenceData {
+  const totalSites = sites.length;
+  const contributingSites = sites.filter(site => site.dataPeriods.length > 0).length;
+  const contributionRatio = totalSites > 0 ? contributingSites / totalSites : 0;
+  
+  let confidenceLevel: 'high' | 'medium' | 'low';
+  
+  if (contributionRatio >= 0.8) {
+    confidenceLevel = 'high';
+  } else if (contributionRatio >= 0.5) {
+    confidenceLevel = 'medium';
+  } else {
+    confidenceLevel = 'low';
+  }
+  
+  return {
+    confidence: CONFIDENCE_LEVELS[confidenceLevel],
+    contributingSites,
+    totalSites
+  };
 }
 
 export default function TimelineSparklineChart({
@@ -16,7 +104,8 @@ export default function TimelineSparklineChart({
   endYear,
   dateRange,
   isCollapsed,
-  selectedSiteId
+  selectedSiteId,
+  onConfidenceUpdate
 }: TimelineSparklineChartProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   // Generate year labels
@@ -27,22 +116,32 @@ export default function TimelineSparklineChart({
 
   // TODO: Remove this test data generation once real data integration is complete
   // Generate additional test sites for scrolling demonstration (if less than 15 sites provided)
-  const testSites = sites.length < 15 ? [
-    // Ensure existing sites have proper naming for demo
-    ...sites.map((site, i) => ({
-      ...site,
-      name: `Site ${i + 1}`
-    })),
-    // Add additional test sites
-    ...Array.from({ length: 20 }, (_, i) => ({
-      id: `test-site-${i + sites.length + 1}`,
-      name: `Site ${i + sites.length + 1}`,
-      dataPeriods: [
-        { start: Math.random() * 30, end: Math.random() * 20 + 40 },
-        { start: Math.random() * 20 + 60, end: Math.random() * 15 + 80 }
-      ]
-    }))
-  ] : sites;
+  const testSites = useMemo(() => {
+    if (sites.length >= 15) return sites;
+    
+    return [
+      // Ensure existing sites have proper naming for demo
+      ...sites.map((site, i) => ({
+        ...site,
+        name: `Site ${i + 1}`
+      })),
+      // Add additional test sites with varying data contribution for confidence demo
+      ...Array.from({ length: 20 }, (_, i) => {
+        const siteIndex = i + sites.length + 1;
+        // Create some sites without data to demonstrate different confidence levels
+        const hasData = siteIndex <= 17; // 17 out of ~27 sites will have data (63% - medium confidence)
+        
+        return {
+          id: `test-site-${siteIndex}`,
+          name: `Site ${siteIndex}`,
+          dataPeriods: hasData ? [
+            { start: 15 + (i * 3) % 30, end: 35 + (i * 3) % 20 }, // Deterministic positioning
+            { start: 60 + (i * 2) % 20, end: 75 + (i * 2) % 15 }
+          ] : []
+        };
+      })
+    ];
+  }, [sites]); // Only recalculate when sites prop changes
 
   // Auto-scroll to selected site
   useEffect(() => {
@@ -62,6 +161,16 @@ export default function TimelineSparklineChart({
       }
     }
   }, [selectedSiteId, isCollapsed]);
+
+  // Calculate confidence data, memoized to prevent unnecessary recalculations
+  const confidenceData = useMemo(() => {
+    return calculateConfidence(testSites);
+  }, [testSites]);
+
+  // Update parent component when confidence data changes
+  useEffect(() => {
+    onConfidenceUpdate(confidenceData);
+  }, [confidenceData, onConfidenceUpdate]);
 
   return (
     <div
@@ -86,12 +195,7 @@ export default function TimelineSparklineChart({
             >
               ({dateRange})
             </p>
-            <p
-              id="timeline-sparkline-chart-site-count"
-              className="text-xs text-gray-400 text-center mt-1"
-            >
-              {testSites.length} sites
-            </p>
+
           </div>
 
           {/* Scrollable Timeline Container */}
