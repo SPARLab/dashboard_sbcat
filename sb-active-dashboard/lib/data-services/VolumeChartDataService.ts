@@ -80,14 +80,16 @@ export class VolumeChartDataService {
   async getHighestVolumeData(
     mapView: MapView,
     filters: any,
-    limit: number = 10
+    limit: number = 10,
+    selectedGeometry?: __esri.Geometry | null
   ): Promise<HighestVolumeData> {
     const sites = await CountSiteProcessingService.getHighestVolumeSites(
       this.sitesLayer,
       this.aadtLayer,
       mapView,
       filters,
-      limit
+      limit,
+      selectedGeometry
     );
 
     return { sites };

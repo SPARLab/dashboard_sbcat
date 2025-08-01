@@ -67,17 +67,14 @@ export default function NewVolumeRightSidebar({
     // Check if layer is already there
     const existingLayer = mapView.map.allLayers.find(l => l.title === "AADT Count Sites") as FeatureLayer;
     if (existingLayer) {
-      console.log('✅ AADT layer found immediately');
       setAadtLayer(existingLayer);
       return;
     }
 
     // If not, listen for layer changes
-    console.log('... AADT layer not found, listening for changes...');
     const handle = mapView.map.allLayers.on("change", (event) => {
         const addedLayer = event.added.find((l: any) => l.title === "AADT Count Sites");
         if (addedLayer) {
-            console.log('✅ AADT layer found after change event');
             setAadtLayer(addedLayer as FeatureLayer);
             handle.remove();
         }
@@ -106,25 +103,12 @@ export default function NewVolumeRightSidebar({
 
   // Fetch timeline data when selectedGeometry, dateRange, or filters change
   useEffect(() => {
-    console.log('🔄 Timeline useEffect triggered:', {
-      hasMapView: !!mapView,
-      hasSelectedGeometry: !!selectedGeometry,
-      hasSitesLayer: !!sitesLayer,
-      hasAadtTable: !!aadtTable,
-      hasAadtLayer: !!aadtLayer,
-      dateRange,
-      showBicyclist,
-      showPedestrian
-    });
-
     if (!mapView || !selectedGeometry || !sitesLayer || !aadtTable || !aadtLayer) {
-      console.log('❌ Missing required dependencies, clearing timeline data');
       setTimelineData([]);
       return;
     }
 
     const fetchTimelineData = async () => {
-      console.log('📡 Fetching timeline data for selected geometry...');
       setTimelineLoading(true);
       try {
         const volumeService = new VolumeChartDataService(sitesLayer, countsLayer, aadtLayer!);
@@ -144,7 +128,6 @@ export default function NewVolumeRightSidebar({
           selectedGeometry
         );
         
-        console.log('✅ Timeline data received:', result);
         setTimelineData(result.sites || []);
       } catch (error) {
         console.error('❌ Error fetching timeline data:', error);
@@ -233,7 +216,15 @@ export default function NewVolumeRightSidebar({
                 selectedSiteId={selectedCountSite}
                 onSiteSelect={onCountSiteSelect}
               />
-              <HighestVolume />
+              <HighestVolume 
+                mapView={mapView}
+                sitesLayer={sitesLayer}
+                countsLayer={countsLayer}
+                aadtTable={aadtTable}
+                showBicyclist={showBicyclist}
+                showPedestrian={showPedestrian}
+                selectedGeometry={selectedGeometry}
+              />
               <ModeBreakdown />
             </div>
           </>
@@ -246,4 +237,4 @@ export default function NewVolumeRightSidebar({
       </div>
     </div>
   );
-} 
+}

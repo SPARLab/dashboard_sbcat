@@ -1,13 +1,83 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import MoreInformationIconCostBenefitTool from "./MoreInformationIcon";
 import CollapseExpandIcon from "./CollapseExpandIcon";
+import { VolumeChartDataService } from "../../../../lib/data-services/VolumeChartDataService";
+import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import Polygon from "@arcgis/core/geometry/Polygon";
 
-export default function HighestVolume() {
+interface HighestVolumeProps {
+  mapView?: __esri.MapView | null;
+  sitesLayer?: FeatureLayer | null;
+  countsLayer?: FeatureLayer | null;
+  aadtTable?: FeatureLayer | null;
+  showBicyclist?: boolean;
+  showPedestrian?: boolean;
+  selectedGeometry?: Polygon | null;
+}
+
+interface HighestVolumeSite {
+  siteId: number;
+  siteName: string;
+  bikeAADT: number;
+  pedAADT: number;
+  totalAADT: number;
+}
+
+export default function HighestVolume({
+  mapView,
+  sitesLayer,
+  countsLayer,
+  aadtTable,
+  showBicyclist = true,
+  showPedestrian = true,
+  selectedGeometry
+}: HighestVolumeProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [sites, setSites] = useState<HighestVolumeSite[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const toggleCollapse = () => {
         setIsCollapsed(!isCollapsed);
     };
+
+    // Fetch highest volume data
+    useEffect(() => {
+        if (!mapView || !sitesLayer || !aadtTable) {
+            setSites([]);
+            return;
+        }
+
+        const fetchHighestVolumeData = async () => {
+            setIsLoading(true);
+            setError(null);
+            
+            try {
+                const volumeService = new VolumeChartDataService(sitesLayer, countsLayer as FeatureLayer, aadtTable);
+                const filters = {
+                    showBicyclist,
+                    showPedestrian,
+                };
+                
+                const result = await volumeService.getHighestVolumeData(
+                    mapView,
+                    filters,
+                    5, // limit to top 5
+                    selectedGeometry
+                );
+                
+                setSites(result.sites || []);
+            } catch (err) {
+                console.error('Error fetching highest volume data:', err);
+                setError('Failed to load highest volume data');
+                setSites([]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchHighestVolumeData();
+    }, [mapView, sitesLayer, countsLayer, aadtTable, showBicyclist, showPedestrian, selectedGeometry]);
 
   return (
     <div
@@ -24,29 +94,36 @@ export default function HighestVolume() {
         <CollapseExpandIcon id="highest-volume-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
       </div>
       <div id="highest-volume-collapsible-content" className={`transition-all duration-400 ease-in-out overflow-y-hidden ${isCollapsed ? 'max-h-0' : 'max-h-96'}`}>
-          <ul id="highest-volume-list" className="space-y-2 text-sm">
-              <li id="highest-volume-item-1" className="flex justify-between items-center">
-                  <p id="highest-volume-item-1-name" className="text-gray-800">1. State Street</p>
-                  <p id="highest-volume-item-1-value" className="text-gray-800 font-medium">2,450</p>
-              </li>
-              <li id="highest-volume-item-2" className="flex justify-between items-center">
-                  <p id="highest-volume-item-2-name" className="text-gray-800">2. Cabrillo Blvd</p>
-                  <p id="highest-volume-item-2-value" className="text-gray-800 font-medium">1,870</p>
-              </li>
-              <li id="highest-volume-item-3" className="flex justify-between items-center">
-                  <p id="highest-volume-item-3-name" className="text-gray-800">3. Anacapa Street</p>
-                  <p id="highest-volume-item-3-value" className="text-gray-800 font-medium">1,230</p>
-              </li>
-              <li id="highest-volume-item-4" className="flex justify-between items-center">
-                  <p id="highest-volume-item-4-name" className="text-gray-800">4. De La Guerra St</p>
-                  <p id="highest-volume-item-4-value" className="text-gray-800 font-medium">980</p>
-              </li>
-              <li id="highest-volume-item-5" className="flex justify-between items-center">
-                  <p id="highest-volume-item-5-name" className="text-gray-800">5. Carrillo Street</p>
-                  <p id="highest-volume-item-5-value" className="text-gray-800 font-medium">740</p>
-              </li>
-          </ul>
+          {isLoading && (
+              <div id="highest-volume-loading" className="text-sm text-gray-500 text-center py-4">
+                  Loading highest volume data...
+              </div>
+          )}
+          {error && (
+              <div id="highest-volume-error" className="text-sm text-red-600 text-center py-4">
+                  {error}
+              </div>
+          )}
+          {!isLoading && !error && sites.length === 0 && (
+              <div id="highest-volume-no-data" className="text-sm text-gray-500 text-center py-4">
+                  No volume data available for current view
+              </div>
+          )}
+          {!isLoading && !error && sites.length > 0 && (
+              <ul id="highest-volume-list" className="space-y-2 text-sm">
+                  {sites.map((site, index) => (
+                      <li key={site.siteId} id={`highest-volume-item-${index + 1}`} className="flex justify-between items-center">
+                          <p id={`highest-volume-item-${index + 1}-name`} className="text-gray-800">
+                              {index + 1}. {site.siteName}
+                          </p>
+                          <p id={`highest-volume-item-${index + 1}-value`} className="text-gray-800 font-medium">
+                              {site.totalAADT.toLocaleString()}
+                          </p>
+                      </li>
+                  ))}
+              </ul>
+          )}
       </div>
     </div>
   );
-} 
+}

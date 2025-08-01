@@ -85,62 +85,78 @@ export class CountSiteProcessingService {
     aadtLayer: __esri.FeatureLayer,
     mapView: __esri.MapView,
     filters: any,
-    limit: number = 10
+    limit: number = 10,
+    selectedGeometry?: __esri.Geometry | null
   ): Promise<Array<{
     siteId: number;
     siteName: string;
     bikeAADT: number;
     pedAADT: number;
     totalAADT: number;
-    locality: string;
   }>> {
-    // Get sites in current extent
-    const siteIds = await SpatialUtilService.getSiteIdsInExtent(sitesLayer, mapView);
-    
-    if (siteIds.length === 0) return [];
+    try {
+      // Get sites in current extent or selected geometry
+      const siteIds = await SpatialUtilService.getSiteIdsInExtent(
+        sitesLayer,
+        mapView,
+        selectedGeometry
+      );
+      
+      if (siteIds.length === 0) {
+        return [];
+      }
 
-    // Get site metadata
-    const sitesQuery = sitesLayer.createQuery();
-    sitesQuery.where = `id IN (${siteIds.join(',')})`;
-    sitesQuery.outFields = ["id", "name", "locality"];
-    sitesQuery.returnGeometry = false;
+      // Get site metadata
+      const sitesQuery = sitesLayer.createQuery();
+      sitesQuery.where = `id IN (${siteIds.join(',')})`;
+      sitesQuery.outFields = ["id", "name"];
+      sitesQuery.returnGeometry = false;
 
-    const sitesResult = await sitesLayer.queryFeatures(sitesQuery);
-    const siteMetadata = sitesResult.features.reduce((acc, f) => {
-      acc[f.attributes.id] = f.attributes;
-      return acc;
-    }, {} as any);
+      const sitesResult = await sitesLayer.queryFeatures(sitesQuery);
+      
+      const siteMetadata = sitesResult.features.reduce((acc, f) => {
+        acc[f.attributes.id] = f.attributes;
+        return acc;
+      }, {} as any);
 
-    // Get AADT data
-    const spatialWhere = SpatialUtilService.buildSpatialWhereClause(siteIds);
-    const aadtQuery = aadtLayer.createQuery();
-    aadtQuery.where = spatialWhere;
-    aadtQuery.outFields = ["site_id", "count_type", "all_aadt"];
-    aadtQuery.returnGeometry = false;
+      // Get AADT data
+      const spatialWhere = SpatialUtilService.buildSpatialWhereClause(siteIds);
+      
+      const aadtQuery = aadtLayer.createQuery();
+      aadtQuery.where = spatialWhere;
+      aadtQuery.outFields = ["site_id", "count_type", "all_aadt"];
+      aadtQuery.returnGeometry = false;
 
-    const aadtResult = await aadtLayer.queryFeatures(aadtQuery);
-    const aadtBySite = AggregationUtilService.groupByField(
-      aadtResult.features.map(f => f.attributes),
-      'site_id'
-    );
+      const aadtResult = await aadtLayer.queryFeatures(aadtQuery);
+      
+      const aadtBySite = AggregationUtilService.groupByField(
+        aadtResult.features.map(f => f.attributes),
+        'site_id'
+      );
 
-    // Process and rank sites
-    const rankedSites = Object.entries(aadtBySite).map(([siteId, records]: [string, any[]]) => {
-      const bikeAADT = records.find(r => r.count_type === 'bike')?.all_aadt || 0;
-      const pedAADT = records.find(r => r.count_type === 'ped')?.all_aadt || 0;
-      const metadata = siteMetadata[siteId];
+      // Process and rank sites
+      const rankedSites = Object.entries(aadtBySite).map(([siteId, records]: [string, any[]]) => {
+        const bikeAADT = records.find(r => r.count_type === 'bike')?.all_aadt || 0;
+        const pedAADT = records.find(r => r.count_type === 'ped')?.all_aadt || 0;
+        const metadata = siteMetadata[siteId];
 
-      return {
-        siteId: parseInt(siteId),
-        siteName: metadata?.name || `Site ${siteId}`,
-        bikeAADT,
-        pedAADT,
-        totalAADT: bikeAADT + pedAADT,
-        locality: metadata?.locality || 'Unknown'
-      };
-    }).sort((a, b) => b.totalAADT - a.totalAADT);
+        const site = {
+          siteId: parseInt(siteId),
+          siteName: metadata?.name || `Site ${siteId}`,
+          bikeAADT,
+          pedAADT,
+          totalAADT: bikeAADT + pedAADT,
+        };
+        
+        return site;
+      }).sort((a, b) => b.totalAADT - a.totalAADT);
 
-    return rankedSites.slice(0, limit);
+      return rankedSites.slice(0, limit);
+      
+    } catch (error) {
+      console.error('❌ Error in getHighestVolumeSites:', error);
+      throw error;
+    }
   }
 
   /**

@@ -13,10 +13,12 @@ export class SpatialUtilService {
    */
   static async getSiteIdsInExtent(
     sitesLayer: FeatureLayer,
-    mapView: MapView
+    mapView: MapView,
+    selectedGeometry?: Geometry | null
   ): Promise<number[]> {
     const sitesQuery = sitesLayer.createQuery();
-    sitesQuery.geometry = mapView.extent;
+    // Prioritize selectedGeometry if it exists, otherwise use the map extent
+    sitesQuery.geometry = selectedGeometry || mapView.extent;
     sitesQuery.spatialRelationship = "intersects";
     sitesQuery.outFields = ["id"];
     sitesQuery.returnGeometry = false;
