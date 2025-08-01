@@ -161,8 +161,6 @@ export default function YearToYearVolumeComparison({
   const formatHourName = (hourName: string): string => {
     const hour = parseInt(hourName);
     if (isNaN(hour)) return hourName;
- 
-    console.log("We are hitting this function")
     
     if (hour === 0) return '12 AM';
     if (hour < 12) return `${hour} AM`;
@@ -519,7 +517,7 @@ export default function YearToYearVolumeComparison({
               className="absolute top-5 left-1/2 transform -translate-x-1/2 z-10 text-sm font-medium whitespace-nowrap"
               style={{ color: hoveredPoint.seriesName === '2023' ? '#ef4444' : '#3b82f6' }}
             >
-              {`${hoveredPoint.value.toLocaleString()} Pedestrians & Bicyclists`}
+              {`${hoveredPoint.value.toLocaleString()} Pedestrians & Bicyclists${hoveredPoint.name ? ` (${timeScale === 'Hour' ? formatHourName(hoveredPoint.name) : hoveredPoint.name})` : ''}`}
             </div>
           )}
 
