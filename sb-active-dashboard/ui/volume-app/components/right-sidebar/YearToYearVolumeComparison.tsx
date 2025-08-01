@@ -157,17 +157,30 @@ export default function YearToYearVolumeComparison({
     [],
   );
 
-  // Extract data for both years from currentData
-  const currentData2023 = currentData.map(item => ({ name: item.name, value: item.year2023 }));
-  const currentData2024 = currentData.map(item => ({ name: item.name, value: item.year2024 }));
+  // Filter out data points where both years have zero values (missing data)
+  const filteredData = currentData.filter(item => item.year2023 > 0 || item.year2024 > 0);
   
   // Determine if we should use bar chart or line chart
   const useBarChart = timeScale === 'Weekday vs Weekend' || timeScale === 'Year';
   const isYearView = timeScale === 'Year';
-  const categories = isYearView ? ['2023', '2024'] : currentData.map(item => item.name);
+  const categories = isYearView ? ['2023', '2024'] : filteredData.map(item => item.name);
   
-  // Calculate dynamic y-axis range
-  const allValues = [...currentData2023.map(item => item.value), ...currentData2024.map(item => item.value)];
+  // Extract data for both years - for line charts, use null for missing data to maintain alignment
+  const currentData2023 = useBarChart ? 
+    filteredData
+      .filter(item => item.year2023 > 0)
+      .map(item => ({ name: item.name, value: item.year2023 })) :
+    filteredData.map(item => ({ name: item.name, value: item.year2023 > 0 ? item.year2023 : null }));
+    
+  const currentData2024 = useBarChart ?
+    filteredData
+      .filter(item => item.year2024 > 0)
+      .map(item => ({ name: item.name, value: item.year2024 })) :
+    filteredData.map(item => ({ name: item.name, value: item.year2024 > 0 ? item.year2024 : null }));
+  
+  // Calculate dynamic y-axis range (filter out null values)
+  const allValues = [...currentData2023.map(item => item.value), ...currentData2024.map(item => item.value)]
+    .filter(value => value !== null && value !== undefined);
   const minValue = allValues.length > 0 ? Math.min(...allValues) : 0;
   const maxValue = allValues.length > 0 ? Math.max(...allValues) : 100;
   const padding = (maxValue - minValue) * 0.1; // 10% padding
