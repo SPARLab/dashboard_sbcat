@@ -3,21 +3,22 @@
  * This version uses a dedicated GraphicsLayer for highlighting, which is the most
  * performant method for complex, interactive feature layers.
  */
+import Polygon from "@arcgis/core/geometry/Polygon";
+import Graphic from "@arcgis/core/Graphic";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
-import Graphic from "@arcgis/core/Graphic";
-import MapView from "@arcgis/core/views/MapView";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
-import FeatureEffect from "@arcgis/core/layers/support/FeatureEffect";
-import Polygon from "@arcgis/core/geometry/Polygon";
+import MapView from "@arcgis/core/views/MapView";
 
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 
 const BOUNDARY_LAYER_URLS = {
   CITIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/25", // Incorporated Places
-  SERVICE_AREAS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/26" // Census Designated Places
+  SERVICE_AREAS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/26", // Census Designated Places
+  COUNTIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1", // Counties
+  CENSUS_TRACTS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0" // Census Tracts
 };
 
 interface GeographicLevel {
@@ -28,6 +29,8 @@ interface GeographicLevel {
 export class GeographicBoundariesService {
   private cityLayer: FeatureLayer;
   private serviceAreaLayer: FeatureLayer;
+  private countyLayer: FeatureLayer;
+  private censusTractLayer: FeatureLayer;
   private highlightLayer: GraphicsLayer;
   
   private mapView: MapView | null = null;
@@ -67,6 +70,8 @@ export class GeographicBoundariesService {
         visible: false,
         popupEnabled: false,
         outFields: ["OBJECTID", "NAME"],
+        minScale: 0, // No minimum scale limit - visible at all zoom levels
+        maxScale: 0, // No maximum scale limit - visible at all zoom levels
         renderer: new SimpleRenderer({
           symbol: new SimpleFillSymbol({
             color: [0, 0, 0, 0],
@@ -78,6 +83,8 @@ export class GeographicBoundariesService {
     
     this.cityLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.CITIES, "Cities & Towns");
     this.serviceAreaLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.SERVICE_AREAS, "Census Designated Places");
+    this.countyLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.COUNTIES, "Counties");
+    this.censusTractLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.CENSUS_TRACTS, "Census Tracts");
 
     this.highlightLayer = new GraphicsLayer({
         title: "Boundary Highlights",
@@ -86,7 +93,7 @@ export class GeographicBoundariesService {
   }
 
   getBoundaryLayers(): (FeatureLayer | GraphicsLayer)[] {
-    return [this.cityLayer, this.serviceAreaLayer, this.highlightLayer];
+    return [this.cityLayer, this.serviceAreaLayer, this.countyLayer, this.censusTractLayer, this.highlightLayer];
   }
   
   setSelectionChangeCallback(callback: (data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void) {
@@ -106,6 +113,14 @@ export class GeographicBoundariesService {
       this.serviceAreaLayer.visible = true;
       layers.push(this.serviceAreaLayer);
     }
+    if (level === 'county') {
+      this.countyLayer.visible = true;
+      layers.push(this.countyLayer);
+    }
+    if (level === 'census-tract') {
+      this.censusTractLayer.visible = true;
+      layers.push(this.censusTractLayer);
+    }
 
     if (layers.length > 0) {
       this.setupInteractivity(mapView, layers);
@@ -116,6 +131,8 @@ export class GeographicBoundariesService {
     this.cleanupInteractivity();
     this.cityLayer.visible = false;
     this.serviceAreaLayer.visible = false;
+    this.countyLayer.visible = false;
+    this.censusTractLayer.visible = false;
   }
   
   

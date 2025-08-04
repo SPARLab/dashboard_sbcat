@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
-import NewVolumeSubHeader from "./layout/NewVolumeSubHeader";
+import { useState } from "react";
+import { useSelection } from "../../lib/hooks/useSelection";
+import NewVolumeMap from "./components/map/NewVolumeMap";
 import NewVolumeLeftSidebar from "./layout/NewVolumeLeftSidebar";
 import NewVolumeRightSidebar from "./layout/NewVolumeRightSidebar";
-import NewVolumeMap from "./components/map/NewVolumeMap";
-import { useSelection } from "../../lib/hooks/useSelection";
+import NewVolumeSubHeader from "./layout/NewVolumeSubHeader";
 
 export default function NewVolumeApp() {
   const [activeTab, setActiveTab] = useState('raw-data');
@@ -27,12 +27,8 @@ export default function NewVolumeApp() {
     endDate: new Date(2023, 11, 31)
   });
 
-  // Auto-switch to City/Service Area when on Raw Data tab
-  useEffect(() => {
-    if (activeTab === 'raw-data') {
-      setGeographicLevel('city-service-area');
-    }
-  }, [activeTab]);
+  // Note: Removed auto-switch to City/Service Area restriction
+  // Users can now select any geographic level (including county and census tract) for all tabs
 
   // Handle map view ready from map component
   const handleMapViewReady = (view: __esri.MapView) => {
