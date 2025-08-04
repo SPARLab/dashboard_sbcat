@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import SharedTimelineChart, { type SiteData } from "../right-sidebar/SharedTimelineChart";
 
 interface CompletenessMetricsProps {
@@ -13,6 +13,7 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
     {
       id: "site1",
       name: "Site 1",
+      label: "S1",
       dataPeriods: [
         { start: 0, end: 35 },
         { start: 45, end: 55 },
@@ -23,6 +24,7 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
     {
       id: "site2", 
       name: "Site 2",
+      label: "S2",
       dataPeriods: [
         { start: 10, end: 25 },
         { start: 40, end: 50 }
@@ -31,6 +33,7 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
     {
       id: "site3",
       name: "Site 3", 
+      label: "S3",
       dataPeriods: [
         { start: 0, end: 45 },
         { start: 60, end: 100 }
@@ -39,6 +42,7 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
     {
       id: "site4",
       name: "Site 4",
+      label: "S4",
       dataPeriods: [
         { start: 5, end: 95 }
       ]
@@ -46,6 +50,7 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
     {
       id: "site5",
       name: "Site 5",
+      label: "S5",
       dataPeriods: [
         { start: 0, end: 15 },
         { start: 25, end: 35 },
@@ -57,11 +62,13 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
     {
       id: "site6",
       name: "Site 6",
+      label: "S6",
       dataPeriods: []
     },
     {
       id: "site7",
       name: "Site 7",
+      label: "S7",
       dataPeriods: []
     }
   ];
