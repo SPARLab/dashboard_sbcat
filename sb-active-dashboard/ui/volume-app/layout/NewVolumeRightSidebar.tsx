@@ -189,13 +189,13 @@ export default function NewVolumeRightSidebar({
         {selectedGeometry && (
           <div id="selection-indicator" className={`${horizontalMargins} mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg`}>
             {selectedAreaName ? (
-              <p className="text-sm text-blue-700 font-medium mb-2">{selectedAreaName}</p>
+              <p className="text-sm text-blue-700 font-medium">{selectedAreaName}</p>
             ) : (
-              <p className="text-xs text-blue-700 mb-2">Custom selected area</p>
+              <p className="text-xs text-blue-700">Custom selected area</p>
             )}
-            <p className="text-xs text-blue-600 mt-2 italic">
+            {/* <p className="text-xs text-blue-600 mt-2 italic">
               Click elsewhere to clear selection.
-            </p>
+            </p> */}
           </div>
         )}
         

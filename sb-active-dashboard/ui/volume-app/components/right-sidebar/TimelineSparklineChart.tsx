@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import SharedTimelineChart, { type SiteData } from "./SharedTimelineChart";
 
 interface ConfidenceLevel {
@@ -84,9 +84,9 @@ function calculateConfidence(sites: SiteData[]): ConfidenceData {
   
   let confidenceLevel: 'high' | 'medium' | 'low';
   
-  if (contributionRatio >= 0.8) {
+  if (contributionRatio >= 0.6) {
     confidenceLevel = 'high';
-  } else if (contributionRatio >= 0.5) {
+  } else if (contributionRatio >= 0.3) {
     confidenceLevel = 'medium';
   } else {
     confidenceLevel = 'low';
