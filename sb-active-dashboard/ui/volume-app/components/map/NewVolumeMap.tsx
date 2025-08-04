@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Box as MuiBox } from "@mui/material";
-import { ArcgisMap } from "@arcgis/map-components-react";
-import { createAADTLayer, createHexagonLayer } from "../../../../lib/volume-app/volumeLayers";
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
-import { queryHourlyCounts, HourlyData } from "../../../../lib/volume-app/hourlyStats";
-import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
-import GroupLayer from "@arcgis/core/layers/GroupLayer";
-import { GeographicBoundariesService } from "../../../../lib/data-services/GeographicBoundariesService";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import Graphic from "@arcgis/core/Graphic";
+import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import GroupLayer from "@arcgis/core/layers/GroupLayer";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
+import { ArcgisMap } from "@arcgis/map-components-react";
+import { Box as MuiBox } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
+import { GeographicBoundariesService } from "../../../../lib/data-services/GeographicBoundariesService";
+import { HourlyData, queryHourlyCounts } from "../../../../lib/volume-app/hourlyStats";
+import { createAADTLayer, createHexagonLayer } from "../../../../lib/volume-app/volumeLayers";
 
 interface NewVolumeMapProps {
   activeTab: string;
@@ -117,7 +117,8 @@ export default function NewVolumeMap({
   // Control layers based on tab and model counts selection
   useEffect(() => {
     if (aadtLayer && hexagonLayer) {
-      if (activeTab === 'raw-data') {
+      if (activeTab === 'raw-data' || activeTab === 'data-completeness') {
+        // Show raw AADT data for both Raw Data and Data Completeness tabs
         aadtLayer.visible = true;
         hexagonLayer.visible = false;
       } else { // 'modeled-data' tab
@@ -145,9 +146,9 @@ export default function NewVolumeMap({
 
   // Listen to map view changes to query hourly data for raw count sites
   useEffect(() => {
-    // Only query when the raw data tab is active and view is ready
-    if (activeTab !== "raw-data" || !viewReady || !mapViewRef.current) {
-      setHourlyData([]); // Clear data when not on raw tab
+    // Only query when raw data or data completeness tabs are active and view is ready
+    if ((activeTab !== "raw-data" && activeTab !== "data-completeness") || !viewReady || !mapViewRef.current) {
+      setHourlyData([]); // Clear data when not on raw data or data completeness tabs
       return;
     }
 

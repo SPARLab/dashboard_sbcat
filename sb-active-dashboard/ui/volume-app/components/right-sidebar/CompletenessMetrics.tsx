@@ -1,77 +1,48 @@
+import type React from "react";
 import { useState } from "react";
 import SharedTimelineChart, { type SiteData } from "../right-sidebar/SharedTimelineChart";
 
-interface CompletenessMetricsProps {
-  horizontalMargins: string;
+interface ConfidenceLevel {
+  level: 'high' | 'medium' | 'low';
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  icon: React.ReactNode;
 }
 
-export default function CompletenessMetrics({ horizontalMargins }: CompletenessMetricsProps) {
+interface ConfidenceData {
+  confidence: ConfidenceLevel;
+  contributingSites: number;
+  totalSites: number;
+}
+
+interface CompletenessMetricsProps {
+  horizontalMargins: string;
+  timelineData: SiteData[];
+  confidenceData: ConfidenceData | null;
+  selectedAreaName: string | null;
+  dateRange: { startDate: Date; endDate: Date };
+  isLoading: boolean;
+}
+
+export default function CompletenessMetrics({ 
+  horizontalMargins, 
+  timelineData, 
+  confidenceData, 
+  selectedAreaName, 
+  dateRange, 
+  isLoading 
+}: CompletenessMetricsProps) {
   const [isConfidenceExpanded, setIsConfidenceExpanded] = useState(true);
 
-  // Sample data - this would come from your data source
-  const timelineData: SiteData[] = [
-    {
-      id: "site1",
-      name: "Site 1",
-      label: "S1",
-      dataPeriods: [
-        { start: 0, end: 35 },
-        { start: 45, end: 55 },
-        { start: 65, end: 85 },
-        { start: 90, end: 95 }
-      ]
-    },
-    {
-      id: "site2", 
-      name: "Site 2",
-      label: "S2",
-      dataPeriods: [
-        { start: 10, end: 25 },
-        { start: 40, end: 50 }
-      ]
-    },
-    {
-      id: "site3",
-      name: "Site 3", 
-      label: "S3",
-      dataPeriods: [
-        { start: 0, end: 45 },
-        { start: 60, end: 100 }
-      ]
-    },
-    {
-      id: "site4",
-      name: "Site 4",
-      label: "S4",
-      dataPeriods: [
-        { start: 5, end: 95 }
-      ]
-    },
-    {
-      id: "site5",
-      name: "Site 5",
-      label: "S5",
-      dataPeriods: [
-        { start: 0, end: 15 },
-        { start: 25, end: 35 },
-        { start: 45, end: 55 },
-        { start: 65, end: 75 },
-        { start: 85, end: 95 }
-      ]
-    },
-    {
-      id: "site6",
-      name: "Site 6",
-      label: "S6",
-      dataPeriods: []
-    },
-    {
-      id: "site7",
-      name: "Site 7",
-      label: "S7",
-      dataPeriods: []
-    }
-  ];
+  // Use real data from props, fallback to empty if no data
+  const sitesData = timelineData || [];
+  const confidenceLevel = confidenceData?.confidence?.level || 'low';
+  const contributingSites = confidenceData?.contributingSites || 0;
+  const totalSites = confidenceData?.totalSites || 0;
+  
+  // Calculate confidence percentage based on contributing sites
+  const confidencePercentage = totalSites > 0 ? Math.round((contributingSites / totalSites) * 100) : 0;
 
   return (
     <div id="data-completeness-container" className="w-[calc(100%-2rem)] bg-white border border-gray-200 rounded-md overflow-hidden mx-4">
@@ -79,8 +50,7 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
       <div id="zone-locator-container" className="bg-white">
         <div className={`py-4 ${horizontalMargins}`}>
           <h3 id="zone-locator-title" className="text-lg font-medium text-gray-800 leading-normal">
-            Santa Barbara, CA<br />
-            Census Tract 2039
+            {selectedAreaName || "Select an area"}
           </h3>
         </div>
         <div className="h-px bg-gray-200"></div>
@@ -98,15 +68,18 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
             <div id="data-completeness-progress-bar" className="bg-gray-200 h-4 rounded-full flex-1 mr-4">
               <div 
                 id="data-completeness-progress-fill"
-                className="bg-yellow-400 h-4 rounded-full" 
-                style={{ width: '65%' }}
+                className={`h-4 rounded-full ${
+                  confidenceLevel === 'high' ? 'bg-green-400' : 
+                  confidenceLevel === 'medium' ? 'bg-yellow-400' : 'bg-red-400'
+                }`}
+                style={{ width: `${confidencePercentage}%` }}
               />
             </div>
-            <span id="data-completeness-percentage" className="text-sm font-medium text-black">65%</span>
+            <span id="data-completeness-percentage" className="text-sm font-medium text-black">{confidencePercentage}%</span>
           </div>
           
           <p id="data-completeness-confidence" className="text-xs text-gray-500">
-            Medium confidence level
+            {confidenceLevel.charAt(0).toUpperCase() + confidenceLevel.slice(1)} confidence level
           </p>
         </div>
         <div className="h-px bg-gray-200"></div>
@@ -132,41 +105,40 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
           <div id="spatial-density-metric" className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-black">Spatial Density</span>
-              <span className="text-xs font-medium text-black">58%</span>
+              <span className="text-xs font-medium text-black">{Math.round((contributingSites / Math.max(totalSites, 1)) * 100)}%</span>
             </div>
-            <p className="text-xs text-gray-500">4 count sites in this zone</p>
+            <p className="text-xs text-gray-500">{totalSites} count site{totalSites !== 1 ? 's' : ''} in this zone</p>
           </div>
         </div>
         <div className="h-px bg-gray-200"></div>
       </div>
 
-      {/* Stale Count Sites Section */}
-      <div id="stale-count-sites-section" className="bg-white">
-        <div className={`py-2 space-y-1.5 ${horizontalMargins}`}>
-          <h4 id="stale-count-sites-title" className="text-sm font-medium text-gray-700">
-            Stale Count Sites
-          </h4>
-          
-          <div id="stale-sites-list" className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="w-3.5 h-3.5 flex-shrink-0">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M2.05078 2.05078L1.12109 1.12109C0.708203 0.708203 0 1.00078 0 1.5832V4.59375C0 4.95742 0.292578 5.25 0.65625 5.25H3.6668C4.25195 5.25 4.54453 4.5418 4.13164 4.12891L3.28945 3.28672C4.23828 2.33789 5.55078 1.75 7 1.75C9.89844 1.75 12.25 4.10156 12.25 7C12.25 9.89844 9.89844 12.25 7 12.25C5.88438 12.25 4.85078 11.9027 4.00039 11.3094C3.60391 11.0332 3.05977 11.1289 2.78086 11.5254C2.50195 11.9219 2.60039 12.466 2.99688 12.7449C4.13438 13.5352 5.51523 14 7 14C10.8664 14 14 10.8664 14 7C14 3.13359 10.8664 0 7 0C5.0668 0 3.3168 0.784766 2.05078 2.05078ZM7 3.5C6.63633 3.5 6.34375 3.79258 6.34375 4.15625V7C6.34375 7.175 6.41211 7.3418 6.53516 7.46484L8.50391 9.43359C8.76094 9.69063 9.17656 9.69063 9.43086 9.43359C9.68516 9.17656 9.68789 8.76094 9.43086 8.50664L7.65352 6.7293V4.15625C7.65352 3.79258 7.36094 3.5 6.99727 3.5H7Z" fill="#F59E0B"/>
-                </svg>
-              </div>
-              <span className="text-sm text-black">Main St & Broadway (Last count: 2021)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3.5 h-3.5 flex-shrink-0">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M2.05078 2.05078L1.12109 1.12109C0.708203 0.708203 0 1.00078 0 1.5832V4.59375C0 4.95742 0.292578 5.25 0.65625 5.25H3.6668C4.25195 5.25 4.54453 4.5418 4.13164 4.12891L3.28945 3.28672C4.23828 2.33789 5.55078 1.75 7 1.75C9.89844 1.75 12.25 4.10156 12.25 7C12.25 9.89844 9.89844 12.25 7 12.25C5.88438 12.25 4.85078 11.9027 4.00039 11.3094C3.60391 11.0332 3.05977 11.1289 2.78086 11.5254C2.50195 11.9219 2.60039 12.466 2.99688 12.7449C4.13438 13.5352 5.51523 14 7 14C10.8664 14 14 10.8664 14 7C14 3.13359 10.8664 0 7 0C5.0668 0 3.3168 0.784766 2.05078 2.05078ZM7 3.5C6.63633 3.5 6.34375 3.79258 6.34375 4.15625V7C6.34375 7.175 6.41211 7.3418 6.53516 7.46484L8.50391 9.43359C8.76094 9.69063 9.17656 9.69063 9.43086 9.43359C9.68516 9.17656 9.68789 8.76094 9.43086 8.50664L7.65352 6.7293V4.15625C7.65352 3.79258 7.36094 3.5 6.99727 3.5H7Z" fill="#F59E0B"/>
-                </svg>
-              </div>
-              <span className="text-sm text-black">Oak Ave & 5th St (Last count: 2020)</span>
+      {/* Stale Count Sites Section - Only show if there are sites with limited data */}
+      {sitesData.length > 0 && (contributingSites < totalSites) && (
+        <div id="stale-count-sites-section" className="bg-white">
+          <div className={`py-2 space-y-1.5 ${horizontalMargins}`}>
+            <h4 id="stale-count-sites-title" className="text-sm font-medium text-gray-700">
+              Limited Data Sites
+            </h4>
+            
+            <div id="stale-sites-list" className="space-y-1">
+              {sitesData
+                .filter(site => !site.dataPeriods || site.dataPeriods.length === 0)
+                .slice(0, 3) // Show max 3 for space
+                .map((site) => (
+                  <div key={site.id} className="flex items-center gap-2">
+                    <div className="w-3.5 h-3.5 flex-shrink-0">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.05078 2.05078L1.12109 1.12109C0.708203 0.708203 0 1.00078 0 1.5832V4.59375C0 4.95742 0.292578 5.25 0.65625 5.25H3.6668C4.25195 5.25 4.54453 4.5418 4.13164 4.12891L3.28945 3.28672C4.23828 2.33789 5.55078 1.75 7 1.75C9.89844 1.75 12.25 4.10156 12.25 7C12.25 9.89844 9.89844 12.25 7 12.25C5.88438 12.25 4.85078 11.9027 4.00039 11.3094C3.60391 11.0332 3.05977 11.1289 2.78086 11.5254C2.50195 11.9219 2.60039 12.466 2.99688 12.7449C4.13438 13.5352 5.51523 14 7 14C10.8664 14 14 10.8664 14 7C14 3.13359 10.8664 0 7 0C5.0668 0 3.3168 0.784766 2.05078 2.05078ZM7 3.5C6.63633 3.5 6.34375 3.79258 6.34375 4.15625V7C6.34375 7.175 6.41211 7.3418 6.53516 7.46484L8.50391 9.43359C8.76094 9.69063 9.17656 9.69063 9.43086 9.43359C9.68516 9.17656 9.68789 8.76094 9.43086 8.50664L7.65352 6.7293V4.15625C7.65352 3.79258 7.36094 3.5 6.99727 3.5H7Z" fill="#F59E0B"/>
+                      </svg>
+                    </div>
+                    <span className="text-sm text-black">{site.name} (Limited data available)</span>
+                  </div>
+                ))}
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Medium Confidence Warning with Timeline */}
       <div id="confidence-warning-section" className="bg-gray-50 border-t border-b rounded-t-md border-gray-200 overflow-hidden">
@@ -185,7 +157,7 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
                 </svg>
               </div>
               <p className="text-xs text-gray-800 leading-tight">
-                Medium confidence - 5 out of 7 selected sites contributing data for given timeframe
+                {confidenceLevel.charAt(0).toUpperCase() + confidenceLevel.slice(1)} confidence - {contributingSites} out of {totalSites} selected sites contributing data for given timeframe
               </p>
             </div>
             <div id="expand-icon" className={`transform transition-transform ${isConfidenceExpanded ? 'rotate-180' : ''}`}>
@@ -203,31 +175,47 @@ export default function CompletenessMetrics({ horizontalMargins }: CompletenessM
             <div id="timeline-sparkline-section" className="bg-white border-t border-gray-200 p-4">
               <div className="text-center mb-4">
                 <h3 className="text-sm font-medium text-gray-600">Timeline of available data per site</h3>
-                <p className="text-xs text-gray-500 mt-1">(Jan 2022 – Sept 2025)</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  ({dateRange.startDate.toLocaleDateString()} – {dateRange.endDate.toLocaleDateString()})
+                </p>
               </div>
               
-              <SharedTimelineChart
-                sites={timelineData}
-                years={[2022, 2023, 2025]}
-                variant="compact"
-                idPrefix="data-completeness-timeline"
-              />
+              {isLoading ? (
+                <div className="text-center py-4">
+                  <div className="text-sm text-gray-500">Loading timeline data...</div>
+                </div>
+              ) : sitesData.length > 0 ? (
+                <SharedTimelineChart
+                  sites={sitesData}
+                  years={[dateRange.startDate.getFullYear(), dateRange.endDate.getFullYear()]}
+                  variant="compact"
+                  idPrefix="data-completeness-timeline"
+                />
+              ) : (
+                <div className="text-center py-4">
+                  <div className="text-sm text-gray-500">No data available for selected area</div>
+                </div>
+              )}
             </div>
           </div>
       </div>
 
       {/* Total Data Collected Section */}
-      <div id="total-data-collected-section" className="bg-white">
-        <div className={`py-2 space-y-1.5 ${horizontalMargins}`}>
-          <h4 id="total-data-title" className="text-sm font-medium text-gray-700">
-            Total Data Collected
-          </h4>
-          <div id="total-data-card" className="bg-gray-50 rounded-md p-3">
-            <div className="text-2xl font-medium text-black">1,248</div>
-            <div className="text-xs text-gray-500">Hours of data collected in 2023</div>
+      {sitesData.length > 0 && (
+        <div id="total-data-collected-section" className="bg-white">
+          <div className={`py-2 space-y-1.5 ${horizontalMargins}`}>
+            <h4 id="total-data-title" className="text-sm font-medium text-gray-700">
+              Data Collection Summary
+            </h4>
+            <div id="total-data-card" className="bg-gray-50 rounded-md p-3">
+              <div className="text-2xl font-medium text-black">{contributingSites}</div>
+              <div className="text-xs text-gray-500">
+                Active sites contributing data in selected timeframe
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 } 

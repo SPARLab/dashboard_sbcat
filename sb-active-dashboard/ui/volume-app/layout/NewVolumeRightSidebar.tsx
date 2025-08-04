@@ -1,19 +1,18 @@
-import React, { useState, useEffect, useCallback } from "react";
-import TrendsHeader from "../components/right-sidebar/TrendsHeader";
-import MilesOfStreetByTrafficLevelBarChart from "../components/right-sidebar/MilesOfStreetByTrafficLevelBarChart";
-import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
-import LowDataCoverage from "../components/right-sidebar/LowDataCoverage";
-import SummaryStatistics from "../components/right-sidebar/SummaryStatistics";
-import HighestVolume from "../components/right-sidebar/HighestVolume";
-import Placeholder from "../components/right-sidebar/Placeholder";
-import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVolumeBreakdown";
-import YearToYearVolumeComparison from "../components/right-sidebar/YearToYearVolumeComparison";
-import TimelineSparkline from "../components/right-sidebar/TimelineSparkline";
-import ModeBreakdown from "../components/right-sidebar/ModeBreakdown";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
-import { useSpatialQuery, useVolumeSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
+import React, { useCallback, useEffect, useState } from "react";
 import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDataService";
+import { useSpatialQuery, useVolumeSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
+import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVolumeBreakdown";
+import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
+import HighestVolume from "../components/right-sidebar/HighestVolume";
+import LowDataCoverage from "../components/right-sidebar/LowDataCoverage";
+import MilesOfStreetByTrafficLevelBarChart from "../components/right-sidebar/MilesOfStreetByTrafficLevelBarChart";
+import ModeBreakdown from "../components/right-sidebar/ModeBreakdown";
+import SummaryStatistics from "../components/right-sidebar/SummaryStatistics";
+import TimelineSparkline from "../components/right-sidebar/TimelineSparkline";
+import TrendsHeader from "../components/right-sidebar/TrendsHeader";
+import YearToYearVolumeComparison from "../components/right-sidebar/YearToYearVolumeComparison";
 
 interface DateRangeValue {
   startDate: Date;
@@ -78,7 +77,7 @@ export default function NewVolumeRightSidebar({
 
   // Find the AADT layer from the map once the map is loaded
   useEffect(() => {
-    if (!mapView) return;
+    if (!mapView || !mapView.map) return;
 
     // Check if layer is already there
     const existingLayer = mapView.map.allLayers.find(l => l.title === "AADT Count Sites") as FeatureLayer;
@@ -271,7 +270,14 @@ export default function NewVolumeRightSidebar({
         )}
         {activeTab === 'data-completeness' && (
           <>
-            <CompletenessMetrics horizontalMargins={horizontalMargins} />
+            <CompletenessMetrics 
+              horizontalMargins={horizontalMargins}
+              timelineData={timelineData}
+              confidenceData={confidenceData}
+              selectedAreaName={selectedAreaName || null}
+              dateRange={dateRange}
+              isLoading={timelineLoading}
+            />
           </>
         )}
       </div>
