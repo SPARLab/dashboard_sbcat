@@ -277,6 +277,8 @@ export default function NewVolumeRightSidebar({
               selectedAreaName={selectedAreaName || null}
               dateRange={dateRange}
               isLoading={timelineLoading}
+              selectedSiteId={selectedCountSite}
+              onSiteSelect={onCountSiteSelect}
             />
           </>
         )}

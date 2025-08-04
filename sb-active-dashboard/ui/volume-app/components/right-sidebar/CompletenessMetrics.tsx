@@ -23,6 +23,8 @@ interface CompletenessMetricsProps {
   selectedAreaName: string | null;
   dateRange: { startDate: Date; endDate: Date };
   isLoading: boolean;
+  selectedSiteId?: string | null;
+  onSiteSelect?: (siteId: string | null) => void;
 }
 
 export default function CompletenessMetrics({ 
@@ -31,7 +33,9 @@ export default function CompletenessMetrics({
   confidenceData, 
   selectedAreaName, 
   dateRange, 
-  isLoading 
+  isLoading,
+  selectedSiteId,
+  onSiteSelect
 }: CompletenessMetricsProps) {
   const [isConfidenceExpanded, setIsConfidenceExpanded] = useState(true);
 
@@ -231,6 +235,8 @@ export default function CompletenessMetrics({
                     years={[dateRange.startDate.getFullYear(), dateRange.endDate.getFullYear()]}
                     variant="compact"
                     idPrefix="data-completeness-timeline"
+                    selectedSiteId={selectedSiteId}
+                    onSiteSelect={onSiteSelect}
                   />
                 </div>
               ) : (
