@@ -1,8 +1,8 @@
 'use client';
-import ReactECharts from 'echarts-for-react';
-import { useMemo, useState, useEffect } from 'react';
-import { ModeledVolumeChartDataService } from '../../../../lib/data-services/ModeledVolumeChartDataService';
 import Polygon from "@arcgis/core/geometry/Polygon";
+import ReactECharts from 'echarts-for-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ModeledVolumeChartDataService } from '../../../../lib/data-services/ModeledVolumeChartDataService';
 
 // Static fallback data for when real data isn't available
 const fallbackChartData = [
@@ -19,6 +19,12 @@ const fallbackChartData = [
     value: 122,
   },
 ];
+
+interface ChartEventParams {
+  value: number;
+  name?: string;
+  seriesName?: string;
+}
 
 interface MilesOfStreetByTrafficLevelBarChartProps {
   dataType: string;
@@ -96,7 +102,7 @@ export default function MilesOfStreetByTrafficLevelBarChart({
 
   const onEvents = useMemo(
     () => ({
-      mouseover: (params: any) => {
+      mouseover: (params: ChartEventParams) => {
         setHoveredBar({ value: params.value });
       },
       mouseout: () => {
