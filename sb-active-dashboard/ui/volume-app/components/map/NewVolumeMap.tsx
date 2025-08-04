@@ -8,6 +8,7 @@ import { ArcgisMap } from "@arcgis/map-components-react";
 import { Box as MuiBox } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { GeographicBoundariesService } from "../../../../lib/data-services/GeographicBoundariesService";
+import { ModeledVolumeDataService } from "../../../../lib/data-services/ModeledVolumeDataService";
 import { HourlyData, queryHourlyCounts } from "../../../../lib/volume-app/hourlyStats";
 import { createAADTLayer, createHexagonLayer } from "../../../../lib/volume-app/volumeLayers";
 
@@ -49,6 +50,9 @@ export default function NewVolumeMap({
     return service;
   });
 
+  // Modeled volume data service for line segment queries
+  const [modeledVolumeService] = useState(() => new ModeledVolumeDataService());
+
   // Hourly data for Cost Benefit Tool (AADT)
   const [hourlyData, setHourlyData] = useState<HourlyData[]>([]);
   
@@ -84,6 +88,13 @@ export default function NewVolumeMap({
           mapViewRef.current.map.add(aadt);
           mapViewRef.current.map.add(hexagon);
           
+          // Add modeled volume service layers for spatial querying (invisible but queryable)
+          const modeledLayers = modeledVolumeService.getLayers();
+          modeledLayers.forEach(layer => {
+            mapViewRef.current.map.add(layer);
+            console.log(`✅ Added modeled volume layer: ${layer.title}`);
+          });
+          
           // Add boundary layers to map
           const boundaryLayers = boundaryService.getBoundaryLayers();
           boundaryLayers.forEach(layer => mapViewRef.current.map.add(layer));
@@ -99,7 +110,7 @@ export default function NewVolumeMap({
       
       loadLayers();
     }
-  }, [viewReady, boundaryService]);
+  }, [viewReady, boundaryService, modeledVolumeService]);
 
   useEffect(() => {
     if (viewReady && boundaryService && geographicLevel && mapViewRef.current) {

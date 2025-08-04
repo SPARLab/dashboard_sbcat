@@ -6,9 +6,8 @@
 
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import MapView from "@arcgis/core/views/MapView";
-import { CountSiteProcessingService } from "../utilities/volume-utils/count-site-processing";
 import { TimeSeriesPrepService } from "../utilities/chart-data-prep/time-series-prep";
-import { AggregationUtilService } from "../utilities/shared/aggregation";
+import { CountSiteProcessingService } from "../utilities/volume-utils/count-site-processing";
 
 // Chart-specific data interfaces
 interface SummaryStatsData {
@@ -64,7 +63,7 @@ export class VolumeChartDataService {
    */
   async getSummaryStatistics(
     mapView: MapView,
-    filters: any,
+    filters: { showBicyclist: boolean; showPedestrian: boolean },
     selectedGeometry?: __esri.Geometry | null
   ): Promise<SummaryStatsData> {
     return CountSiteProcessingService.getSummaryStatistics(
@@ -81,7 +80,7 @@ export class VolumeChartDataService {
    */
   async getHighestVolumeData(
     mapView: MapView,
-    filters: any,
+    filters: { showBicyclist: boolean; showPedestrian: boolean },
     limit: number = 10,
     selectedGeometry?: __esri.Geometry | null
   ): Promise<HighestVolumeData> {
@@ -94,7 +93,13 @@ export class VolumeChartDataService {
       selectedGeometry
     );
 
-    return { sites };
+    // Add locality field to match interface
+    const sitesWithLocality = sites.map(site => ({
+      ...site,
+      locality: 'Unknown' // Default value since locality is required in interface
+    }));
+    
+    return { sites: sitesWithLocality };
   }
 
   /**
@@ -104,7 +109,7 @@ export class VolumeChartDataService {
     const maxRecordCount = 1000; // Safe value for ArcGIS Server feature queries
 
     // 1. Get all object IDs that match the original query
-    const allObjectIds = await layer.queryObjectIds(query);
+    const allObjectIds = await layer.queryObjectIds(query as __esri.QueryProperties);
     
     if (!allObjectIds || allObjectIds.length === 0) {
         return [];
@@ -113,14 +118,14 @@ export class VolumeChartDataService {
     // 2. Split IDs into chunks
     const idChunks: number[][] = [];
     for (let i = 0; i < allObjectIds.length; i += maxRecordCount) {
-        idChunks.push(allObjectIds.slice(i, i + maxRecordCount));
+        idChunks.push(allObjectIds.slice(i, i + maxRecordCount).filter((id): id is number => typeof id === 'number'));
     }
 
     // 3. Create feature query promises for each chunk
     const featureQueryPromises = idChunks.map(chunk => {
         const featureQuery = query.clone();
         featureQuery.objectIds = chunk;
-        return layer.queryFeatures(featureQuery);
+        return layer.queryFeatures(featureQuery as __esri.QueryProperties);
     });
 
     // 4. Run in parallel and combine results
@@ -135,7 +140,7 @@ export class VolumeChartDataService {
    */
   async getTimelineSparklineData(
     mapView: MapView,
-    filters: any,
+    filters: { showBicyclist: boolean; showPedestrian: boolean },
     timeSpan: { start: Date; end: Date },
     selectedGeometry?: __esri.Geometry | null
   ): Promise<TimelineSparklineData> {
@@ -151,10 +156,8 @@ export class VolumeChartDataService {
       sitesQuery.outFields = ["id", "name"];
       sitesQuery.returnGeometry = false;
 
-      const sitesResult = await this.sitesLayer.queryFeatures(sitesQuery);
-      
-      console.log('Step 1: Sites in polygon', sitesResult.features.map(f => f.attributes));
-      
+      const sitesResult = await this.sitesLayer.queryFeatures(sitesQuery as __esri.QueryProperties);
+            
       if (sitesResult.features.length === 0) {
         return { sites: [] };
       }
@@ -164,7 +167,6 @@ export class VolumeChartDataService {
         acc[feature.attributes.id] = feature.attributes;
         return acc;
       }, {} as Record<number, {id: number, name: string}>);
-      console.log('Step 1b: Site metadata', siteMetadata);
 
       // Step 2: Get count data for these sites within the date range using paginated helper
       const countsQuery = this.countsLayer.createQuery();
@@ -176,7 +178,6 @@ export class VolumeChartDataService {
       countsQuery.returnGeometry = false;
 
       const countsResultFeatures = await this.queryAllFeaturesInParallel(this.countsLayer, countsQuery);
-      console.log('Step 2: Counts data from server', countsResultFeatures.map(f => f.attributes));
 
       // Step 3: Group count data by site to find data periods
       const countsBySite = countsResultFeatures.reduce((acc, feature) => {
@@ -189,7 +190,6 @@ export class VolumeChartDataService {
         acc[siteId].push(countDate);
         return acc;
       }, {} as Record<number, Date[]>);
-      console.log('Step 3: Counts grouped by site', countsBySite);
 
       // Step 4: Convert to timeline format, including sites with no data in the period
       const timelineData = sitesResult.features.map((siteFeature, index) => {
@@ -217,7 +217,6 @@ export class VolumeChartDataService {
         
         return result;
       });
-      console.log('Step 4: Final timeline data', timelineData);
 
       const sites = TimeSeriesPrepService.prepareTimelineSparklineData(timelineData, timeSpan);
       return { sites };
@@ -233,7 +232,7 @@ export class VolumeChartDataService {
    */
   async getModeBreakdownData(
     mapView: MapView,
-    filters: any,
+    filters: { showBicyclist: boolean; showPedestrian: boolean },
     selectedGeometry?: __esri.Geometry | null
   ): Promise<ModeBreakdownData> {
     // Get summary stats first
@@ -260,13 +259,17 @@ export class VolumeChartDataService {
    * Get data for YearToYearVolumeComparison chart component
    */
   async getYearToYearComparisonData(
-    mapView: MapView,
-    filters: any,
-    currentYear: number,
-    previousYear: number
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _mapView: MapView,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _filters: { showBicyclist: boolean; showPedestrian: boolean },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _currentYear: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _previousYear: number
   ): Promise<{
     categories: string[];
-    series: any[];
+    series: Array<{ name: string; data: number[] }>;
     summary: {
       totalChange: number;
       percentChange: number;
@@ -290,8 +293,10 @@ export class VolumeChartDataService {
    * Get data for AggregatedVolumeBreakdown chart component
    */
   async getAggregatedVolumeBreakdownData(
-    mapView: MapView,
-    filters: any
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _mapView: MapView,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _filters: { showBicyclist: boolean; showPedestrian: boolean }
   ): Promise<{
     totalVolume: number;
     weekdayVolume: number;
@@ -314,7 +319,7 @@ export class VolumeChartDataService {
    */
   async getCompletenessMetricsData(
     mapView: MapView,
-    filters: any,
+    _filters: { showBicyclist: boolean; showPedestrian: boolean },
     dateRange: { start: Date; end: Date }
   ): Promise<{
     sitesWithData: number;
@@ -334,8 +339,10 @@ export class VolumeChartDataService {
    * Get data for MilesOfStreetByTrafficLevelBarChart component
    */
   async getMilesOfStreetByTrafficLevelData(
-    mapView: MapView,
-    filters: any
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _mapView: MapView,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _filters: { showBicyclist: boolean; showPedestrian: boolean }
   ): Promise<{
     categories: string[];
     data: number[];
@@ -354,8 +361,10 @@ export class VolumeChartDataService {
    * Get data for LowDataCoverage chart component
    */
   async getLowDataCoverageData(
-    mapView: MapView,
-    filters: any
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _mapView: MapView,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _filters: { showBicyclist: boolean; showPedestrian: boolean }
   ): Promise<{
     areas: Array<{
       name: string;

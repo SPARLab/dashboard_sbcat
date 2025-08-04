@@ -88,7 +88,7 @@ export default function NewVolumeRightSidebar({
 
     // If not, listen for layer changes
     const handle = mapView.map.allLayers.on("change", (event) => {
-        const addedLayer = event.added.find((l: any) => l.title === "AADT Count Sites");
+        const addedLayer = event.added.find((l: __esri.Layer) => l.title === "AADT Count Sites");
         if (addedLayer) {
             setAadtLayer(addedLayer as FeatureLayer);
             handle.remove();
@@ -99,21 +99,26 @@ export default function NewVolumeRightSidebar({
 
   }, [mapView]);
 
-  // Use spatial query hooks
-  const { result: spatialResult, isLoading, error, areaDescription } = useSpatialQuery(
+  // Use spatial query hooks (keeping for future use)
+  useSpatialQuery(
     aadtLayer,
     selectedGeometry || null
   );
 
   // Use volume-specific spatial query for summary statistics
-  const { result: volumeResult, isLoading: volumeLoading, error: volumeError } = useVolumeSpatialQuery(
+  const { result: volumeResult, isLoading: volumeLoading } = useVolumeSpatialQuery(
     sitesLayer,
     aadtTable,
     selectedGeometry || null
   );
 
   // State for timeline data
-  const [timelineData, setTimelineData] = useState<any[]>([]);
+  const [timelineData, setTimelineData] = useState<Array<{
+    id: string;
+    name: string;
+    label: string;
+    dataPeriods: Array<{ start: number; end: number }>;
+  }>>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
 
   // State for confidence data from timeline sparkline
@@ -168,7 +173,10 @@ export default function NewVolumeRightSidebar({
           selectedGeometry
         );
         
-        setTimelineData(result.sites || []);
+        setTimelineData((result.sites || []).map(site => ({
+          ...site,
+          label: site.name // Add missing label property
+        })));
       } catch (error) {
         console.error('❌ Error fetching timeline data:', error);
         setTimelineData([]);
@@ -178,7 +186,7 @@ export default function NewVolumeRightSidebar({
     };
 
     fetchTimelineData();
-  }, [mapView, selectedGeometry, sitesLayer, aadtTable, dateRange, showBicyclist, showPedestrian]);
+  }, [mapView, selectedGeometry, sitesLayer, countsLayer, aadtTable, dateRange, showBicyclist, showPedestrian]);
 
 
 
@@ -186,7 +194,7 @@ export default function NewVolumeRightSidebar({
     <div id="volume-trends-sidebar" className="w-[412px] bg-white border-l border-gray-200 overflow-y-auto no-scrollbar">
       <div className="py-4">
         <TrendsHeader activeTab={activeTab} horizontalMargins={horizontalMargins} />
-        {selectedGeometry && (
+        {selectedGeometry && (activeTab === 'raw-data' || activeTab === 'modeled-data') && (
           <div id="selection-indicator" className={`${horizontalMargins} mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg`}>
             {selectedAreaName ? (
               <p className="text-sm text-blue-700 font-medium">{selectedAreaName}</p>

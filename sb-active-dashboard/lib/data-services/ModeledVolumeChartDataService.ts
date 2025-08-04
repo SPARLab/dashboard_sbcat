@@ -3,9 +3,9 @@
  * Provides chart-ready data for modeled volume components
  */
 
-import { ModeledVolumeDataService } from './ModeledVolumeDataService';
-import MapView from "@arcgis/core/views/MapView";
 import Geometry from "@arcgis/core/geometry/Geometry";
+import MapView from "@arcgis/core/views/MapView";
+import { ModeledVolumeDataService } from './ModeledVolumeDataService';
 
 interface ChartDataConfig {
   dataSource: 'dillon' | 'lily';
@@ -43,9 +43,10 @@ export class ModeledVolumeChartDataService {
     geometry?: Geometry
   ): Promise<TrafficLevelBreakdownData> {
     try {
-      // Get raw traffic level data - always falls back to simulated data currently
-      // Real data integration pending due to missing edgeuid/strava_id mapping
-      const rawData = await this.volumeDataService.getTrafficLevelData(mapView, config);
+      // Get raw traffic level data with proper geometry handling
+      const rawData = geometry 
+        ? await this.volumeDataService.getTrafficLevelDataWithGeometry(mapView, config, geometry)
+        : await this.volumeDataService.getTrafficLevelData(mapView, config);
       
       // Calculate totals and percentages (using simulated data)
       const totalMiles = rawData.totalMiles?.reduce((sum, miles) => sum + miles, 0) || 0;
@@ -80,17 +81,17 @@ export class ModeledVolumeChartDataService {
     } catch (error) {
       console.error('Error getting traffic level breakdown data:', error);
       
-      // Return fallback data
+      // Return empty data instead of fallback data to allow UI to detect no data state
       return {
         categories: ['Low', 'Medium', 'High'],
-        totalMiles: [115, 127, 122],
-        percentages: [31.6, 34.9, 33.5],
+        totalMiles: [0, 0, 0],
+        percentages: [0, 0, 0],
         details: {
-          low: { miles: 115, percentage: 31.6, segments: 450 },
-          medium: { miles: 127, percentage: 34.9, segments: 380 },
-          high: { miles: 122, percentage: 33.5, segments: 290 }
+          low: { miles: 0, percentage: 0, segments: 0 },
+          medium: { miles: 0, percentage: 0, segments: 0 },
+          high: { miles: 0, percentage: 0, segments: 0 }
         },
-        totalNetworkMiles: 364
+        totalNetworkMiles: 0
       };
     }
   }

@@ -1,12 +1,12 @@
 "use client";
 
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
-import VectorTileLayer from "@arcgis/core/layers/VectorTileLayer";
 import GroupLayer from "@arcgis/core/layers/GroupLayer";
 import Field from "@arcgis/core/layers/support/Field";
+import VectorTileLayer from "@arcgis/core/layers/VectorTileLayer";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
-import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import ColorVariable from "@arcgis/core/renderers/visualVariables/ColorVariable";
+import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 
 // Create AADT Feature Layer for count sites
 export async function createAADTLayer() {

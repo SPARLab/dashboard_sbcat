@@ -1,10 +1,10 @@
 'use client';
-import ReactECharts from 'echarts-for-react';
-import { useMemo, useState, useEffect } from 'react';
 import Polygon from "@arcgis/core/geometry/Polygon";
-import CollapseExpandIcon from './CollapseExpandIcon';
-import { VolumeBreakdownDataService, TimeScale, VolumeBreakdownData } from '../../../../lib/data-services/VolumeBreakdownDataService';
+import ReactECharts from 'echarts-for-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { TimeScale, VolumeBreakdownData, VolumeBreakdownDataService } from '../../../../lib/data-services/VolumeBreakdownDataService';
 import Tooltip from '../../../components/Tooltip';
+import CollapseExpandIcon from './CollapseExpandIcon';
 const timeScales: TimeScale[] = ['Hour', 'Day', 'Weekday vs Weekend', 'Month', 'Year'];
 
 interface HoveredBarData {
@@ -48,7 +48,7 @@ export default function AggregatedVolumeBreakdown({
   };
 
   // Preload all time scales for current selection
-  const preloadAllTimeScales = async (geometry: Polygon | null, bike: boolean, ped: boolean) => {
+  const preloadAllTimeScales = useCallback(async (geometry: Polygon | null, bike: boolean, ped: boolean) => {
     const newCacheKey = generateCacheKey(geometry, bike, ped);
     const newCache = new Map<TimeScale, VolumeBreakdownData[]>();
 
@@ -83,7 +83,7 @@ export default function AggregatedVolumeBreakdown({
     } finally {
       setIsPreloading(false);
     }
-  };
+  }, []);
 
   // Fetch data when dependencies change
   useEffect(() => {
@@ -136,11 +136,11 @@ export default function AggregatedVolumeBreakdown({
     };
 
     fetchData();
-  }, [selectedGeometry, timeScale, showBicyclist, showPedestrian]);
+  }, [selectedGeometry, timeScale, showBicyclist, showPedestrian, cacheKey, dataCache, preloadAllTimeScales]);
 
   const onEvents = useMemo(
     () => ({
-      mouseover: (params: any) => {
+      mouseover: (params: { value: number; name: string }) => {
         setHoveredBar({ value: params.value, name: params.name });
       },
       mouseout: () => {

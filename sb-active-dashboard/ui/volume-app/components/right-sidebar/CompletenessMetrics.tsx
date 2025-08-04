@@ -117,7 +117,7 @@ export default function CompletenessMetrics({
       {/* Dynamic Confidence Warning with Timeline - Always show but with different styling */}
       <div 
         id="confidence-warning-section" 
-        className={`border-t border-b border-gray-200 rounded-t-md overflow-hidden ${
+        className={`border-t border-b border-gray-200 rounded-t-md overflow-hidden py-1 ${
           totalSites > 0 ? (
             confidenceLevel === 'high' ? 'bg-green-50' : 
             confidenceLevel === 'medium' ? 'bg-yellow-50' : 'bg-red-50'

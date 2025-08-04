@@ -1,8 +1,24 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import DateRangeSection from "../../../components/filters/DateRangeSection";
 import GeographicLevelSection from "../../../components/filters/GeographicLevelSection";
 
+interface DateRangeValue {
+  startDate: Date;
+  endDate: Date;
+}
+
 export default function SafetyFilterPanel() {
+  // Date range state for safety data filtering
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setFullYear(endDate.getFullYear() - 3); // Default to 3 years of data
+    return { startDate, endDate };
+  });
+
+  const handleDateRangeChange = (newDateRange: DateRangeValue) => {
+    setDateRange(newDateRange);
+  };
   return (
     <>
       {/* Severity of Incident */}
@@ -18,7 +34,10 @@ export default function SafetyFilterPanel() {
       <hr className="border-gray-200" />
 
       {/* Date Range - Reused from New Volume */}
-      <DateRangeSection />
+      <DateRangeSection 
+        dateRange={dateRange}
+        onDateRangeChange={handleDateRangeChange}
+      />
       <hr className="border-gray-200" />
 
       {/* Time of Day */}
