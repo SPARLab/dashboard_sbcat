@@ -1,15 +1,20 @@
 'use client';
-import ReactECharts from 'echarts-for-react';
-import { useMemo, useState, useEffect } from 'react';
 import Polygon from "@arcgis/core/geometry/Polygon";
-import MoreInformationIcon from './MoreInformationIcon';
-import CollapseExpandIcon from './CollapseExpandIcon';
-import { YearToYearComparisonDataService, TimeScale, YearToYearComparisonData } from '../../../../lib/data-services/YearToYearComparisonDataService';
+import ReactECharts from 'echarts-for-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { TimeScale, YearToYearComparisonData, YearToYearComparisonDataService } from '../../../../lib/data-services/YearToYearComparisonDataService';
 import Tooltip from '../../../components/Tooltip';
+import CollapseExpandIcon from './CollapseExpandIcon';
 
 const timeScales: TimeScale[] = ['Hour', 'Day', 'Weekday vs Weekend', 'Month', 'Year'];
 
 interface HoveredPointData {
+  value: number;
+  name: string;
+  seriesName: string;
+}
+
+interface ChartEventParams {
   value: number;
   name: string;
   seriesName: string;
@@ -51,7 +56,7 @@ export default function YearToYearVolumeComparison({
   };
 
   // Preload all time scales for current selection
-  const preloadAllTimeScales = async (geometry: Polygon | null, bike: boolean, ped: boolean) => {
+  const preloadAllTimeScales = useCallback(async (geometry: Polygon | null, bike: boolean, ped: boolean) => {
     const newCacheKey = generateCacheKey(geometry, bike, ped);
     const newCache = new Map<TimeScale, YearToYearComparisonData[]>();
 
@@ -86,7 +91,7 @@ export default function YearToYearVolumeComparison({
     } finally {
       setIsPreloading(false);
     }
-  };
+  }, []);
 
   // Fetch data when dependencies change
   useEffect(() => {
@@ -139,11 +144,11 @@ export default function YearToYearVolumeComparison({
     };
 
     fetchData();
-  }, [selectedGeometry, timeScale, showBicyclist, showPedestrian]);
+  }, [selectedGeometry, timeScale, showBicyclist, showPedestrian, cacheKey, dataCache, preloadAllTimeScales]);
 
   const onEvents = useMemo(
     () => ({
-      mouseover: (params: any) => {
+      mouseover: (params: ChartEventParams) => {
         setHoveredPoint({ 
           value: params.value, 
           name: params.name,
@@ -174,7 +179,6 @@ export default function YearToYearVolumeComparison({
   // Determine if we should use bar chart or line chart
   const useBarChart = timeScale === 'Weekday vs Weekend' || timeScale === 'Year';
   const isYearView = timeScale === 'Year';
-  const categories = isYearView ? ['2023', '2024'] : filteredData.map(item => timeScale === 'Hour' ? formatHourName(item.name) : item.name);
   
   // Extract data for both years - for line charts, use null for missing data to maintain alignment
   const currentData2023 = useBarChart ? 
@@ -199,7 +203,10 @@ export default function YearToYearVolumeComparison({
   const yAxisMax = maxValue + padding;
 
   const option = useMemo(
-    () => ({
+    () => {
+      const categories = isYearView ? ['2023', '2024'] : filteredData.map(item => timeScale === 'Hour' ? formatHourName(item.name) : item.name);
+      
+      return ({
       animation: true,
       animationDuration: 1000,
       animationEasing: 'cubicOut',
@@ -409,8 +416,8 @@ export default function YearToYearVolumeComparison({
       tooltip: {
         show: false,
       },
-    }),
-    [currentData, timeScale, useBarChart, isYearView, yAxisMin, yAxisMax, categories, currentData2023, currentData2024],
+    })},
+    [timeScale, useBarChart, isYearView, yAxisMin, yAxisMax, currentData2023, currentData2024, filteredData],
   );
 
   // Memoize the chart component - always call hooks at the top level
@@ -429,18 +436,7 @@ export default function YearToYearVolumeComparison({
     [option, onEvents, timeScale],
   );
 
-  const getTimeScaleUnit = (scale: TimeScale): string => {
-    switch(scale) {
-      case 'Hour': return 'hour';
-      case 'Day': return 'day';
-      case 'Weekday vs Weekend': return 'period';
-      case 'Month': return 'month';
-      case 'Year': return 'year';
-      default: return 'period';
-    }
-  };
-
-    // Get detailed calculation explanation for tooltips
+  // Get detailed calculation explanation for tooltips
   const getCalculationExplanation = (scale: TimeScale): string => {
     switch (scale) {
       case 'Hour':
