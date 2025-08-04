@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DateRange, RangeKeyDict } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
@@ -255,12 +255,20 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
     });
   };
 
-  const startOfYear = new Date(2023, 0, 1);
-  const endOfYear = new Date(2023, 11, 31);
-  const totalDays = (endOfYear.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24);
-  
-  const startPercent = ((selection.startDate.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100;
-  const endPercent = ((selection.endDate.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100;
+  // Calculate dynamic year range based on selected dates
+  const { startOfPeriod, totalDays, startPercent, endPercent } = useMemo(() => {
+    const startYear = Math.min(selection.startDate.getFullYear(), selection.endDate.getFullYear());
+    const endYear = Math.max(selection.startDate.getFullYear(), selection.endDate.getFullYear());
+    
+    const startOfPeriod = new Date(startYear, 0, 1);
+    const endOfPeriod = new Date(endYear, 11, 31);
+    const totalDays = (endOfPeriod.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24);
+    
+    const startPercent = Math.max(0, Math.min(100, ((selection.startDate.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100));
+    const endPercent = Math.max(0, Math.min(100, ((selection.endDate.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100));
+    
+    return { startOfPeriod, totalDays, startPercent, endPercent };
+  }, [selection.startDate, selection.endDate]);
 
   const handleMouseDown = useCallback((type: 'start' | 'end') => {
     setIsDragging(type);
@@ -271,7 +279,7 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
     const rect = trackRef.current.getBoundingClientRect();
     const percent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
     const days = Math.round((percent / 100) * totalDays);
-    const newDate = new Date(startOfYear.getTime() + days * 24 * 60 * 60 * 1000);
+    const newDate = new Date(startOfPeriod.getTime() + days * 24 * 60 * 60 * 1000);
 
     let newSelection = { ...selection };
     if (isDragging === 'start' && newDate <= selection.endDate) {
@@ -283,7 +291,7 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
       setSelection(newSelection);
       onDateRangeChange({ startDate: newSelection.startDate, endDate: newSelection.endDate });
     }
-  }, [isDragging, totalDays, startOfYear, selection.startDate, selection.endDate, onDateRangeChange]);
+  }, [isDragging, totalDays, startOfPeriod, selection, onDateRangeChange]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(null);
