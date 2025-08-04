@@ -1,8 +1,8 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { DateRange, RangeKeyDict } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
+import ReactDOM from 'react-dom';
 
 interface CalendarPortalProps {
   showCalendar: boolean;
@@ -216,7 +216,7 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
   const trackRef = useRef<HTMLDivElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
 
-  const calendarIcon = "http://localhost:3845/assets/1be83d6e0c00a3e729a68de2ad961591d68c608d.svg";
+  const calendarIcon = "/icons/calendar-icon.svg";
 
   // Sync internal selection state when external dateRange prop changes
   useEffect(() => {
