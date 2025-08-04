@@ -273,7 +273,6 @@ export default function NewVolumeRightSidebar({
             <CompletenessMetrics 
               horizontalMargins={horizontalMargins}
               timelineData={timelineData}
-              confidenceData={confidenceData}
               selectedAreaName={selectedAreaName || null}
               dateRange={dateRange}
               isLoading={timelineLoading}

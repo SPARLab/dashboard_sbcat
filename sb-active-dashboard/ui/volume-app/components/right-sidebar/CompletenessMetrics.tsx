@@ -1,25 +1,9 @@
-import type React from "react";
 import { useState } from "react";
 import SharedTimelineChart, { type SiteData } from "../right-sidebar/SharedTimelineChart";
-
-interface ConfidenceLevel {
-  level: 'high' | 'medium' | 'low';
-  color: string;
-  bgColor: string;
-  borderColor: string;
-  icon: React.ReactNode;
-}
-
-interface ConfidenceData {
-  confidence: ConfidenceLevel;
-  contributingSites: number;
-  totalSites: number;
-}
 
 interface CompletenessMetricsProps {
   horizontalMargins: string;
   timelineData: SiteData[];
-  confidenceData: ConfidenceData | null;
   selectedAreaName: string | null;
   dateRange: { startDate: Date; endDate: Date };
   isLoading: boolean;
@@ -30,7 +14,6 @@ interface CompletenessMetricsProps {
 export default function CompletenessMetrics({ 
   horizontalMargins, 
   timelineData, 
-  confidenceData, 
   selectedAreaName, 
   dateRange, 
   isLoading,
@@ -41,7 +24,6 @@ export default function CompletenessMetrics({
 
   // Use real data from props, fallback to empty if no data
   const sitesData = timelineData || [];
-  const confidenceLevel = confidenceData?.confidence?.level || 'low';
   
   // Use timeline data as source of truth for site counts to ensure sync
   const totalSites = sitesData.length;
@@ -49,6 +31,18 @@ export default function CompletenessMetrics({
   
   // Calculate confidence percentage based on active sites
   const confidencePercentage = totalSites > 0 ? Math.round((activeSites / totalSites) * 100) : 0;
+  
+  // Calculate confidence level based on actual data contribution ratio
+  const contributionRatio = totalSites > 0 ? activeSites / totalSites : 0;
+  let confidenceLevel: 'high' | 'medium' | 'low';
+  
+  if (contributionRatio >= 0.6) {
+    confidenceLevel = 'high';
+  } else if (contributionRatio >= 0.3) {
+    confidenceLevel = 'medium';
+  } else {
+    confidenceLevel = 'low';
+  }
 
   return (
     <div id="data-completeness-container" className="w-[calc(100%-2rem)] bg-white border border-gray-200 rounded-md overflow-hidden mx-4">
