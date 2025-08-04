@@ -1,9 +1,9 @@
 'use client';
-import ReactECharts from 'echarts-for-react';
-import { useMemo, useState, useEffect } from 'react';
 import Polygon from "@arcgis/core/geometry/Polygon";
-import CollapseExpandIcon from './CollapseExpandIcon';
+import ReactECharts from 'echarts-for-react';
+import { useEffect, useMemo, useState } from 'react';
 import { VolumeChartDataService } from '../../../../lib/data-services/VolumeChartDataService';
+import CollapseExpandIcon from './CollapseExpandIcon';
 
 interface ModeBreakdownData {
   bicycle: { count: number; percentage: number };
@@ -23,7 +23,7 @@ interface ModeBreakdownProps {
   showPedestrian?: boolean;
   volumeChartDataService?: VolumeChartDataService;
   mapView?: __esri.MapView;
-  filters?: any;
+  filters?: Record<string, unknown>;
 }
 
 export default function ModeBreakdown({ 
@@ -42,7 +42,6 @@ export default function ModeBreakdown({
   
   // Cache for data
   const [dataCache, setDataCache] = useState<Map<string, ModeBreakdownData>>(new Map());
-  const [cacheKey, setCacheKey] = useState<string>('');
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -59,7 +58,6 @@ export default function ModeBreakdown({
   // Load data when selection or filters change
   useEffect(() => {
     const newCacheKey = generateCacheKey(selectedGeometry, showBicyclist, showPedestrian);
-    setCacheKey(newCacheKey);
 
     // Check cache first
     if (dataCache.has(newCacheKey)) {
@@ -99,7 +97,7 @@ export default function ModeBreakdown({
     };
 
     loadData();
-  }, [selectedGeometry, showBicyclist, showPedestrian, volumeChartDataService, mapView, filters]);
+  }, [selectedGeometry, showBicyclist, showPedestrian, volumeChartDataService, mapView, filters, dataCache]);
 
   // Prepare chart data from currentData
   const modeData = useMemo(() => {
@@ -141,7 +139,7 @@ export default function ModeBreakdown({
 
   const onEvents = useMemo(
     () => ({
-      mouseover: (params: any) => {
+      mouseover: (params: { value: number; name: string }) => {
         setHoveredBar({ value: params.value, name: params.name });
       },
       mouseout: () => {
@@ -230,7 +228,7 @@ export default function ModeBreakdown({
         },
         series: [
           {
-            data: modeData.map((item, index) => ({
+            data: modeData.map((item) => ({
               value: item.value,
               itemStyle: {
                 color: item.color,
@@ -317,7 +315,8 @@ export default function ModeBreakdown({
               {hoveredBar && (
                 <div
                   id="mode-breakdown-tooltip"
-                  className="absolute -top-8 left-1/2 transform -translate-x-1/2 z-10 text-gray-900 text-sm font-medium whitespace-nowrap bg-white rounded shadow-md border px-2 py-1"
+                  className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10 text-sm font-medium whitespace-nowrap"
+                  style={{ color: '#3b82f6' }}
                 >
                   {`${hoveredBar.value.toFixed(1)}% ${hoveredBar.name}`}
                 </div>
