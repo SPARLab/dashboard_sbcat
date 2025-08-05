@@ -175,7 +175,7 @@ export class GeographicBoundariesService {
                 if (err.name !== "AbortError") console.error("hitTest failed:", err);
                 this.hitTestInProgress = false;
             });
-    });
+    }, { once: true });
 
     const clickHandler = mapView.on("click", (event) => {
       mapView.hitTest(event, { include: layers }).then(response => {
@@ -356,7 +356,11 @@ export class GeographicBoundariesService {
     }
   }
 
-  private cleanupInteractivity() {
+  public getInteractivityHandlers(): __esri.Handle[] {
+    return this.interactivityHandlers;
+  }
+
+  public cleanupInteractivity() {
     this.interactivityHandlers.forEach(handler => handler.remove());
     this.interactivityHandlers = [];
 
@@ -372,6 +376,26 @@ export class GeographicBoundariesService {
     
     if (this.mapView?.container) {
       this.mapView.container.style.cursor = "default";
+    }
+  }
+
+  public resetHighlightLayer(mapView: MapView) {
+    if (mapView) {
+      // Remove the old layer if it exists
+      if (this.highlightLayer) {
+        mapView.map.remove(this.highlightLayer);
+      }
+      
+      // Create a brand new GraphicsLayer
+      this.highlightLayer = new GraphicsLayer({
+        title: "Boundary Highlights",
+        listMode: "hide"
+      });
+      
+      // Add the new layer to the map
+      mapView.map.add(this.highlightLayer);
+      
+      console.log('[DEBUG] Highlight layer has been completely reset.');
     }
   }
 }

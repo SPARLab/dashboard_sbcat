@@ -1,10 +1,8 @@
-import React from "react";
-import SortDataSection from "../components/left-sidebar/SortDataSection";
-import ModelCountTypeSection from "../components/left-sidebar/ModelCountTypeSection";
-import RoadUserSection from "../components/left-sidebar/RoadUserSection";
 import DateRangeSection from "../../components/filters/DateRangeSection";
 import GeographicLevelSection from "../../components/filters/GeographicLevelSection";
-import ModeledDataAdditionalSection from "../components/left-sidebar/ModeledDataAdditionalSection";
+import ModelCountTypeSection from "../components/left-sidebar/ModelCountTypeSection";
+import RoadUserSection from "../components/left-sidebar/RoadUserSection";
+import SortDataSection from "../components/left-sidebar/SortDataSection";
 
 interface DateRangeValue {
   startDate: Date;
@@ -63,10 +61,27 @@ export default function NewVolumeLeftSidebar({
         onDateRangeChange={onDateRangeChange}
       />
       <hr className="border-gray-200" />
-      <GeographicLevelSection 
-        geographicLevel={geographicLevel}
-        onGeographicLevelChange={onGeographicLevelChange}
-      />
+      <div
+  id="custom-draw-tool-activation"
+  className={`p-4 cursor-pointer ${
+    geographicLevel === 'custom'
+      ? 'bg-blue-100 border-l-4 border-blue-500'
+      : 'hover:bg-gray-50'
+  }`}
+  onClick={() => onGeographicLevelChange(geographicLevel === 'custom' ? '' : 'custom')}
+>
+  <h3 className="text-base font-medium text-gray-900">Custom Draw Tool</h3>
+  <p className="text-sm text-gray-600 mt-1">
+    {geographicLevel === 'custom'
+      ? 'Exit drawing mode and clear custom polygons.'
+      : 'Click to draw a custom area on the map.'}
+  </p>
+</div>
+<hr className="border-gray-200" />
+<GeographicLevelSection 
+  geographicLevel={geographicLevel}
+  onGeographicLevelChange={onGeographicLevelChange}
+/>
     </div>
   );
 }

@@ -12,6 +12,10 @@ import { ModeledVolumeDataService } from "../../../../lib/data-services/ModeledV
 import { HourlyData, queryHourlyCounts } from "../../../../lib/volume-app/hourlyStats";
 import { createAADTLayer, createHexagonLayer } from "../../../../lib/volume-app/volumeLayers";
 
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
+import SketchViewModel from "@arcgis/core/widgets/Sketch/SketchViewModel";
+
 interface NewVolumeMapProps {
   activeTab: string;
   showBicyclist: boolean;
@@ -76,6 +80,9 @@ export default function NewVolumeMap({
     }
   };
 
+  const [sketchViewModel, setSketchViewModel] = useState<SketchViewModel | null>(null);
+  const [sketchLayer, setSketchLayer] = useState<GraphicsLayer | null>(null);
+
   // Load layers when map view is ready
   useEffect(() => {
     if (viewReady && mapViewRef.current) {
@@ -99,6 +106,10 @@ export default function NewVolumeMap({
           const boundaryLayers = boundaryService.getBoundaryLayers();
           boundaryLayers.forEach(layer => mapViewRef.current.map.add(layer));
           
+          const graphicsLayer = new GraphicsLayer();
+          mapViewRef.current.map.add(graphicsLayer);
+          setSketchLayer(graphicsLayer);
+          
           // Store layer references
           setAadtLayer(aadt);
           setHexagonLayer(hexagon);
@@ -112,11 +123,62 @@ export default function NewVolumeMap({
     }
   }, [viewReady, boundaryService, modeledVolumeService]);
 
-  useEffect(() => {
+    useEffect(() => {
     if (viewReady && boundaryService && geographicLevel && mapViewRef.current) {
-      boundaryService.switchGeographicLevel(geographicLevel as any, mapViewRef.current);
+      if (geographicLevel === 'custom' && sketchLayer) {
+        // Disable boundary service interactivity and hide its layers
+boundaryService.cleanupInteractivity();
+// Also hide the layers associated with the service
+boundaryService.getBoundaryLayers().forEach(layer => {
+  if (layer.type === 'feature' || layer.type === 'graphics') {
+    layer.visible = false;
+  }
+});
+
+        const sketchVM = new SketchViewModel({
+          view: mapViewRef.current,
+          layer: sketchLayer,
+          polygonSymbol: new SimpleFillSymbol({
+            color: [138, 43, 226, 0.2], // BlueViolet
+            outline: {
+              color: [138, 43, 226, 1],
+              width: 2,
+            },
+          }),
+        });
+
+        setSketchViewModel(sketchVM);
+
+        sketchVM.on('create', (event) => {
+          if (event.state === 'complete') {
+            if (onSelectionChange) {
+              onSelectionChange(event.graphic.geometry as Polygon);
+            }
+          }
+        });
+
+        sketchVM.create('polygon');
+      } else {
+        if (sketchViewModel) {
+          sketchViewModel.destroy();
+          setSketchViewModel(null);
+        }
+        if (sketchLayer) {
+          sketchLayer.removeAll();
+        }
+        // Re-enable boundary service interactivity
+        boundaryService.resetHighlightLayer(mapViewRef.current);
+        boundaryService.switchGeographicLevel(geographicLevel as any, mapViewRef.current);
+      }
     }
-  }, [viewReady, boundaryService, geographicLevel]);
+
+    return () => {
+      if (sketchViewModel) {
+        sketchViewModel.destroy();
+        setSketchViewModel(null);
+      }
+    };
+  }, [geographicLevel, sketchLayer]);
 
   // Update selection callback when it changes
   useEffect(() => {
