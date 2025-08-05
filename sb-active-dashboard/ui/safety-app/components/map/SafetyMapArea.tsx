@@ -1,9 +1,23 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { SafetyFilters, SafetyVisualizationType } from "../../../../lib/safety-app/types";
+import NewSafetyMap from "./NewSafetyMap";
 
-export default function SafetyMapArea() {
-  const [activeMapTab, setActiveMapTab] = useState('incident-to-volume-ratio');
+interface SafetyMapAreaProps {
+  filters?: Partial<SafetyFilters>;
+  geographicLevel?: string;
+  onMapViewReady?: (mapView: __esri.MapView) => void;
+  onSelectionChange?: (data: { geometry: __esri.Polygon | null; areaName?: string | null }) => void;
+}
 
-  const mapTabs = [
+export default function SafetyMapArea({ 
+  filters = {},
+  geographicLevel = 'cities',
+  onMapViewReady,
+  onSelectionChange
+}: SafetyMapAreaProps) {
+  const [activeMapTab, setActiveMapTab] = useState<SafetyVisualizationType>('incident-to-volume-ratio');
+
+  const mapTabs: Array<{ id: SafetyVisualizationType; label: string }> = [
     { id: 'raw-incidents', label: 'Raw Incidents' },
     { id: 'incident-heatmap', label: 'Incident Heatmap' },
     { id: 'incident-to-volume-ratio', label: 'Incident to Volume Ratio Heatmap' },
@@ -17,7 +31,7 @@ export default function SafetyMapArea() {
       </div>
 
       {/* Map Area */}
-      <div id="safety-map-content" className="flex-1 bg-gradient-to-br from-blue-200 via-green-200 via-yellow-200 via-orange-200 to-red-200 relative">
+      <div id="safety-map-content" className="flex-1 bg-gray-100 relative">
         
         {/* Map Tabs - Absolutely positioned over the map */}
         <div id="safety-map-tabs-container" className="absolute top-4 right-4 z-30">
@@ -38,23 +52,15 @@ export default function SafetyMapArea() {
             ))}
           </div>
         </div>
-        {/* Map Placeholder - This would contain the actual map component */}
-        <div id="safety-map-placeholder" className="w-full h-full flex items-center justify-center">
-          <div id="safety-map-info-card" className="bg-white bg-opacity-90 rounded-lg p-8 shadow-lg">
-            <h3 id="safety-map-title" className="text-xl font-semibold text-gray-800 mb-2">Safety Map Area</h3>
-            <p id="safety-active-tab-display" className="text-gray-600 mb-4">
-              Active Tab: {mapTabs.find(tab => tab.id === activeMapTab)?.label}
-            </p>
-            <div id="safety-map-features-description" className="text-sm text-gray-500">
-              <p id="safety-map-features-intro">This area will contain:</p>
-              <ul id="safety-map-features-list" className="list-disc list-inside mt-2 space-y-1">
-                <li id="safety-feature-visualization">Interactive safety incident data visualization</li>
-                <li id="safety-feature-heatmap">Heatmap overlays showing incident density</li>
-                <li id="safety-feature-volume-ratio">Traffic volume ratio analysis</li>
-                <li id="safety-feature-geographic-tools">Geographic boundary selection tools</li>
-              </ul>
-            </div>
-          </div>
+        {/* Actual Map Component */}
+        <div id="safety-map-container" className="w-full h-full">
+          <NewSafetyMap
+            activeVisualization={activeMapTab}
+            filters={filters}
+            geographicLevel={geographicLevel}
+            onMapViewReady={onMapViewReady}
+            onSelectionChange={onSelectionChange}
+          />
         </div>
 
         {/* Legend - positioned in bottom right with proper z-index */}

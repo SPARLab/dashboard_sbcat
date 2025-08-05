@@ -1,12 +1,22 @@
-import React from "react";
-import SummaryStatistics from "../components/right-sidebar/SummaryStatistics";
-import MostDangerousAreas from "../components/right-sidebar/MostDangerousAreas";
+import { SafetyFilters } from "../../../lib/safety-app/types";
 import AnnualIncidentsComparison from "../components/right-sidebar/AnnualIncidentsComparison";
-import IncidentsVsTrafficRatios from "../components/right-sidebar/IncidentsVsTrafficRatios";
-import SeverityBreakdown from "../components/right-sidebar/SeverityBreakdown";
 import ConflictTypeBreakdown from "../components/right-sidebar/ConflictTypeBreakdown";
+import IncidentsVsTrafficRatios from "../components/right-sidebar/IncidentsVsTrafficRatios";
+import MostDangerousAreas from "../components/right-sidebar/MostDangerousAreas";
+import SeverityBreakdown from "../components/right-sidebar/SeverityBreakdown";
+import SummaryStatistics from "../components/right-sidebar/SummaryStatistics";
 
-export default function SafetyRightSidebar() {
+interface SafetyRightSidebarProps {
+  mapView: __esri.MapView | null;
+  filters: Partial<SafetyFilters>;
+  selectedGeometry: __esri.Polygon | null;
+}
+
+export default function SafetyRightSidebar({
+  mapView,
+  filters,
+  selectedGeometry
+}: SafetyRightSidebarProps) {
   return (
     <div id="safety-analysis-sidebar" className="w-[412px] bg-white border-l border-gray-200 flex flex-col h-full">
       {/* Fixed Analysis Header */}
@@ -17,12 +27,36 @@ export default function SafetyRightSidebar() {
       {/* Scrollable Analysis Content */}
       <div id="safety-analysis-content" className="flex-1 overflow-y-auto no-scrollbar">
         <div id="safety-analysis-components" className="space-y-3 px-3.5 py-2">
-          <SummaryStatistics />
-          <MostDangerousAreas />
-          <AnnualIncidentsComparison />
-          <IncidentsVsTrafficRatios />
-          <SeverityBreakdown />
-          <ConflictTypeBreakdown />
+          <SummaryStatistics 
+            mapView={mapView}
+            filters={filters}
+            selectedGeometry={selectedGeometry}
+          />
+          <MostDangerousAreas 
+            mapView={mapView}
+            filters={filters}
+            selectedGeometry={selectedGeometry}
+          />
+          <AnnualIncidentsComparison 
+            mapView={mapView}
+            filters={filters}
+            selectedGeometry={selectedGeometry}
+          />
+          <IncidentsVsTrafficRatios 
+            mapView={mapView}
+            filters={filters}
+            selectedGeometry={selectedGeometry}
+          />
+          <SeverityBreakdown 
+            mapView={mapView}
+            filters={filters}
+            selectedGeometry={selectedGeometry}
+          />
+          <ConflictTypeBreakdown 
+            mapView={mapView}
+            filters={filters}
+            selectedGeometry={selectedGeometry}
+          />
         </div>
       </div>
     </div>

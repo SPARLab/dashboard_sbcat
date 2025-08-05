@@ -1,7 +1,19 @@
-import React from "react";
+import { SafetyFilters } from "../../../lib/safety-app/types";
 import SafetyFilterPanel from "../components/left-sidebar/SafetyFilterPanel";
 
-export default function SafetyLeftSidebar() {
+interface SafetyLeftSidebarProps {
+  filters: Partial<SafetyFilters>;
+  onFiltersChange: (filters: Partial<SafetyFilters>) => void;
+  geographicLevel: string;
+  onGeographicLevelChange: (level: string) => void;
+}
+
+export default function SafetyLeftSidebar({
+  filters,
+  onFiltersChange,
+  geographicLevel,
+  onGeographicLevelChange
+}: SafetyLeftSidebarProps) {
   return (
     <div id="safety-filters-sidebar" className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
       {/* Fixed Filter Data Header */}
@@ -11,7 +23,12 @@ export default function SafetyLeftSidebar() {
 
       {/* Scrollable Filter Content */}
       <div id="safety-filters-content" className="flex-1 overflow-y-auto no-scrollbar">
-        <SafetyFilterPanel />
+        <SafetyFilterPanel 
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          geographicLevel={geographicLevel}
+          onGeographicLevelChange={onGeographicLevelChange}
+        />
       </div>
     </div>
   );
