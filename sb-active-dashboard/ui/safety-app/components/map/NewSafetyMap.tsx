@@ -1,8 +1,6 @@
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 import Polygon from "@arcgis/core/geometry/Polygon";
-import Graphic from "@arcgis/core/Graphic";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
-import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import { ArcgisMap } from "@arcgis/map-components-react";
 import { Box as MuiBox } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
@@ -128,6 +126,16 @@ export default function NewSafetyMap({
       try {
         setDataLoading(true);
 
+        // Clean up any existing weighted layer if not using incident-to-volume-ratio
+        if (activeVisualization !== 'incident-to-volume-ratio') {
+          const existingWeightedLayer = mapViewRef.current.map.layers.find(
+            (layer: any) => layer.title === "Weighted Safety Incidents"
+          );
+          if (existingWeightedLayer) {
+            mapViewRef.current.map.remove(existingWeightedLayer);
+          }
+        }
+
         // Remove any existing renderer or feature reduction
         incidentsLayer.featureReduction = null;
         incidentsLayer.renderer = null;
@@ -154,8 +162,8 @@ export default function NewSafetyMap({
               console.warn('Weights layer not available for incident-to-volume ratio visualization');
               // Fallback to regular heatmap
               incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
+              incidentsLayer.visible = true;
             }
-            incidentsLayer.visible = true;
             break;
 
           default:
@@ -190,42 +198,55 @@ export default function NewSafetyMap({
 
       if (weightedIncidents.length === 0) {
         console.warn('No weighted incident data available for current extent');
-        // Fallback to regular incidents
+        // Fallback to regular heatmap
         incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
+        incidentsLayer.visible = true;
         return;
       }
 
-      // Create graphics with weighted exposure values
-      const weightedGraphics = weightedIncidents.map(incident => {
-        return new Graphic({
-          geometry: incident.geometry,
-          attributes: {
-            ...incident,
-            weightedExposure: incident.weightedExposure
-          }
-        });
-      });
+      // Since HeatmapRenderer only works with FeatureLayer, we need to create a client-side FeatureLayer
+      // with the weighted data
+      
+      // Create features array for client-side feature layer
+      const weightedFeatures = weightedIncidents.map(incident => ({
+        geometry: incident.geometry,
+        attributes: {
+          objectid: incident.OBJECTID,
+          id: incident.id,
+          weightedExposure: incident.weightedExposure || 0,
+          severity: incident.maxSeverity || 'unknown',
+          data_source: incident.data_source || 'unknown'
+        }
+      }));
 
-      // Create a temporary graphics layer for the weighted visualization
+      // Remove existing weighted layer if it exists
       const existingWeightedLayer = mapViewRef.current.map.layers.find(
         (layer: any) => layer.title === "Weighted Safety Incidents"
-      ) as GraphicsLayer;
-
-      let weightedLayer: GraphicsLayer;
+      );
       if (existingWeightedLayer) {
-        weightedLayer = existingWeightedLayer;
-        weightedLayer.removeAll();
-      } else {
-        weightedLayer = new GraphicsLayer({
-          title: "Weighted Safety Incidents"
-        });
-        mapViewRef.current.map.add(weightedLayer);
+        mapViewRef.current.map.remove(existingWeightedLayer);
       }
 
-      // Add weighted graphics
-      weightedLayer.addMany(weightedGraphics);
+      // Create a client-side FeatureLayer for the weighted data
+      const weightedLayer = new FeatureLayer({
+        source: weightedFeatures,
+        title: "Weighted Safety Incidents",
+        objectIdField: "objectid",
+        fields: [
+          { name: "objectid", type: "oid" },
+          { name: "id", type: "integer" },
+          { name: "weightedExposure", type: "double" },
+          { name: "severity", type: "string" },
+          { name: "data_source", type: "string" }
+        ],
+        geometryType: "point",
+        spatialReference: mapViewRef.current.spatialReference
+      });
 
-      // Apply exposure-weighted renderer
+      // Add the new weighted layer
+      mapViewRef.current.map.add(weightedLayer);
+
+      // Apply the heatmap renderer to the new FeatureLayer
       const renderer = IncidentVolumeRatioRenderer.getRenderer('exposure', filters);
       
       // Adjust renderer based on data characteristics
@@ -255,6 +276,7 @@ export default function NewSafetyMap({
       console.error('[DEBUG] Failed to create weighted visualization:', error);
       // Fallback to regular heatmap
       incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
+      incidentsLayer.visible = true;
     }
   };
 
@@ -316,6 +338,16 @@ export default function NewSafetyMap({
     return () => {
       if (boundaryService) {
         boundaryService.cleanupInteractivity();
+      }
+      
+      // Clean up weighted layer
+      if (mapViewRef.current) {
+        const existingWeightedLayer = mapViewRef.current.map.layers.find(
+          (layer: any) => layer.title === "Weighted Safety Incidents"
+        );
+        if (existingWeightedLayer) {
+          mapViewRef.current.map.remove(existingWeightedLayer);
+        }
       }
     };
   }, [boundaryService]);
