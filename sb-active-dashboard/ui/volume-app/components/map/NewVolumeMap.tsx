@@ -23,7 +23,7 @@ interface NewVolumeMapProps {
   modelCountsBy: string;
   onMapViewReady?: (mapView: __esri.MapView) => void;
   geographicLevel: string;
-  onSelectionChange?: (geometry: Polygon | null) => void;
+  onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void;
   selectedCountSite?: string | null;
 }
 
@@ -64,19 +64,33 @@ export default function NewVolumeMap({
   const highlightGraphicRef = useRef<Graphic | null>(null);
 
   // Handler to set map center/zoom when view is ready
-  const handleArcgisViewReadyChange = (event: any) => {
+  const handleArcgisViewReadyChange = (event: { target: { view: __esri.MapView } }) => {
     if (event?.target?.view) {
-      event.target.view.goTo({
+      const mapView = event.target.view;
+      mapViewRef.current = mapView;
+      
+      // Set initial view with proper completion handling
+      mapView.goTo({
         center: [-120, 34.7],
         zoom: 9,
+      }).then(() => {
+        // Only mark as ready after the initial navigation completes
+        setViewReady(true);
+        
+        // Pass mapView back to parent component  
+        if (onMapViewReady) {
+          onMapViewReady(mapView);
+        }
+        
+        console.log('[DEBUG] Map view initialization completed successfully');
+      }).catch((error: Error) => {
+        console.error('[DEBUG] Map view initialization failed:', error);
+        // Still mark as ready even if navigation fails
+        setViewReady(true);
+        if (onMapViewReady) {
+          onMapViewReady(mapView);
+        }
       });
-      mapViewRef.current = event.target.view;
-      setViewReady(true);
-      
-      // Pass mapView back to parent component  
-      if (onMapViewReady) {
-        onMapViewReady(event.target.view);
-      }
     }
   };
 
@@ -127,13 +141,16 @@ export default function NewVolumeMap({
     if (viewReady && boundaryService && geographicLevel && mapViewRef.current) {
       if (geographicLevel === 'custom' && sketchLayer) {
         // Disable boundary service interactivity and hide its layers
-boundaryService.cleanupInteractivity();
-// Also hide the layers associated with the service
-boundaryService.getBoundaryLayers().forEach(layer => {
-  if (layer.type === 'feature' || layer.type === 'graphics') {
-    layer.visible = false;
-  }
-});
+        boundaryService.cleanupInteractivity();
+        // Also hide the layers associated with the service
+        boundaryService.getBoundaryLayers().forEach(layer => {
+          if (layer.type === 'feature' || layer.type === 'graphics') {
+            layer.visible = false;
+          }
+        });
+
+        // Mark that layer recreation will be needed after SketchViewModel usage
+        boundaryService.markLayerRecreationNeeded();
 
         const sketchVM = new SketchViewModel({
           view: mapViewRef.current,
@@ -149,7 +166,7 @@ boundaryService.getBoundaryLayers().forEach(layer => {
 
         setSketchViewModel(sketchVM);
 
-        sketchVM.on('create', (event) => {
+        sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
           if (event.state === 'complete') {
             if (onSelectionChange) {
               onSelectionChange(event.graphic.geometry as Polygon);
@@ -166,8 +183,7 @@ boundaryService.getBoundaryLayers().forEach(layer => {
         if (sketchLayer) {
           sketchLayer.removeAll();
         }
-        // Re-enable boundary service interactivity
-        boundaryService.resetHighlightLayer(mapViewRef.current);
+        // Re-enable boundary service interactivity with layer recreation
         boundaryService.switchGeographicLevel(geographicLevel as any, mapViewRef.current);
       }
     }
