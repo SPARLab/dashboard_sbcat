@@ -124,7 +124,6 @@ export class GeographicBoundariesService {
           // Add a small delay to ensure layers are fully rendered
           setTimeout(() => {
             this.isMapReady = true;
-            console.log('[DEBUG] Map is fully ready and stationary, layers should be rendered');
             resolve();
           }, 100); // 100ms delay to ensure rendering is complete
         } else {
@@ -141,14 +140,12 @@ export class GeographicBoundariesService {
    * Completely recreate the highlight layer to fix rendering corruption
    */
   private recreateHighlightLayer(mapView: MapView): void {
-    console.log('[DEBUG] Recreating highlight layer to fix rendering corruption...');
     
     // Remove the old layer from the map
     if (this.highlightLayer && mapView.map) {
       const layers = mapView.map.layers;
       if (layers.includes(this.highlightLayer)) {
         mapView.map.remove(this.highlightLayer);
-        console.log('[DEBUG] Removed old highlight layer from map');
       }
     }
     
@@ -168,7 +165,7 @@ export class GeographicBoundariesService {
       
       // Verify the layer was added successfully
       if (mapView.map.layers.includes(this.highlightLayer)) {
-        console.log('[DEBUG] Highlight layer recreated and added to map successfully');
+        // Highlight layer recreated and added to map successfully
       } else {
         console.error('[DEBUG] Failed to add recreated highlight layer to map');
       }
@@ -227,22 +224,17 @@ export class GeographicBoundariesService {
    */
   public markLayerRecreationNeeded(): void {
     this.layerRecreationPending = true;
-    console.log('[DEBUG] Marked highlight layer for recreation after SketchViewModel usage');
   }
   
   private setupInteractivity(mapView: MapView, layers: FeatureLayer[]) {
     // Clean up any existing interactivity
     this.cleanupInteractivity();
 
-    console.log('[DEBUG] Setting up interactivity with layers:', layers.map(l => l.title));
-
     // ALWAYS recreate the highlight layer to ensure it's not corrupted
-    console.log('[DEBUG] Recreating highlight layer for fresh start');
     this.recreateHighlightLayer(mapView);
 
     // Verify layers are visible and properly configured
     layers.forEach(layer => {
-      console.log(`[DEBUG] Layer ${layer.title}: visible=${layer.visible}, loaded=${layer.loaded}`);
       if (!layer.visible) {
         console.warn(`[DEBUG] Warning: Layer ${layer.title} is not visible!`);
       }
@@ -257,7 +249,6 @@ export class GeographicBoundariesService {
       console.warn('[DEBUG] Not all layers are ready for interaction, waiting...');
       // Wait a bit more for layers to be ready
       setTimeout(() => {
-        console.log('[DEBUG] Retrying interactivity setup after delay');
         this.setupInteractivity(mapView, layers);
       }, 200);
       return;
@@ -268,13 +259,11 @@ export class GeographicBoundariesService {
         const mouseEnterHandler = () => { 
             this.isMouseOverMap = true;
             this.clearHoverCleanupTimeout();
-            console.log('[DEBUG] Mouse entered map');
         };
         const mouseLeaveHandler = () => {
             this.isMouseOverMap = false;
             // Use debounced cleanup to prevent flicker from race conditions
             this.scheduleHoverCleanup();
-            console.log('[DEBUG] Mouse left map');
         };
         
         // CRITICAL FIX: Add DOM-level mouse move handler to always capture position
@@ -289,7 +278,7 @@ export class GeographicBoundariesService {
             this.lastScreenPosition = { x: mouseEvent.clientX - rectLocal.left, y: mouseEvent.clientY - rectLocal.top };
             }
 
-            console.log(`[DEBUG] DOM mouse move captured: client=(${mouseEvent.clientX}, ${mouseEvent.clientY}), screen=(${this.lastScreenPosition?.x}, ${this.lastScreenPosition?.y})`);
+
         };
         
         mapView.container.addEventListener("mouseenter", mouseEnterHandler);
@@ -304,7 +293,6 @@ export class GeographicBoundariesService {
                                   currentMouseY >= rect.top && currentMouseY <= rect.bottom;
         
         if (isMouseAlreadyOver && !this.isMouseOverMap) {
-            console.log('[DEBUG] Mouse is already over map when handlers attached, triggering enter logic');
             this.isMouseOverMap = true;
         }
         
@@ -328,7 +316,6 @@ export class GeographicBoundariesService {
         
         // Only process hover logic if interactivity is fully ready
         if (!this.isInteractivityFullyReady) {
-            console.log('[DEBUG] Captured pointer position but ignoring hover - interactivity not fully ready');
             return;
         }
 
@@ -344,11 +331,9 @@ export class GeographicBoundariesService {
         }
         
         this.hitTestInProgress = true;
-        console.log('[DEBUG] Starting hit test with layers:', layers.map(l => l.title));
 
         mapView.hitTest(event, { include: layers })
             .then(response => {
-                console.log('[DEBUG] Hit test response:', response.results.length, 'results');
                 
                 // Double-check we're still over the map when the async operation completes
                 if (!this.isMouseOverMap) {
@@ -361,17 +346,12 @@ export class GeographicBoundariesService {
                     ? response.results[0].graphic 
                     : null;
                 
-                if (graphic) {
-                  console.log('[DEBUG] Hit test found graphic:', graphic.attributes);
-                } else {
-                  console.log('[DEBUG] Hit test found no graphics');
-                }
+
                 
                 this.handleHover(graphic);
                 this.hitTestInProgress = false;
             })
             .catch(err => {
-                console.error('[DEBUG] Hit test failed:', err);
                 if (err.name !== "AbortError") console.error("hitTest failed:", err);
                 this.hitTestInProgress = false;
             });
@@ -380,7 +360,6 @@ export class GeographicBoundariesService {
     const clickHandler = mapView.on("click", (event) => {
       // Only process clicks if interactivity is fully ready
       if (!this.isInteractivityFullyReady) {
-        console.log('[DEBUG] Ignoring click - interactivity not fully ready');
         return;
       }
 
@@ -389,9 +368,7 @@ export class GeographicBoundariesService {
               ? response.results[0].graphic as Graphic
               : null;
           
-          if (graphic) {
-            console.log('[DEBUG] Click found graphic:', graphic.attributes);
-          }
+
           
           this.handleSelection(graphic);
       });
@@ -413,11 +390,10 @@ export class GeographicBoundariesService {
     // Mark interactivity as fully ready after layer recreation is complete
     setTimeout(() => {
       this.isInteractivityFullyReady = true;
-      console.log('[DEBUG] Interactivity is now fully ready for mouse events');
       
       // Additional check: verify layers are still visible and queryable
       layers.forEach(layer => {
-        console.log(`[DEBUG] Layer ${layer.title} ready state: visible=${layer.visible}, loaded=${layer.loaded}, opacity=${layer.opacity}`);
+        // Layer ready state verification
       });
       
       // Test if layers are queryable
@@ -427,7 +403,7 @@ export class GeographicBoundariesService {
         testQuery.outFields = ["OBJECTID"];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         layers[0].queryFeatures(testQuery as any).then(result => {
-          console.log(`[DEBUG] Test query on ${layers[0].title}: ${result.features.length} features found`);
+          // Test query completed
         }).catch(err => {
           console.error(`[DEBUG] Test query failed on ${layers[0].title}:`, err);
         });
@@ -449,7 +425,7 @@ export class GeographicBoundariesService {
           clientY: centerY
         });
         
-        console.log('[DEBUG] Dispatching synthetic mouse move to force position capture');
+
         mapView.container.dispatchEvent(mouseMoveEvent);
       }
       
@@ -463,10 +439,7 @@ export class GeographicBoundariesService {
           const hasClientPosition = this.lastClientPosition !== null;
           const hasScreenPosition = this.lastScreenPosition !== null;
           
-          console.log(`[DEBUG] Position check - hasClientPosition: ${hasClientPosition}, hasScreenPosition: ${hasScreenPosition}`);
-          console.log(`[DEBUG] lastClientPosition:`, this.lastClientPosition);
-          console.log(`[DEBUG] lastScreenPosition:`, this.lastScreenPosition);
-          console.log(`[DEBUG] isMouseOverMap: ${this.isMouseOverMap}`);
+
           
           // If we have any position data, check if it's within bounds
           if (this.lastClientPosition) {
@@ -476,35 +449,29 @@ export class GeographicBoundariesService {
             const isMouseInBounds = currentMouseX >= rect.left && currentMouseX <= rect.right && 
                                    currentMouseY >= rect.top && currentMouseY <= rect.bottom;
             
-            console.log(`[DEBUG] Checking mouse position: clientX=${currentMouseX}, clientY=${currentMouseY}, inBounds=${isMouseInBounds}`);
-            console.log(`[DEBUG] Map bounds: left=${rect.left}, right=${rect.right}, top=${rect.top}, bottom=${rect.bottom}`);
+
             
             if (isMouseInBounds && !this.isMouseOverMap) {
-              console.log('[DEBUG] Mouse is in bounds but not tracked as over map, updating state');
               this.isMouseOverMap = true;
             }
           } else if (this.lastScreenPosition && !this.isMouseOverMap) {
             // If we only have screen position, assume mouse is over map
-            console.log('[DEBUG] Have screen position but no client position, assuming mouse is over map');
             this.isMouseOverMap = true;
           }
           
           // ADDITIONAL FIX: If still no mouse tracking, force it on
           if (!this.isMouseOverMap && !hasClientPosition && !hasScreenPosition) {
-            console.log('[DEBUG] No mouse position captured at all, forcing mouse over state');
             this.isMouseOverMap = true;
             
             // Try to get mouse position from PointerEvent if available
             if (window.PointerEvent) {
-              console.log('[DEBUG] Attempting to capture position via PointerEvent');
+              // Attempting to capture position via PointerEvent
             }
           }
         }
         
         // CRITICAL FIX: If mouse is currently over the map, re-process the current position
         if (this.isMouseOverMap && this.lastScreenPosition) {
-          console.log('[DEBUG] Mouse is over map, re-processing current screen position for immediate hover effects');
-          console.log('[DEBUG] Screen position for hit test:', this.lastScreenPosition);
           
           // Create a synthetic event to re-trigger the hover logic
           const syntheticEvent = {
@@ -515,12 +482,10 @@ export class GeographicBoundariesService {
           // Use setTimeout to ensure this happens after the current execution cycle
           setTimeout(() => {
             if (this.isMouseOverMap && !this.hitTestInProgress) {
-              console.log('[DEBUG] Re-processing hover for current mouse position');
               this.hitTestInProgress = true;
               
               mapView.hitTest(syntheticEvent, { include: layers })
                 .then(response => {
-                  console.log('[DEBUG] Re-process hit test response:', response.results.length, 'results');
                   
                   if (!this.isMouseOverMap) {
                     this.hitTestInProgress = false;
@@ -532,28 +497,22 @@ export class GeographicBoundariesService {
                     ? response.results[0].graphic 
                     : null;
                   
-                  if (graphic) {
-                    console.log('[DEBUG] Re-process hit test found graphic:', graphic.attributes);
-                  } else {
-                    console.log('[DEBUG] Re-process hit test found no graphics');
-                  }
+
                   
                   this.handleHover(graphic);
                   this.hitTestInProgress = false;
                 })
                 .catch(err => {
-                  console.error('[DEBUG] Re-process hit test failed:', err);
+                  console.error('Re-process hit test failed:', err);
                   this.hitTestInProgress = false;
                 });
             }
           }, 50); // Small delay to ensure everything is settled
-        } else {
-          console.log('[DEBUG] Cannot re-process hover - isMouseOverMap:', this.isMouseOverMap, 'lastScreenPosition:', this.lastScreenPosition);
         }
       }, 300); // Increased delay to ensure DOM events have time to fire
     }, 200); // Increased delay to ensure layer recreation is complete
     
-    console.log('[DEBUG] Interactivity setup completed successfully');
+
   }
   
   private clearHoverCleanupTimeout() {
@@ -590,15 +549,12 @@ export class GeographicBoundariesService {
     }
 
     if (this.hoveredGraphic) {
-      console.log('[DEBUG] Removing existing hover graphic');
       this.highlightLayer.remove(this.hoveredGraphic);
       this.hoveredGraphic = null;
     }
     
     const isSelected = newlyHovered?.attributes.OBJECTID === this.selectedFeature?.objectId;
     if (newlyHovered && !isSelected) {
-        console.log('[DEBUG] Creating new hover graphic for:', newlyHovered.attributes);
-         
         this.hoveredGraphic = new Graphic({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             geometry: newlyHovered.geometry as any,
@@ -606,15 +562,11 @@ export class GeographicBoundariesService {
             symbol: this.hoverSymbol
         });
         
-        console.log('[DEBUG] Adding hover graphic to highlight layer. Layer graphics count:', this.highlightLayer.graphics.length);
         this.highlightLayer.add(this.hoveredGraphic);
-        console.log('[DEBUG] After adding hover graphic. Layer graphics count:', this.highlightLayer.graphics.length);
         
         if (this.mapView?.container) {
           this.mapView.container.style.cursor = "pointer";
         }
-    } else if (!newlyHovered) {
-        console.log('[DEBUG] No hover graphic to show');
     }
   }
   
@@ -757,7 +709,7 @@ export class GeographicBoundariesService {
       // Add the new layer to the map
       mapView.map.add(this.highlightLayer);
       
-      console.log('[DEBUG] Highlight layer has been completely reset.');
+
     }
   }
 }
