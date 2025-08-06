@@ -16,15 +16,16 @@ export class IncidentVolumeRatioRenderer {
     return new HeatmapRenderer({
       field: "weightedExposure", // This comes from joined IncidentHeatmapWeights data
       blurRadius: 25,
-      maxDensity: 0.02, // Adjust based on exposure data range
+      maxDensity: 0.01, // Reduced to avoid everything being red
       minDensity: 0,
       colorStops: [
         { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
-        { ratio: 0.1, color: "rgba(0, 255, 0, 0.2)" }, // Light green - low risk
-        { ratio: 0.2, color: "rgba(173, 255, 47, 0.4)" }, // Green yellow - low-medium risk
-        { ratio: 0.4, color: "rgba(255, 255, 0, 0.6)" }, // Yellow - medium risk
-        { ratio: 0.6, color: "rgba(255, 165, 0, 0.7)" }, // Orange - medium-high risk
-        { ratio: 0.8, color: "rgba(255, 69, 0, 0.8)" }, // Orange red - high risk
+        { ratio: 0.01, color: "rgba(0, 150, 0, 0.3)" }, // Dark green - very low risk
+        { ratio: 0.05, color: "rgba(50, 205, 50, 0.4)" }, // Lime green - low risk
+        { ratio: 0.15, color: "rgba(173, 255, 47, 0.5)" }, // Green yellow - low-medium risk
+        { ratio: 0.3, color: "rgba(255, 255, 0, 0.6)" }, // Yellow - medium risk
+        { ratio: 0.5, color: "rgba(255, 165, 0, 0.7)" }, // Orange - medium-high risk
+        { ratio: 0.7, color: "rgba(255, 69, 0, 0.8)" }, // Orange red - high risk
         { ratio: 1.0, color: "rgba(220, 20, 60, 1.0)" } // Crimson - very high risk
       ]
     });
@@ -235,17 +236,27 @@ export class IncidentVolumeRatioRenderer {
   ): HeatmapRenderer {
     const newRenderer = renderer.clone();
     
-    // Adjust max density based on exposure value range
+    // Adjust max density based on exposure value range and feature density
     const exposureRange = maxExposure - minExposure;
-    let maxDensity = 0.02;
+    let maxDensity = renderer.maxDensity; // Start with the renderer's existing value
     
-    if (exposureRange > 1000) {
-      maxDensity = 0.03; // Higher density for large exposure ranges
+    // Only adjust if we detect problematic ranges
+    if (exposureRange < 5 && minExposure > 2) {
+      // Very narrow range with moderate-high values - use ultra-sensitive density
+      maxDensity = Math.min(maxDensity, 0.00005);
+    } else if (exposureRange < 3) {
+      // Extremely narrow range - be very sensitive
+      maxDensity = Math.min(maxDensity, 0.0001);
     } else if (exposureRange < 10) {
-      maxDensity = 0.01; // Lower density for small ranges
+      // Narrow range - be more sensitive
+      maxDensity = Math.min(maxDensity, 0.0005);
+    } else if (minExposure > 500) {
+      maxDensity = 0.002; // Very aggressive reduction for very high exposure values
+    } else if (minExposure > 100) {
+      maxDensity = 0.003; // Very low for high exposure values
     }
     
-    // Adjust blur based on feature count
+    // Adjust blur based on feature count for better visualization
     let blurRadius = 25;
     if (featureCount > 1000) {
       blurRadius = 20; // Tighter clustering for many features
@@ -253,10 +264,119 @@ export class IncidentVolumeRatioRenderer {
       blurRadius = 35; // Wider spread for few features
     }
     
+    console.log('[DEBUG] Renderer adjustment:', {
+      originalMaxDensity: renderer.maxDensity,
+      newMaxDensity: maxDensity,
+      originalBlurRadius: renderer.blurRadius,
+      newBlurRadius: blurRadius,
+      exposureRange,
+      minExposure,
+      maxExposure,
+      featureCount
+    });
+    
     newRenderer.maxDensity = maxDensity;
     newRenderer.blurRadius = blurRadius;
     
     return newRenderer;
+  }
+
+  /**
+   * Create data-driven color stops based on actual exposure distribution
+   */
+  static createDataDrivenColorStops(exposureValues: number[]): any[] {
+    if (exposureValues.length === 0) {
+      return [
+        { ratio: 0, color: "rgba(255, 255, 255, 0)" },
+        { ratio: 1, color: "rgba(220, 20, 60, 1.0)" }
+      ];
+    }
+
+    // Sort exposure values to find percentiles
+    const sortedValues = [...exposureValues].sort((a, b) => a - b);
+    const getPercentile = (p: number) => {
+      const index = Math.floor(p * (sortedValues.length - 1));
+      return sortedValues[index];
+    };
+
+    // Use percentiles to set color boundaries
+    const p10 = getPercentile(0.1);
+    const p25 = getPercentile(0.25);
+    const p50 = getPercentile(0.5);
+    const p75 = getPercentile(0.75);
+    const p90 = getPercentile(0.9);
+    const max = sortedValues[sortedValues.length - 1];
+
+    console.log('[DEBUG] Exposure percentiles:', { p10, p25, p50, p75, p90, max });
+
+    return [
+      { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
+      { ratio: 0.01, color: "rgba(0, 150, 0, 0.3)" }, // Dark green - very low risk
+      { ratio: 0.1, color: "rgba(50, 205, 50, 0.4)" }, // Lime green - low risk (p10)
+      { ratio: 0.25, color: "rgba(173, 255, 47, 0.5)" }, // Green yellow - low-medium risk (p25)
+      { ratio: 0.5, color: "rgba(255, 255, 0, 0.6)" }, // Yellow - medium risk (p50)
+      { ratio: 0.75, color: "rgba(255, 165, 0, 0.7)" }, // Orange - medium-high risk (p75)
+      { ratio: 0.9, color: "rgba(255, 69, 0, 0.8)" }, // Orange red - high risk (p90)
+      { ratio: 1.0, color: "rgba(220, 20, 60, 1.0)" } // Crimson - very high risk (max)
+    ];
+  }
+
+  /**
+   * Create a renderer with data-driven color stops
+   */
+  static createDataDrivenRenderer(exposureValues: number[]): HeatmapRenderer {
+    const colorStops = this.createDataDrivenColorStops(exposureValues);
+    
+    // For narrow data ranges, use extremely low maxDensity
+    const range = Math.max(...exposureValues) - Math.min(...exposureValues);
+    const avgValue = exposureValues.reduce((a, b) => a + b, 0) / exposureValues.length;
+    
+    let maxDensity = 0.005;
+    if (range < 5 && avgValue > 2) {
+      // Very narrow range with moderate-high values - use ultra-low density
+      maxDensity = 0.0001;
+    } else if (range < 10) {
+      maxDensity = 0.0005;
+    }
+    
+    console.log('[DEBUG] Data-driven renderer settings:', {
+      range,
+      avgValue,
+      selectedMaxDensity: maxDensity,
+      reasoning: range < 5 && avgValue > 2 ? 'ultra-low for narrow high-value range' : 'default'
+    });
+    
+    return new HeatmapRenderer({
+      field: "weightedExposure",
+      blurRadius: 25,
+      maxDensity,
+      minDensity: 0,
+      colorStops
+    });
+  }
+
+  /**
+   * Create a normalized renderer that uses 0-1 normalized exposure values
+   */
+  static createNormalizedRenderer(): HeatmapRenderer {
+    console.log('[DEBUG] Creating normalized renderer with enhanced hotspot visibility');
+    
+    return new HeatmapRenderer({
+      field: "normalizedExposure", // Use the normalized 0-1 values
+      blurRadius: 20, // Slightly tighter for more defined hotspots
+      maxDensity: 0.015, // Slightly higher to show more variation
+      minDensity: 0,
+      colorStops: [
+        { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
+        { ratio: 0.05, color: "rgba(0, 150, 0, 0.3)" }, // Dark green - very low risk
+        { ratio: 0.2, color: "rgba(50, 205, 50, 0.5)" }, // Lime green - low risk
+        { ratio: 0.4, color: "rgba(173, 255, 47, 0.6)" }, // Yellow-green - low-med risk
+        { ratio: 0.6, color: "rgba(255, 255, 0, 0.7)" }, // Yellow - medium risk
+        { ratio: 0.8, color: "rgba(255, 165, 0, 0.8)" }, // Orange - high risk
+        { ratio: 0.95, color: "rgba(255, 69, 0, 0.9)" }, // Orange-red - very high risk
+        { ratio: 1.0, color: "rgba(220, 20, 60, 1.0)" } // Crimson - extreme risk
+      ]
+    });
   }
 
   /**

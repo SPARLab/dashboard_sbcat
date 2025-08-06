@@ -273,7 +273,17 @@ export class SafetyIncidentsDataService {
 
     // Filter cached weights for the requested incident IDs
     const incidentIdSet = new Set(incidentIds);
-    return this.weightsCache?.filter(weight => incidentIdSet.has(weight.incident_id)) || [];
+    const filteredWeights = this.weightsCache?.filter(weight => incidentIdSet.has(weight.incident_id)) || [];
+    
+    console.log('[DEBUG] Weights filtering:', {
+      totalCachedWeights: this.weightsCache?.length || 0,
+      requestedIncidentIds: incidentIds.length,
+      matchingWeights: filteredWeights.length,
+      sampleRequestedIds: incidentIds.slice(0, 5),
+      sampleMatchingWeights: filteredWeights.slice(0, 5)
+    });
+    
+    return filteredWeights;
   }
 
   /**
@@ -350,6 +360,17 @@ export class SafetyIncidentsDataService {
 
       // Calculate weighted exposure (sum of all weights for this incident)
       const weightedExposure = incidentWeights.reduce((sum, weight) => sum + weight.exposure, 0);
+
+      // Debug logging for first few incidents
+      if (incident.id <= 10) {
+        console.log(`[DEBUG] Join for incident ${incident.id}:`, {
+          incidentId: incident.id,
+          partiesCount: incidentParties.length,
+          weightsCount: incidentWeights.length,
+          weightedExposure,
+          sampleWeights: incidentWeights.slice(0, 2)
+        });
+      }
 
       return {
         ...incident,

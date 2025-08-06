@@ -406,11 +406,42 @@ export default function NewSafetyMap({
         filters
       );
 
+      // Debug the raw safety data
+      console.log('[DEBUG] Raw safety data:', {
+        totalIncidents: safetyData.data.length,
+        sampleIncident: safetyData.data[0],
+        incidentsWithWeights: safetyData.data.filter(inc => inc.hasWeight).length,
+        incidentsWithExposure: safetyData.data.filter(inc => inc.weightedExposure).length,
+        sampleWeightedIncident: safetyData.data.find(inc => inc.weightedExposure)
+      });
+
       // Filter incidents that have weight data
       const weightedIncidents = safetyData.data.filter(inc => inc.hasWeight && inc.weightedExposure);
 
+      console.log('[DEBUG] Filtered weighted incidents:', {
+        totalWeightedIncidents: weightedIncidents.length,
+        sampleWeightedIncidents: weightedIncidents.slice(0, 3).map(inc => ({
+          id: inc.id,
+          hasWeight: inc.hasWeight,
+          weightedExposure: inc.weightedExposure,
+          weightsCount: inc.weights?.length || 0
+        }))
+      });
+
       if (weightedIncidents.length === 0) {
         console.warn('No weighted incident data available for current extent');
+        console.log('[DEBUG] Trying to understand why no weighted data:', {
+          totalIncidents: safetyData.data.length,
+          incidentsWithHasWeight: safetyData.data.filter(inc => inc.hasWeight).length,
+          incidentsWithWeightedExposure: safetyData.data.filter(inc => inc.weightedExposure).length,
+          sampleIncidentWeights: safetyData.data.slice(0, 5).map(inc => ({
+            id: inc.id,
+            hasWeight: inc.hasWeight,
+            weightedExposure: inc.weightedExposure,
+            weights: inc.weights
+          }))
+        });
+        
         // Fallback to regular heatmap
         incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
         incidentsLayer.visible = true;
@@ -420,17 +451,56 @@ export default function NewSafetyMap({
       // Since HeatmapRenderer only works with FeatureLayer, we need to create a client-side FeatureLayer
       // with the weighted data
       
-      // Create features array for client-side feature layer
-      const weightedFeatures = weightedIncidents.map(incident => ({
-        geometry: incident.geometry,
-        attributes: {
-          objectid: incident.OBJECTID,
-          id: incident.id,
-          weightedExposure: incident.weightedExposure || 0,
-          severity: incident.maxSeverity || 'unknown',
-          data_source: incident.data_source || 'unknown'
+      // Normalize exposure values to 0-1 range for better heatmap visualization
+      const exposureValues = weightedIncidents.map(inc => inc.weightedExposure || 0);
+      const minExposure = Math.min(...exposureValues);
+      const maxExposure = Math.max(...exposureValues);
+      const exposureRange = maxExposure - minExposure;
+      
+      console.log('[DEBUG] Normalizing exposure values:', {
+        originalRange: [minExposure, maxExposure],
+        rangeSize: exposureRange,
+        valueDistribution: {
+          count: exposureValues.length,
+          min: Math.min(...exposureValues),
+          max: Math.max(...exposureValues),
+          avg: exposureValues.reduce((a, b) => a + b, 0) / exposureValues.length,
+          median: exposureValues.sort((a, b) => a - b)[Math.floor(exposureValues.length / 2)],
+          top10percent: exposureValues.slice(-Math.floor(exposureValues.length * 0.1))
         }
-      }));
+      });
+
+      // Create features array for client-side feature layer with normalized exposure
+      const weightedFeatures = weightedIncidents.map((incident, index) => {
+        const originalExposure = incident.weightedExposure || 0;
+        // Normalize to 0-1 scale
+        const normalizedExposure = exposureRange > 0 
+          ? (originalExposure - minExposure) / exposureRange 
+          : 0;
+        
+        const feature = {
+          geometry: incident.geometry,
+          attributes: {
+            objectid: incident.OBJECTID || index + 1, // Ensure we have a valid objectid
+            id: incident.id,
+            weightedExposure: originalExposure, // Keep original for reference
+            normalizedExposure: normalizedExposure, // Use this for visualization
+            severity: incident.maxSeverity || 'unknown',
+            data_source: incident.data_source || 'unknown'
+          }
+        };
+        
+        // Debug first few features
+        if (index < 3) {
+          console.log(`[DEBUG] Feature ${index}:`, {
+            original: originalExposure,
+            normalized: normalizedExposure,
+            attributes: feature.attributes
+          });
+        }
+        
+        return feature;
+      });
 
       // Remove existing weighted layer if it exists
       const existingWeightedLayer = mapViewRef.current.map.layers.find(
@@ -449,6 +519,7 @@ export default function NewSafetyMap({
           { name: "objectid", type: "oid" },
           { name: "id", type: "integer" },
           { name: "weightedExposure", type: "double" },
+          { name: "normalizedExposure", type: "double" },
           { name: "severity", type: "string" },
           { name: "data_source", type: "string" }
         ],
@@ -458,28 +529,21 @@ export default function NewSafetyMap({
 
       // Add the new weighted layer
       mapViewRef.current.map.add(weightedLayer);
+      
+      // Debug the created layer
+      console.log('[DEBUG] Created weighted layer:', {
+        title: weightedLayer.title,
+        featureCount: weightedFeatures.length,
+        fields: weightedLayer.fields?.map(f => ({ name: f.name, type: f.type })),
+        geometryType: weightedLayer.geometryType,
+        source: 'client-side features'
+      });
 
-      // Apply the heatmap renderer to the new FeatureLayer
-      const renderer = IncidentVolumeRatioRenderer.getRenderer('exposure', filters);
+      // Use the normalized renderer for consistent visualization
+      console.log('[DEBUG] Using normalized renderer for consistent color distribution');
       
-      // Adjust renderer based on data characteristics
-      const exposureValues = weightedIncidents
-        .map(inc => inc.weightedExposure || 0)
-        .filter(val => val > 0);
-      
-      if (exposureValues.length > 0) {
-        const minExposure = Math.min(...exposureValues);
-        const maxExposure = Math.max(...exposureValues);
-        const adjustedRenderer = IncidentVolumeRatioRenderer.adjustForDataRange(
-          renderer,
-          minExposure,
-          maxExposure,
-          weightedIncidents.length
-        );
-        weightedLayer.renderer = adjustedRenderer;
-      } else {
-        weightedLayer.renderer = renderer;
-      }
+      const normalizedRenderer = IncidentVolumeRatioRenderer.createNormalizedRenderer();
+      weightedLayer.renderer = normalizedRenderer;
 
       // Hide the regular incidents layer and show the weighted layer
       incidentsLayer.visible = false;
