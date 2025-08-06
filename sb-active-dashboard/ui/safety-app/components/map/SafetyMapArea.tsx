@@ -68,19 +68,19 @@ export default function SafetyMapArea({
           <h4 id="safety-legend-title" className="text-xs font-normal text-gray-900 mb-3">Legend</h4>
           <div id="safety-legend-items" className="space-y-2">
             <div id="safety-legend-fatality" className="flex items-center gap-2">
-              <div id="safety-legend-fatality-dot" className="w-3 h-3 bg-gray-600 rounded-full"></div>
+              <div id="safety-legend-fatality-dot" className="w-3 h-3 bg-black rounded-full"></div>
               <span id="safety-legend-fatality-label" className="text-xs text-gray-700">Fatality</span>
             </div>
             <div id="safety-legend-severe-injury" className="flex items-center gap-2">
-              <div id="safety-legend-severe-injury-dot" className="w-3 h-3 bg-gray-500 rounded-full"></div>
+              <div id="safety-legend-severe-injury-dot" className="w-3 h-3 bg-red-500 rounded-full"></div>
               <span id="safety-legend-severe-injury-label" className="text-xs text-gray-700">Severe Injury</span>
             </div>
             <div id="safety-legend-injury" className="flex items-center gap-2">
-              <div id="safety-legend-injury-dot" className="w-3 h-3 bg-gray-500 rounded-full"></div>
+              <div id="safety-legend-injury-dot" className="w-3 h-3 bg-orange-500 rounded-full"></div>
               <span id="safety-legend-injury-label" className="text-xs text-gray-700">Injury</span>
             </div>
             <div id="safety-legend-near-miss" className="flex items-center gap-2">
-              <div id="safety-legend-near-miss-dot" className="w-3 h-3 bg-gray-500 rounded-full"></div>
+              <div id="safety-legend-near-miss-dot" className="w-3 h-3 bg-yellow-500 rounded-full"></div>
               <span id="safety-legend-near-miss-label" className="text-xs text-gray-700">Near-miss</span>
             </div>
           </div>

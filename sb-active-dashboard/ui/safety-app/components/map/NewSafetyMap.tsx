@@ -85,6 +85,8 @@ export default function NewSafetyMap({
         }
         
         console.log('[DEBUG] Safety map view initialization completed successfully');
+        console.log('[DEBUG] MapView popup available:', !!mapView.popup);
+        console.log('[DEBUG] MapView methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(mapView)).filter(name => name.includes('popup') || name.includes('Popup')));
       }).catch((error: Error) => {
         console.error('[DEBUG] Safety map view initialization failed:', error);
         // Still mark as ready even if navigation fails
@@ -148,10 +150,11 @@ export default function NewSafetyMap({
         
         if (response.results.length > 0) {
           // Check if we clicked on an incident feature
-          const graphicHits = response.results.filter((result: any) => 
+          const graphicHits = response.results.filter((result: any) =>
             result.graphic && (
-              result.graphic.layer === incidentsLayer || 
-              result.graphic.layer?.title === "Weighted Safety Incidents"
+              result.graphic.layer === incidentsLayer ||
+              result.graphic.layer?.title === "Weighted Safety Incidents" ||
+              result.graphic.layer?.title === "Raw Safety Incidents (Test)"
             )
           );
 
@@ -201,6 +204,11 @@ export default function NewSafetyMap({
         if (graphicHit) {
             const graphic = graphicHit.graphic;
             const attributes = graphic.attributes;
+            
+            // Skip manual popup for Raw Safety Incidents layer - it has its own popupTemplate
+            if (graphic.layer?.title === "Raw Safety Incidents (Test)") {
+              return;
+            }
 
             // Try to get more detailed incident information if available
             let enrichedData = null;
@@ -319,18 +327,31 @@ export default function NewSafetyMap({
             popupContent += '</div>';
 
             // Set popup content and location
-            mapViewRef.current!.popup.open({
-              title: "Safety Incident Details",
-              content: popupContent,
-              location: event.mapPoint
-            });
+            if (mapViewRef.current!.popup) {
+              mapViewRef.current!.popup.open({
+                title: "Safety Incident Details",
+                content: popupContent,
+                location: event.mapPoint
+              });
+            } else {
+              // Alternative approach using openPopup method
+              mapViewRef.current!.openPopup({
+                title: "Safety Incident Details",
+                content: popupContent,
+                location: event.mapPoint
+              });
+            }
 
             // Stop event propagation to prevent boundary selection changes
             event.stopPropagation();
             return; // Early return to prevent further processing
         } else {
           // Close popup if clicking somewhere else
-          mapViewRef.current!.popup.close();
+          if (mapViewRef.current!.popup) {
+            mapViewRef.current!.popup.close();
+          } else if (mapViewRef.current!.closePopup) {
+            mapViewRef.current!.closePopup();
+          }
         }
       } catch (error) {
         console.error('Error handling map click:', error);
@@ -345,7 +366,7 @@ export default function NewSafetyMap({
         clickHandle.remove();
       }
     };
-  }, [viewReady, incidentsLayer, activeVisualization, filters]);
+  }, [viewReady, incidentsLayer, filters, activeVisualization]);
 
   // Update layers when active visualization changes
   useEffect(() => {
@@ -378,9 +399,8 @@ export default function NewSafetyMap({
 
         switch (activeVisualization) {
           case 'raw-incidents':
-            // Use raw incident renderer with points
-            incidentsLayer.renderer = RawIncidentRenderer.getRenderer('severity', filters);
-            incidentsLayer.visible = true;
+            // Create enriched raw incidents with severity data
+            await createRawIncidentsVisualization();
             break;
 
           case 'incident-heatmap':
@@ -627,6 +647,265 @@ export default function NewSafetyMap({
       // Fallback to regular heatmap
       incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
       incidentsLayer.visible = true;
+    }
+  };
+
+  // Create raw incidents visualization with severity color coding
+  const createRawIncidentsVisualization = async () => {
+    try {
+      setDataLoading(true);
+
+      console.log('[DEBUG] Loading enriched incident data to analyze severity values...');
+
+      // Query enriched incidents data for current map extent
+      const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
+        mapViewRef.current.extent,
+        filters
+      );
+
+      console.log('[DEBUG] Enriched data loaded:', {
+        totalIncidents: safetyData.data.length,
+        sampleIncident: safetyData.data[0]
+      });
+
+      // Debug: Analyze severity values by data source
+      const severityAnalysis = {
+        SWITRS: new Set<string>(),
+        BikeMaps: new Set<string>(),
+        unknown: new Set<string>()
+      };
+
+      const partiesAnalysis = {
+        incidentsWithParties: 0,
+        incidentsWithoutParties: 0,
+        totalParties: 0,
+        partySeverityValues: new Set<string>()
+      };
+
+      safetyData.data.forEach(incident => {
+        const dataSource = incident.data_source || 'unknown';
+        const maxSeverity = incident.maxSeverity || '';
+        
+        if (dataSource === 'SWITRS') {
+          severityAnalysis.SWITRS.add(maxSeverity);
+        } else if (dataSource === 'BikeMaps') {
+          severityAnalysis.BikeMaps.add(maxSeverity);
+        } else {
+          severityAnalysis.unknown.add(maxSeverity);
+        }
+
+        // Analyze parties data
+        if (incident.parties && incident.parties.length > 0) {
+          partiesAnalysis.incidentsWithParties++;
+          partiesAnalysis.totalParties += incident.parties.length;
+          incident.parties.forEach(party => {
+            if (party.injury_severity) {
+              partiesAnalysis.partySeverityValues.add(party.injury_severity);
+            }
+          });
+        } else {
+          partiesAnalysis.incidentsWithoutParties++;
+        }
+      });
+
+      console.log('[DEBUG] SEVERITY ANALYSIS BY DATA SOURCE:');
+      console.log('SWITRS severity values:', Array.from(severityAnalysis.SWITRS));
+      console.log('BikeMaps severity values:', Array.from(severityAnalysis.BikeMaps));
+      console.log('Unknown source severity values:', Array.from(severityAnalysis.unknown));
+      
+      console.log('[DEBUG] PARTIES ANALYSIS:');
+      console.log('Incidents with parties:', partiesAnalysis.incidentsWithParties);
+      console.log('Incidents without parties:', partiesAnalysis.incidentsWithoutParties);
+      console.log('Total parties across all incidents:', partiesAnalysis.totalParties);
+      console.log('All party severity values found:', Array.from(partiesAnalysis.partySeverityValues));
+
+      // Debug: Check for data validation issues
+      const validationIssues = [];
+      safetyData.data.forEach((incident, index) => {
+        if (!incident.geometry) {
+          validationIssues.push(`Incident ${incident.id}: missing geometry`);
+        }
+        if (incident.id === null || incident.id === undefined) {
+          validationIssues.push(`Incident at index ${index}: missing id`);
+        }
+        if (incident.maxSeverity === null || incident.maxSeverity === undefined) {
+          validationIssues.push(`Incident ${incident.id}: maxSeverity is null/undefined`);
+        }
+      });
+
+      if (validationIssues.length > 0) {
+        console.log('[DEBUG] VALIDATION ISSUES FOUND:');
+        console.log('First 10 validation issues:', validationIssues.slice(0, 10));
+        console.log('Total validation issues:', validationIssues.length);
+      }
+
+      // Create simplified graphics to test FeatureLayer creation
+      console.log('[DEBUG] Creating simplified graphics for FeatureLayer...');
+      
+      const rawIncidentFeatures = safetyData.data
+        .filter(incident => incident.geometry && incident.id) // Only include valid incidents
+        .slice(0, 500) // Test with 500 incidents now that we fixed the renderer
+        .map((incident, index) => {
+          const maxSeverity = incident.maxSeverity || '';
+          
+          return new Graphic({
+            geometry: incident.geometry,
+            attributes: {
+              objectid: index + 1,
+              id: incident.id,
+              maxSeverity: maxSeverity,
+              data_source: incident.data_source || 'unknown'
+            }
+          });
+        });
+
+      console.log('[DEBUG] Created features sample:', {
+        totalFilteredIncidents: safetyData.data.filter(i => i.geometry && i.id).length,
+        testFeatures: rawIncidentFeatures.length,
+        sampleFeature: rawIncidentFeatures[0]?.attributes
+      });
+
+      // Try creating the layer with minimal fields
+       const rawIncidentsLayer = new FeatureLayer({
+        source: rawIncidentFeatures,
+        title: "Raw Safety Incidents (Test)",
+        objectIdField: "objectid",
+        fields: [
+          { name: "objectid", type: "oid" },
+          { name: "id", type: "integer" },
+          { name: "maxSeverity", type: "string" },
+          { name: "data_source", type: "string" }
+        ],
+        geometryType: "point",
+        spatialReference: mapViewRef.current.spatialReference,
+        popupTemplate: {
+          title: "Safety Incident #{id}",
+          content: async (event: any) => {
+            // Get the clicked feature
+            const graphic = event.graphic;
+            const attributes = graphic.attributes;
+            
+            // Try to get enriched data
+            let enrichedData = null;
+            const incidentId = attributes.id;
+            
+            if (incidentId) {
+              try {
+                const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
+                  mapViewRef.current!.extent,
+                  filters
+                );
+                enrichedData = safetyData.data.find(inc => inc.id === incidentId);
+              } catch (error) {
+                console.warn('Could not fetch enriched incident data:', error);
+              }
+            }
+            
+            const incidentData = enrichedData || attributes;
+            
+                         // Build the HTML content
+             let popupContent = `
+               <div class="incident-popup" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.4; color: #333;">
+                 <style>
+                   .incident-popup p { margin: 0 !important; }
+                   .esri-feature-content .incident-popup p { margin: 0 !important; }
+                   .incident-popup strong { color: #2563eb; }
+                   .incident-popup .section { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+                   .incident-popup .section:last-child { border-bottom: none; margin-bottom: 0; }
+                   .incident-popup .parties { background: #f8fafc; padding: 4px 6px; border-radius: 4px; margin-top: 4px; }
+                 </style>
+             `;
+            
+            // All information in one continuous flow with inline styles
+            if (incidentData.data_source) {
+              popupContent += `<p style="margin: 0 !important;"><strong>Source:</strong> ${incidentData.data_source}</p>`;
+            }
+            if (incidentData.timestamp) {
+              const date = new Date(incidentData.timestamp);
+              popupContent += `<p style="margin: 0 !important;"><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
+            }
+            if (incidentData.conflict_type) {
+              popupContent += `<p style="margin: 0 !important;"><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;
+            }
+            
+            const severity = incidentData.severity || incidentData.maxSeverity;
+            if (severity) {
+              const severityColor = severity === 'Fatality' || severity === 'fatal' ? '#dc2626' : 
+                                  severity === 'Severe Injury' || severity === 'severe_injury' ? '#ea580c' : 
+                                  severity === 'Injury' || severity === 'injury' ? '#d97706' : '#65a30d';
+              popupContent += `<p style="margin: 0 !important;"><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${severity}</span></p>`;
+            }
+            
+            // Involvement
+            const involvement = [];
+            if (incidentData.pedestrian_involved) involvement.push('Pedestrian');
+            if (incidentData.bicyclist_involved) involvement.push('Bicyclist');
+            if (incidentData.vehicle_involved) involvement.push('Vehicle');
+            if (involvement.length > 0) {
+              popupContent += `<p style="margin: 0 !important;"><strong>Involved:</strong> ${involvement.join(', ')}</p>`;
+            }
+            
+            // Parties if available
+            if (enrichedData && enrichedData.parties && enrichedData.parties.length > 0) {
+              popupContent += '<p style="margin: 0 !important;"><strong>Parties Involved:</strong></p>';
+              popupContent += '<div class="parties">';
+              
+                             enrichedData.parties.forEach((party: any, index: number) => {
+                popupContent += `<div style="margin-bottom: 2px;">`;
+                popupContent += `<strong>Party ${party.party_number || index + 1}:</strong> `;
+                if (party.party_type) {
+                  popupContent += `${party.party_type}`;
+                }
+                if (party.injury_severity) {
+                  const injuryColor = party.injury_severity === 'Fatal' ? '#dc2626' : 
+                                     party.injury_severity === 'Severe Injury' ? '#ea580c' : 
+                                     party.injury_severity === 'Other Visible Injury' ? '#d97706' : '#65a30d';
+                  popupContent += ` - <span style="color: ${injuryColor};">${party.injury_severity}</span>`;
+                }
+                if (party.age) {
+                  popupContent += ` (Age: ${party.age})`;
+                }
+                popupContent += '</div>';
+              });
+              
+              popupContent += '</div>';
+            }
+            
+            popupContent += '</div>';
+            
+            return popupContent;
+          }
+        }
+      });
+
+      console.log('[DEBUG] Attempting to add FeatureLayer to map...');
+      
+      // Apply the severity renderer
+      rawIncidentsLayer.renderer = RawIncidentRenderer.getRenderer('severity', filters);
+      
+      // Hide the regular incidents layer and add the enriched one
+      incidentsLayer.visible = false;
+      mapViewRef.current.map.add(rawIncidentsLayer);
+
+      // Wait for layer to load and check for errors
+      rawIncidentsLayer.load().then(() => {
+        console.log('[DEBUG] FeatureLayer loaded successfully!');
+        rawIncidentsLayer.visible = true;
+        setDataLoading(false);
+      }).catch((error) => {
+        console.error('[DEBUG] FeatureLayer load failed:', error);
+        // Fallback to data source renderer
+        incidentsLayer.renderer = RawIncidentRenderer.getRenderer('data_source', filters);
+        incidentsLayer.visible = true;
+        setDataLoading(false);
+      });
+
+    } catch (error) {
+      console.error('[DEBUG] Failed to create raw incidents visualization:', error);
+      // Fallback to data source renderer
+      incidentsLayer.renderer = RawIncidentRenderer.getRenderer('data_source', filters);
+      incidentsLayer.visible = true;
+      setDataLoading(false);
     }
   };
 

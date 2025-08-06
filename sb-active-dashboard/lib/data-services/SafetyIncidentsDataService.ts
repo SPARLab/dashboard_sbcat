@@ -42,7 +42,7 @@ export class SafetyIncidentsDataService {
     partiesLayer: FeatureLayer;
     weightsLayer: FeatureLayer;
   } {
-    if (!this.incidentsLayer) {
+    if (!this.incidentsLayer || this.incidentsLayer.destroyed) {
       this.incidentsLayer = new FeatureLayer({
         url: this.INCIDENTS_URL,
         title: "Safety Incidents",
@@ -50,7 +50,7 @@ export class SafetyIncidentsDataService {
       });
     }
 
-    if (!this.partiesLayer) {
+    if (!this.partiesLayer || this.partiesLayer.destroyed) {
       this.partiesLayer = new FeatureLayer({
         url: this.PARTIES_URL,
         title: "Incident Parties",
@@ -58,7 +58,7 @@ export class SafetyIncidentsDataService {
       });
     }
 
-    if (!this.weightsLayer) {
+    if (!this.weightsLayer || this.weightsLayer.destroyed) {
       this.weightsLayer = new FeatureLayer({
         url: this.WEIGHTS_URL,
         title: "Incident Heatmap Weights",

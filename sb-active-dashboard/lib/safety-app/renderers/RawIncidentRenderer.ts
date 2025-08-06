@@ -25,11 +25,12 @@ export class RawIncidentRenderer {
         }
       }),
       uniqueValueInfos: [
+        // Handle both formats: original lowercase and actual Title Case from data
         {
-          value: "fatal",
+          value: "Fatal",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [139, 0, 0, 0.9], // Dark red for fatalities
+            color: [0, 0, 0, 0.9], // Black for fatalities
             size: 12,
             outline: {
               color: [255, 255, 255, 1],
@@ -39,10 +40,23 @@ export class RawIncidentRenderer {
           label: "Fatal"
         },
         {
-          value: "severe_injury",
+          value: "fatal",
+          symbol: new SimpleMarkerSymbol({
+            style: "circle",
+            color: [0, 0, 0, 0.9], // Black for fatalities
+            size: 12,
+            outline: {
+              color: [255, 255, 255, 1],
+              width: 2
+            }
+          }),
+          label: "Fatal"
+        },
+        {
+          value: "Severe Injury",
           symbol: new SimpleMarkerSymbol({
             style: "circle", 
-            color: [255, 69, 0, 0.8], // Orange-red for severe injury
+            color: [255, 0, 0, 0.8], // Red for severe injury
             size: 10,
             outline: {
               color: [255, 255, 255, 0.8],
@@ -50,6 +64,32 @@ export class RawIncidentRenderer {
             }
           }),
           label: "Severe Injury"
+        },
+        {
+          value: "severe_injury",
+          symbol: new SimpleMarkerSymbol({
+            style: "circle", 
+            color: [255, 0, 0, 0.8], // Red for severe injury
+            size: 10,
+            outline: {
+              color: [255, 255, 255, 0.8],
+              width: 1.5
+            }
+          }),
+          label: "Severe Injury"
+        },
+        {
+          value: "Injury",
+          symbol: new SimpleMarkerSymbol({
+            style: "circle",
+            color: [255, 140, 0, 0.8], // Orange for injury
+            size: 8,
+            outline: {
+              color: [255, 255, 255, 0.8],
+              width: 1
+            }
+          }),
+          label: "Injury"
         },
         {
           value: "injury",
@@ -63,6 +103,19 @@ export class RawIncidentRenderer {
             }
           }),
           label: "Injury"
+        },
+        {
+          value: "Property Damage Only",
+          symbol: new SimpleMarkerSymbol({
+            style: "circle",
+            color: [255, 215, 0, 0.7], // Gold for property damage
+            size: 6,
+            outline: {
+              color: [255, 255, 255, 0.8],
+              width: 1
+            }
+          }),
+          label: "Property Damage Only"
         },
         {
           value: "property_damage_only",
@@ -81,7 +134,7 @@ export class RawIncidentRenderer {
           value: "", // Near misses (no severity data)
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [30, 144, 255, 0.6], // Dodger blue for near misses
+            color: [255, 255, 0, 0.8], // Yellow for near misses
             size: 5,
             outline: {
               color: [255, 255, 255, 0.8],
