@@ -1,16 +1,16 @@
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 import Polygon from "@arcgis/core/geometry/Polygon";
-import Graphic from "@arcgis/core/Graphic";
-import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import { ArcgisMap } from "@arcgis/map-components-react";
 import { CircularProgress, Box as MuiBox } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
-import { GeographicBoundariesService } from "../../../../lib/data-services/GeographicBoundariesService";
-import { SafetyIncidentsDataService } from "../../../../lib/data-services/SafetyIncidentsDataService";
+import { useEffect } from "react";
 import { IncidentHeatmapRenderer } from "../../../../lib/safety-app/renderers/IncidentHeatmapRenderer";
-import { IncidentVolumeRatioRenderer } from "../../../../lib/safety-app/renderers/IncidentVolumeRatioRenderer";
-import { RawIncidentRenderer } from "../../../../lib/safety-app/renderers/RawIncidentRenderer";
 import { SafetyFilters, SafetyVisualizationType } from "../../../../lib/safety-app/types";
+import { useLayerCache } from "../../hooks/useLayerCache";
+import { useMapState } from "../../hooks/useMapState";
+import { useSafetyLayers } from "../../hooks/useSafetyLayers";
+import { MapClickHandler } from "./handlers/MapClickHandler";
+import { RawIncidentsVisualization } from "./visualizations/RawIncidentsVisualization";
+import { WeightedVisualization } from "./visualizations/WeightedVisualization";
 
 interface NewSafetyMapProps {
   activeVisualization: SafetyVisualizationType;
@@ -27,344 +27,57 @@ export default function NewSafetyMap({
   geographicLevel,
   onSelectionChange
 }: NewSafetyMapProps) {
-  const mapViewRef = useRef<any>(null);
-  const [viewReady, setViewReady] = useState(false);
+  // Use custom hooks for state management
+  const {
+    mapViewRef,
+    viewReady,
+    dataLoading,
+    setDataLoading,
+    dataError,
+    setDataError,
+    boundaryService,
+    handleArcgisViewReadyChange
+  } = useMapState({ onMapViewReady, onSelectionChange });
 
-  // Layer state
-  const [incidentsLayer, setIncidentsLayer] = useState<FeatureLayer | null>(null);
-  const [partiesLayer, setPartiesLayer] = useState<FeatureLayer | null>(null);
-  const [weightsLayer, setWeightsLayer] = useState<FeatureLayer | null>(null);
-  
-  // Boundary service state
-  const [boundaryService] = useState(() => {
-    const service = new GeographicBoundariesService();
-    // Set up selection callback if provided
-    if (onSelectionChange) {
-      service.setSelectionChangeCallback(onSelectionChange);
-    }
-    return service;
-  });
+  // Use layer cache hook
+  const {
+    cachedWeightedLayer,
+    setCachedWeightedLayer,
+    cachedExtentKey,
+    setCachedExtentKey,
+    cachedRawIncidentsData,
+    setCachedRawIncidentsData,
+    cachedRawIncidentsLayer,
+    setCachedRawIncidentsLayer,
+    rawDataFiltersKey,
+    setRawDataFiltersKey,
+    generateCacheKey,
+    clearRawIncidentsCache
+  } = useLayerCache();
 
-  // Data loading state
-  const [dataLoading, setDataLoading] = useState(false);
-  const [dataError, setDataError] = useState<string | null>(null);
-  
-  // Cache for the weighted layer to avoid expensive recreation
-  const [cachedWeightedLayer, setCachedWeightedLayer] = useState<__esri.FeatureLayer | null>(null);
-  const [cachedExtentKey, setCachedExtentKey] = useState<string | null>(null);
-  
-  // Cache for raw incidents data to avoid re-querying on every zoom/pan
-  const [cachedRawIncidentsData, setCachedRawIncidentsData] = useState<any[] | null>(null);
-  const [cachedRawIncidentsLayer, setCachedRawIncidentsLayer] = useState<FeatureLayer | null>(null);
-  const [rawDataFiltersKey, setRawDataFiltersKey] = useState<string | null>(null);
+  // Use safety layers hook
+  const { incidentsLayer, weightsLayer } = useSafetyLayers(
+    viewReady,
+    mapViewRef.current,
+    boundaryService,
+    setDataLoading,
+    setDataError
+  );
 
-  // Generate a cache key based on filters only (not extent)
-  // For heatmap visualization, we don't need to reload data when panning/zooming
-  const generateCacheKey = (extent: __esri.Extent, filters: Partial<SafetyFilters>): string => {
-    const filtersKey = JSON.stringify({
-      dateRange: filters.dateRange ? `${filters.dateRange.start.getTime()}-${filters.dateRange.end.getTime()}` : null,
-      dataSource: filters.dataSource?.sort(),
-      roadUser: filters.roadUser?.sort(),
-      conflictType: filters.conflictType?.sort()
-    });
-    return filtersKey;
-  };
 
-  // Handler to set map center/zoom when view is ready
-  const handleArcgisViewReadyChange = (event: { target: { view: __esri.MapView } }) => {
-    if (event?.target?.view) {
-      const mapView = event.target.view;
-      mapViewRef.current = mapView;
-      
-      // Set initial view with proper completion handling
-      mapView.goTo({
-        center: [-120, 34.7],
-        zoom: 9,
-      }).then(() => {
-        // Only mark as ready after the initial navigation completes
-        setViewReady(true);
-        
-        // Pass mapView back to parent component  
-        if (onMapViewReady) {
-          onMapViewReady(mapView);
-        }
-        
-        console.log('[DEBUG] Safety map view initialization completed successfully');
-        console.log('[DEBUG] MapView popup available:', !!mapView.popup);
-        console.log('[DEBUG] MapView methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(mapView)).filter(name => name.includes('popup') || name.includes('Popup')));
-      }).catch((error: Error) => {
-        console.error('[DEBUG] Safety map view initialization failed:', error);
-        // Still mark as ready even if navigation fails
-        setViewReady(true);
-        if (onMapViewReady) {
-          onMapViewReady(mapView);
-        }
-      });
-    }
-  };
 
-  // Initialize safety data layers when map view is ready
-  useEffect(() => {
-    if (!viewReady || !mapViewRef.current) return;
 
-    const initializeLayers = async () => {
-      try {
-        setDataLoading(true);
-        setDataError(null);
-
-        // Initialize the feature layers
-        const layers = SafetyIncidentsDataService.initializeLayers();
-        
-        setIncidentsLayer(layers.incidentsLayer);
-        setPartiesLayer(layers.partiesLayer);
-        setWeightsLayer(layers.weightsLayer);
-
-        // Add boundary layers to map
-        const boundaryLayers = boundaryService.getBoundaryLayers();
-        boundaryLayers.forEach(layer => mapViewRef.current.map.add(layer));
-
-        // Add layers to map
-        mapViewRef.current.map.addMany([
-          layers.incidentsLayer,
-          // Note: parties and weights layers are not added to map as they're for data only
-        ]);
-
-        console.log('[DEBUG] Safety layers initialized successfully');
-        setDataLoading(false);
-
-      } catch (error) {
-        console.error('[DEBUG] Failed to initialize safety layers:', error);
-        setDataError(error instanceof Error ? error.message : 'Failed to load safety data');
-        setDataLoading(false);
-      }
-    };
-
-    initializeLayers();
-  }, [viewReady]);
 
   // Setup map click handlers for incident popups
   useEffect(() => {
     if (!viewReady || !mapViewRef.current || !incidentsLayer) return;
 
-    const handleMapClick = async (event: any) => {
-      try {
-        // First try hit test for point symbols (works for raw incidents)
-        const response = await mapViewRef.current!.hitTest(event);
-        
-        let graphicHit = null;
-        
-        if (response.results.length > 0) {
-          // Check if we clicked on an incident feature
-          const graphicHits = response.results.filter((result: any) =>
-            result.graphic && (
-              result.graphic.layer === incidentsLayer ||
-              result.graphic.layer?.title === "Weighted Safety Incidents" ||
-              result.graphic.layer?.title === "Raw Safety Incidents (Test)"
-            )
-          );
-
-          if (graphicHits.length > 0) {
-            graphicHit = graphicHits[0];
-          }
-        }
-
-        // For heatmap visualizations, if no direct hit, query the layer at the click point
-        if (!graphicHit && (activeVisualization === 'incident-heatmap' || activeVisualization === 'incident-to-volume-ratio')) {
-          const currentLayer = activeVisualization === 'incident-to-volume-ratio' 
-            ? mapViewRef.current!.map.layers.find((layer: any) => layer.title === "Weighted Safety Incidents")
-            : incidentsLayer;
-            
-          if (currentLayer) {
-            // Create a small buffer around the click point to find nearby incidents
-            const buffer = 100; // meters
-            const point = event.mapPoint;
-            const circle = new Graphic({
-              geometry: {
-                type: "circle",
-                center: point,
-                radius: buffer,
-                radiusUnit: "meters"
-              } as any
-            });
-
-            try {
-              const query = (currentLayer as any).createQuery();
-              query.geometry = circle.geometry;
-              query.spatialRelationship = "intersects";
-              query.returnGeometry = true;
-              query.outFields = ["*"];
-              query.num = 1; // Just get the closest one
-
-              const queryResults = await (currentLayer as any).queryFeatures(query);
-              
-              if (queryResults.features.length > 0) {
-                graphicHit = { graphic: queryResults.features[0] };
-              }
-            } catch (queryError) {
-              console.warn('Could not query layer for heatmap click:', queryError);
-            }
-          }
-        }
-
-        if (graphicHit) {
-            const graphic = graphicHit.graphic;
-            const attributes = graphic.attributes;
-            
-            // Skip manual popup for Raw Safety Incidents layer - it has its own popupTemplate
-            if (graphic.layer?.title === "Raw Safety Incidents (Test)") {
-              return;
-            }
-
-            // Try to get more detailed incident information if available
-            let enrichedData = null;
-            const incidentId = attributes.id || attributes.incident_id;
-            
-            if (incidentId) {
-              try {
-                // Get enriched data for this specific incident
-                const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
-                  mapViewRef.current!.extent,
-                  filters
-                );
-                enrichedData = safetyData.data.find(inc => inc.id === incidentId);
-              } catch (error) {
-                console.warn('Could not fetch enriched incident data:', error);
-              }
-            }
-
-            // Use enriched data if available, otherwise fall back to graphic attributes
-            const incidentData = enrichedData || attributes;
-
-            // Create popup content with better styling
-            let popupContent = `
-              <div class="incident-popup" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.4; color: #333;">
-                <style>
-                  .incident-popup p { margin: 8px 0; }
-                  .incident-popup strong { color: #2563eb; }
-                  .incident-popup .section { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; }
-                  .incident-popup .section:last-child { border-bottom: none; margin-bottom: 0; }
-                  .incident-popup .parties { background: #f8fafc; padding: 8px; border-radius: 4px; margin-top: 8px; }
-                </style>
-            `;
-            
-            // Basic incident information section
-            popupContent += '<div class="section">';
-            if (incidentData.id) {
-              popupContent += `<p><strong>Incident ID:</strong> ${incidentData.id}</p>`;
-            }
-            
-            if (incidentData.data_source) {
-              popupContent += `<p><strong>Source:</strong> ${incidentData.data_source}</p>`;
-            }
-            
-            if (incidentData.timestamp) {
-              const date = new Date(incidentData.timestamp);
-              popupContent += `<p><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
-            }
-            popupContent += '</div>';
-
-            // Incident details section
-            popupContent += '<div class="section">';
-            if (incidentData.conflict_type) {
-              popupContent += `<p><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;
-            }
-
-            // Severity information
-            const severity = incidentData.severity || incidentData.maxSeverity;
-            if (severity) {
-              const severityColor = severity === 'Fatality' ? '#dc2626' : 
-                                  severity === 'Severe Injury' ? '#ea580c' : 
-                                  severity === 'Injury' ? '#d97706' : '#65a30d';
-              popupContent += `<p><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${severity}</span></p>`;
-            }
-
-            // Involvement flags
-            const involvement = [];
-            if (incidentData.pedestrian_involved) involvement.push('Pedestrian');
-            if (incidentData.bicyclist_involved) involvement.push('Bicyclist');
-            if (incidentData.vehicle_involved) involvement.push('Vehicle');
-            
-            if (involvement.length > 0) {
-              popupContent += `<p><strong>Involved:</strong> ${involvement.join(', ')}</p>`;
-            }
-            popupContent += '</div>';
-
-            // Risk/weight information for incident-to-volume ratio
-            if (attributes.weightedExposure || (enrichedData && enrichedData.weightedExposure)) {
-              popupContent += '<div class="section">';
-              const weight = attributes.weightedExposure || enrichedData.weightedExposure;
-              popupContent += `<p><strong>Risk Weight:</strong> ${weight.toFixed(3)}</p>`;
-              popupContent += '<p style="font-size: 0.85em; color: #6b7280;">Higher values indicate greater risk relative to traffic volume</p>';
-              popupContent += '</div>';
-            }
-
-            // Parties information if available
-            if (enrichedData && enrichedData.parties && enrichedData.parties.length > 0) {
-              popupContent += '<div class="section">';
-              popupContent += '<p><strong>Parties Involved:</strong></p>';
-              popupContent += '<div class="parties">';
-              
-              enrichedData.parties.forEach((party, index) => {
-                popupContent += `<div style="margin-bottom: 6px;">`;
-                popupContent += `<strong>Party ${party.party_number || index + 1}:</strong> `;
-                
-                if (party.party_type) {
-                  popupContent += `${party.party_type}`;
-                }
-                
-                if (party.injury_severity) {
-                  const injuryColor = party.injury_severity === 'Fatal' ? '#dc2626' : 
-                                     party.injury_severity === 'Severe Injury' ? '#ea580c' : 
-                                     party.injury_severity === 'Other Visible Injury' ? '#d97706' : '#65a30d';
-                  popupContent += ` - <span style="color: ${injuryColor};">${party.injury_severity}</span>`;
-                }
-                
-                if (party.age) {
-                  popupContent += ` (Age: ${party.age})`;
-                }
-                
-                popupContent += '</div>';
-              });
-              
-              popupContent += '</div></div>';
-            }
-
-            popupContent += '</div>';
-
-            // Set popup content and location
-            if (mapViewRef.current!.popup) {
-              mapViewRef.current!.popup.open({
-                title: "Safety Incident Details",
-                content: popupContent,
-                location: event.mapPoint
-              });
-            } else {
-              // Alternative approach using openPopup method
-              mapViewRef.current!.openPopup({
-                title: "Safety Incident Details",
-                content: popupContent,
-                location: event.mapPoint
-              });
-            }
-
-            // Stop event propagation to prevent boundary selection changes
-            event.stopPropagation();
-            return; // Early return to prevent further processing
-        } else {
-          // Close popup if clicking somewhere else
-          if (mapViewRef.current!.popup) {
-            mapViewRef.current!.popup.close();
-          } else if (mapViewRef.current!.closePopup) {
-            mapViewRef.current!.closePopup();
-          }
-        }
-      } catch (error) {
-        console.error('Error handling map click:', error);
-      }
-    };
-
-    // Add click event listener
-    const clickHandle = mapViewRef.current.on('click', handleMapClick);
+    const clickHandle = MapClickHandler.setupClickHandler(
+      mapViewRef.current,
+      incidentsLayer,
+      filters,
+      activeVisualization
+    );
 
     return () => {
       if (clickHandle) {
@@ -377,21 +90,13 @@ export default function NewSafetyMap({
   useEffect(() => {
     const currentFiltersKey = JSON.stringify(filters);
     if (rawDataFiltersKey && rawDataFiltersKey !== currentFiltersKey) {
-      console.log('[DEBUG] Filters changed, clearing raw incidents cache');
-      setCachedRawIncidentsData(null);
-      setCachedRawIncidentsLayer(null);
-      setRawDataFiltersKey(null);
-      
-      // Remove cached layer from map if it exists
-      if (cachedRawIncidentsLayer && mapViewRef.current) {
-        mapViewRef.current.map.remove(cachedRawIncidentsLayer);
-      }
+      clearRawIncidentsCache(mapViewRef.current || undefined);
     }
-  }, [filters, rawDataFiltersKey, cachedRawIncidentsLayer]);
+  }, [filters, rawDataFiltersKey, clearRawIncidentsCache, cachedRawIncidentsLayer]);
 
   // Update layers when active visualization changes
   useEffect(() => {
-    if (!incidentsLayer || !viewReady) return;
+    if (!incidentsLayer || !viewReady || !mapViewRef.current) return;
 
     const updateVisualization = async () => {
       try {
@@ -406,11 +111,13 @@ export default function NewSafetyMap({
           }
           
           // Also clean up any other weighted layers
-          const existingWeightedLayer = mapViewRef.current.map.layers.find(
-            (layer: any) => layer.title === "Weighted Safety Incidents"
-          );
-          if (existingWeightedLayer && existingWeightedLayer !== cachedWeightedLayer) {
-            mapViewRef.current.map.remove(existingWeightedLayer);
+          if (mapViewRef.current?.map) {
+            const existingWeightedLayer = mapViewRef.current.map.layers.find(
+              (layer: __esri.Layer) => layer.title === "Weighted Safety Incidents"
+            );
+            if (existingWeightedLayer && existingWeightedLayer !== cachedWeightedLayer) {
+              mapViewRef.current.map.remove(existingWeightedLayer);
+            }
           }
         }
 
@@ -420,51 +127,44 @@ export default function NewSafetyMap({
 
         switch (activeVisualization) {
           case 'raw-incidents':
-            // Create enriched raw incidents with severity data
-            await createRawIncidentsVisualization();
+            await RawIncidentsVisualization.createVisualization(
+              mapViewRef.current!,
+              filters,
+              incidentsLayer,
+              cachedRawIncidentsLayer,
+              cachedRawIncidentsData,
+              rawDataFiltersKey,
+              setDataLoading,
+              setCachedRawIncidentsLayer,
+              setCachedRawIncidentsData,
+              setRawDataFiltersKey
+            );
             break;
 
           case 'incident-heatmap':
             // Use heatmap renderer for density visualization
-            incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
+            incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
             incidentsLayer.visible = true;
             break;
 
           case 'incident-to-volume-ratio':
-            // Check if we have a cached layer first
-            const currentCacheKey = generateCacheKey(mapViewRef.current.extent, filters);
-            console.log('[DEBUG] Cache check:', {
-              hasCachedLayer: !!cachedWeightedLayer,
-              cachedKey: cachedExtentKey,
-              currentKey: currentCacheKey,
-              keysMatch: cachedExtentKey === currentCacheKey
-            });
-            
-            if (cachedWeightedLayer && cachedExtentKey === currentCacheKey) {
-              console.log('[DEBUG] Using cached layer - skipping loading state');
-              setDataLoading(false); // Cancel loading immediately
-              
-              // Use exposure-weighted heatmap renderer
-              if (weightsLayer) {
-                // For this visualization, we need to join incident and weight data
-                await createWeightedVisualization();
-              } else {
-                console.warn('Weights layer not available for incident-to-volume ratio visualization');
-                // Fallback to regular heatmap
-                incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
-                incidentsLayer.visible = true;
-              }
+            if (weightsLayer) {
+              await WeightedVisualization.createVisualization(
+                mapViewRef.current!,
+                filters,
+                incidentsLayer,
+                weightsLayer,
+                cachedWeightedLayer,
+                cachedExtentKey,
+                generateCacheKey,
+                setCachedWeightedLayer,
+                setCachedExtentKey
+              );
             } else {
-              // No cache available, proceed with loading
-              if (weightsLayer) {
-                // For this visualization, we need to join incident and weight data
-                await createWeightedVisualization();
-              } else {
-                console.warn('Weights layer not available for incident-to-volume ratio visualization');
-                // Fallback to regular heatmap
-                incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
-                incidentsLayer.visible = true;
-              }
+              console.warn('Weights layer not available for incident-to-volume ratio visualization');
+              // Fallback to regular heatmap
+              incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
+              incidentsLayer.visible = true;
             }
             break;
 
@@ -482,413 +182,11 @@ export default function NewSafetyMap({
     };
 
     updateVisualization();
-  }, [activeVisualization, filters, incidentsLayer, weightsLayer, cachedWeightedLayer, cachedExtentKey]);
+  }, [activeVisualization, filters, incidentsLayer, weightsLayer, cachedWeightedLayer, cachedExtentKey, cachedRawIncidentsLayer, cachedRawIncidentsData, rawDataFiltersKey, generateCacheKey, setCachedWeightedLayer, setCachedExtentKey, setCachedRawIncidentsLayer, setCachedRawIncidentsData, setRawDataFiltersKey]);
 
-  // Create weighted visualization for incident-to-volume ratio
-  const createWeightedVisualization = async () => {
-    if (!incidentsLayer || !weightsLayer || !mapViewRef.current) return;
 
-    try {
-      // Check if we can use cached layer
-      const currentCacheKey = generateCacheKey(mapViewRef.current.extent, filters);
-      
-      if (cachedWeightedLayer && cachedExtentKey === currentCacheKey) {
-        console.log('[DEBUG] Using cached weighted layer - no reload needed');
-        
-        // Hide the regular incidents layer and show the cached weighted layer
-        incidentsLayer.visible = false;
-        cachedWeightedLayer.visible = true;
-        
-        // Make sure the cached layer is in the map
-        if (!mapViewRef.current.map.layers.includes(cachedWeightedLayer)) {
-          mapViewRef.current.map.add(cachedWeightedLayer);
-        }
-        
-        return;
-      }
 
-      console.log('[DEBUG] Cache miss - creating new weighted layer');
 
-      // Query incidents and weights for current map extent
-      const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
-        mapViewRef.current.extent,
-        filters
-      );
-
-      // Debug the raw safety data
-      console.log('[DEBUG] Raw safety data:', {
-        totalIncidents: safetyData.data.length,
-        sampleIncident: safetyData.data[0],
-        incidentsWithWeights: safetyData.data.filter(inc => inc.hasWeight).length,
-        incidentsWithExposure: safetyData.data.filter(inc => inc.weightedExposure).length,
-        sampleWeightedIncident: safetyData.data.find(inc => inc.weightedExposure)
-      });
-
-      // Filter incidents that have weight data
-      const weightedIncidents = safetyData.data.filter(inc => inc.hasWeight && inc.weightedExposure);
-
-      console.log('[DEBUG] Filtered weighted incidents:', {
-        totalWeightedIncidents: weightedIncidents.length,
-        sampleWeightedIncidents: weightedIncidents.slice(0, 3).map(inc => ({
-          id: inc.id,
-          hasWeight: inc.hasWeight,
-          weightedExposure: inc.weightedExposure,
-          weightsCount: inc.weights?.length || 0
-        }))
-      });
-
-      if (weightedIncidents.length === 0) {
-        console.warn('No weighted incident data available for current extent');
-        console.log('[DEBUG] Trying to understand why no weighted data:', {
-          totalIncidents: safetyData.data.length,
-          incidentsWithHasWeight: safetyData.data.filter(inc => inc.hasWeight).length,
-          incidentsWithWeightedExposure: safetyData.data.filter(inc => inc.weightedExposure).length,
-          sampleIncidentWeights: safetyData.data.slice(0, 5).map(inc => ({
-            id: inc.id,
-            hasWeight: inc.hasWeight,
-            weightedExposure: inc.weightedExposure,
-            weights: inc.weights
-          }))
-        });
-        
-        // Fallback to regular heatmap
-        incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
-        incidentsLayer.visible = true;
-        return;
-      }
-
-      // Since HeatmapRenderer only works with FeatureLayer, we need to create a client-side FeatureLayer
-      // with the weighted data
-      
-      // Normalize exposure values to 0-1 range for better heatmap visualization
-      const exposureValues = weightedIncidents.map(inc => inc.weightedExposure || 0);
-      const minExposure = Math.min(...exposureValues);
-      const maxExposure = Math.max(...exposureValues);
-      const exposureRange = maxExposure - minExposure;
-      
-      console.log('[DEBUG] Normalizing exposure values:', {
-        originalRange: [minExposure, maxExposure],
-        rangeSize: exposureRange,
-        valueDistribution: {
-          count: exposureValues.length,
-          min: Math.min(...exposureValues),
-          max: Math.max(...exposureValues),
-          avg: exposureValues.reduce((a, b) => a + b, 0) / exposureValues.length,
-          median: exposureValues.sort((a, b) => a - b)[Math.floor(exposureValues.length / 2)],
-          top10percent: exposureValues.slice(-Math.floor(exposureValues.length * 0.1))
-        }
-      });
-
-      // Create features array for client-side feature layer with normalized exposure
-      const weightedFeatures = weightedIncidents.map((incident, index) => {
-        const originalExposure = incident.weightedExposure || 0;
-        // Normalize to 0-1 scale
-        const normalizedExposure = exposureRange > 0 
-          ? (originalExposure - minExposure) / exposureRange 
-          : 0;
-        
-        const feature = {
-          geometry: incident.geometry,
-          attributes: {
-            objectid: incident.OBJECTID || index + 1, // Ensure we have a valid objectid
-            id: incident.id,
-            weightedExposure: originalExposure, // Keep original for reference
-            normalizedExposure: normalizedExposure, // Use this for visualization
-            severity: incident.maxSeverity || 'unknown',
-            data_source: incident.data_source || 'unknown'
-          }
-        };
-        
-        // Debug first few features
-        if (index < 3) {
-          console.log(`[DEBUG] Feature ${index}:`, {
-            original: originalExposure,
-            normalized: normalizedExposure,
-            attributes: feature.attributes
-          });
-        }
-        
-        return feature;
-      });
-
-      // Remove existing weighted layer if it exists
-      const existingWeightedLayer = mapViewRef.current.map.layers.find(
-        (layer: any) => layer.title === "Weighted Safety Incidents"
-      );
-      if (existingWeightedLayer) {
-        mapViewRef.current.map.remove(existingWeightedLayer);
-      }
-
-      // Create a client-side FeatureLayer for the weighted data
-      const weightedLayer = new FeatureLayer({
-        source: weightedFeatures,
-        title: "Weighted Safety Incidents",
-        objectIdField: "objectid",
-        fields: [
-          { name: "objectid", type: "oid" },
-          { name: "id", type: "integer" },
-          { name: "weightedExposure", type: "double" },
-          { name: "normalizedExposure", type: "double" },
-          { name: "severity", type: "string" },
-          { name: "data_source", type: "string" }
-        ],
-        geometryType: "point",
-        spatialReference: mapViewRef.current.spatialReference
-      });
-
-      // Add the new weighted layer
-      mapViewRef.current.map.add(weightedLayer);
-      
-      // Debug the created layer
-      console.log('[DEBUG] Created weighted layer:', {
-        title: weightedLayer.title,
-        featureCount: weightedFeatures.length,
-        fields: weightedLayer.fields?.map(f => ({ name: f.name, type: f.type })),
-        geometryType: weightedLayer.geometryType,
-        source: 'client-side features'
-      });
-
-      // Use the normalized renderer for consistent visualization
-      console.log('[DEBUG] Using normalized renderer for consistent color distribution');
-      
-      const normalizedRenderer = IncidentVolumeRatioRenderer.createNormalizedRenderer();
-      weightedLayer.renderer = normalizedRenderer;
-
-      // Cache the weighted layer and extent key for future use
-      setCachedWeightedLayer(weightedLayer);
-      setCachedExtentKey(currentCacheKey);
-      console.log('[DEBUG] Cached weighted layer for future use');
-
-      // Hide the regular incidents layer and show the weighted layer
-      incidentsLayer.visible = false;
-      weightedLayer.visible = true;
-
-    } catch (error) {
-      console.error('[DEBUG] Failed to create weighted visualization:', error);
-      // Fallback to regular heatmap
-      incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
-      incidentsLayer.visible = true;
-    }
-  };
-
-    // Create raw incidents visualization with client-side caching (like ArcGIS layers)
-  const createRawIncidentsVisualization = async () => {
-    try {
-      const currentFiltersKey = JSON.stringify(filters);
-      
-      // Check if we have cached data for the current filters
-      if (cachedRawIncidentsLayer && cachedRawIncidentsData && rawDataFiltersKey === currentFiltersKey) {
-        console.log('[DEBUG] Using cached raw incidents layer - no reload needed');
-        
-        // Just show the cached layer
-        if (incidentsLayer) incidentsLayer.visible = false;
-        
-        // Make sure cached layer is in the map
-        if (!mapViewRef.current.map.layers.includes(cachedRawIncidentsLayer)) {
-          mapViewRef.current.map.add(cachedRawIncidentsLayer);
-        }
-        
-        cachedRawIncidentsLayer.visible = true;
-        return;
-      }
-
-      console.log('[DEBUG] Loading ALL raw incidents data (one-time load)...');
-      setDataLoading(true);
-
-      // Load ALL incidents without extent filter (like ArcGIS layers do)
-      const rawData = await SafetyIncidentsDataService.querySafetyData(
-        undefined, // No extent filter - load everything
-        filters
-      );
-
-      if (rawData.error || rawData.incidents.length === 0) {
-        console.log('[DEBUG] No incidents found or error occurred');
-        setDataLoading(false);
-        return;
-      }
-
-      // Create enriched data with parties only (skip weights for raw incidents)
-      const enrichedIncidents = SafetyIncidentsDataService.joinIncidentData(
-        rawData.incidents,
-        rawData.parties,
-        [] // Skip weights for raw incidents to improve performance
-      );
-
-      console.log('[DEBUG] Loaded ALL incidents data:', {
-        totalIncidents: enrichedIncidents.length,
-        sampleIncident: enrichedIncidents[0]
-      });
-
-      // Create graphics for ALL incidents (not just current extent)
-      const rawIncidentFeatures = enrichedIncidents
-        .filter(incident => incident.geometry && incident.id)
-        .map((incident, index) => {
-          const maxSeverity = incident.maxSeverity || '';
-          
-          return new Graphic({
-            geometry: incident.geometry,
-            attributes: {
-              objectid: index + 1,
-              id: incident.id,
-              maxSeverity: maxSeverity,
-              data_source: incident.data_source || 'unknown',
-              // Add more attributes for popup
-              timestamp: incident.timestamp ? incident.timestamp.getTime() : null,
-              conflict_type: incident.conflict_type || '',
-              pedestrian_involved: incident.pedestrian_involved || 0,
-              bicyclist_involved: incident.bicyclist_involved || 0,
-              vehicle_involved: incident.vehicle_involved || 0
-            }
-          });
-        });
-
-      console.log('[DEBUG] Created graphics for ALL incidents:', {
-        totalFeatures: rawIncidentFeatures.length
-      });
-
-      // Remove any existing raw incidents layer
-      const existingRawLayer = mapViewRef.current.map.layers.find(
-        (layer: any) => layer.title === "Raw Safety Incidents"
-      );
-      if (existingRawLayer) {
-        mapViewRef.current.map.remove(existingRawLayer);
-      }
-
-      // Create the layer with ALL data
-      const rawIncidentsLayer = new FeatureLayer({
-        source: rawIncidentFeatures,
-        title: "Raw Safety Incidents",
-        objectIdField: "objectid",
-        fields: [
-          { name: "objectid", type: "oid" },
-          { name: "id", type: "integer" },
-          { name: "maxSeverity", type: "string" },
-          { name: "data_source", type: "string" },
-          { name: "timestamp", type: "date" },
-          { name: "conflict_type", type: "string" },
-          { name: "pedestrian_involved", type: "integer" },
-          { name: "bicyclist_involved", type: "integer" },
-          { name: "vehicle_involved", type: "integer" }
-        ],
-        geometryType: "point",
-        spatialReference: mapViewRef.current.spatialReference,
-        popupTemplate: {
-          title: "Safety Incident #{id}",
-          content: (event: any) => {
-            const graphic = event.graphic;
-            const attributes = graphic.attributes;
-            
-            // Find enriched data from cache
-            const enrichedData = enrichedIncidents.find(inc => inc.id === attributes.id);
-            const incidentData = enrichedData || attributes;
-            
-            // Build popup content using cached data
-            let popupContent = `
-              <div class="incident-popup" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.4; color: #333;">
-                <style>
-                  .incident-popup p { margin: 4px 0 !important; }
-                  .incident-popup strong { color: #2563eb; }
-                  .incident-popup .parties { background: #f8fafc; padding: 4px 6px; border-radius: 4px; margin-top: 4px; }
-                </style>
-            `;
-            
-            if (incidentData.data_source) {
-              popupContent += `<p><strong>Source:</strong> ${incidentData.data_source}</p>`;
-            }
-            if (incidentData.timestamp) {
-              const date = new Date(incidentData.timestamp);
-              popupContent += `<p><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
-            }
-            if (incidentData.conflict_type) {
-              popupContent += `<p><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;
-            }
-            
-            const severity = incidentData.severity || incidentData.maxSeverity;
-            if (severity) {
-              const severityColor = severity === 'Fatality' || severity === 'fatal' ? '#dc2626' : 
-                                  severity === 'Severe Injury' || severity === 'severe_injury' ? '#ea580c' : 
-                                  severity === 'Injury' || severity === 'injury' ? '#d97706' : '#65a30d';
-              popupContent += `<p><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${severity}</span></p>`;
-            }
-            
-            // Involvement
-            const involvement = [];
-            if (incidentData.pedestrian_involved) involvement.push('Pedestrian');
-            if (incidentData.bicyclist_involved) involvement.push('Bicyclist');
-            if (incidentData.vehicle_involved) involvement.push('Vehicle');
-            if (involvement.length > 0) {
-              popupContent += `<p><strong>Involved:</strong> ${involvement.join(', ')}</p>`;
-            }
-            
-            // Parties if available
-            if (enrichedData && enrichedData.parties && enrichedData.parties.length > 0) {
-              popupContent += '<p><strong>Parties Involved:</strong></p>';
-              popupContent += '<div class="parties">';
-              
-              enrichedData.parties.forEach((party: any, index: number) => {
-                popupContent += `<div style="margin-bottom: 2px;">`;
-                popupContent += `<strong>Party ${party.party_number || index + 1}:</strong> `;
-                if (party.party_type) {
-                  popupContent += `${party.party_type}`;
-                }
-                if (party.injury_severity) {
-                  const injuryColor = party.injury_severity === 'Fatal' ? '#dc2626' : 
-                                     party.injury_severity === 'Severe Injury' ? '#ea580c' : 
-                                     party.injury_severity === 'Other Visible Injury' ? '#d97706' : '#65a30d';
-                  popupContent += ` - <span style="color: ${injuryColor};">${party.injury_severity}</span>`;
-                }
-                if (party.age) {
-                  popupContent += ` (Age: ${party.age})`;
-                }
-                popupContent += '</div>';
-              });
-              
-              popupContent += '</div>';
-            }
-            
-            popupContent += '</div>';
-            return popupContent;
-          }
-        }
-      });
-
-      // Apply the severity renderer
-      rawIncidentsLayer.renderer = RawIncidentRenderer.getRenderer('severity', filters);
-      
-      // Hide the regular incidents layer and add the new one
-      if (incidentsLayer) incidentsLayer.visible = false;
-      mapViewRef.current.map.add(rawIncidentsLayer);
-
-      // Cache the layer and data for future use
-      setCachedRawIncidentsLayer(rawIncidentsLayer);
-      setCachedRawIncidentsData(enrichedIncidents);
-      setRawDataFiltersKey(currentFiltersKey);
-
-      // Wait for layer to load
-      rawIncidentsLayer.load().then(() => {
-        console.log('[DEBUG] Raw incidents layer loaded and cached successfully!');
-        rawIncidentsLayer.visible = true;
-        setDataLoading(false);
-      }).catch((error) => {
-        console.error('[DEBUG] FeatureLayer load failed:', error);
-        // Fallback to original layer
-        if (incidentsLayer) {
-          incidentsLayer.renderer = RawIncidentRenderer.getRenderer('data_source', filters);
-          incidentsLayer.visible = true;
-        }
-        setDataLoading(false);
-      });
-
-    } catch (error) {
-      console.error('[DEBUG] Failed to create raw incidents visualization:', error);
-      // Fallback to original layer
-      if (incidentsLayer) {
-        incidentsLayer.renderer = RawIncidentRenderer.getRenderer('data_source', filters);
-        incidentsLayer.visible = true;
-      }
-      setDataLoading(false);
-    }
-  };
 
   // Update boundary visualization based on geographic level
   useEffect(() => {
@@ -897,7 +195,7 @@ export default function NewSafetyMap({
     const updateBoundaries = async () => {
       try {
         // Convert geographicLevel to the format expected by boundary service
-        let boundaryLevel: any = 'city';
+        let boundaryLevel: 'city' | 'county' | 'census-tract' | 'city-service-area' = 'city';
         switch (geographicLevel) {
           case 'cities':
             boundaryLevel = 'city';
@@ -915,7 +213,9 @@ export default function NewSafetyMap({
             boundaryLevel = 'city';
         }
 
-        await boundaryService.switchGeographicLevel(boundaryLevel, mapViewRef.current);
+        if (mapViewRef.current) {
+          await boundaryService.switchGeographicLevel(boundaryLevel, mapViewRef.current);
+        }
         
       } catch (error) {
         console.error('[DEBUG] Failed to update boundaries:', error);
@@ -954,20 +254,21 @@ export default function NewSafetyMap({
       }
       
       // Clean up weighted layer
-      if (mapViewRef.current) {
-        const existingWeightedLayer = mapViewRef.current.map.layers.find(
-          (layer: any) => layer.title === "Weighted Safety Incidents"
+      const currentMapView = mapViewRef.current;
+      if (currentMapView && currentMapView.map) {
+        const existingWeightedLayer = currentMapView.map.layers.find(
+          (layer: __esri.Layer) => layer.title === "Weighted Safety Incidents"
         );
         if (existingWeightedLayer) {
-          mapViewRef.current.map.remove(existingWeightedLayer);
+          currentMapView.map.remove(existingWeightedLayer);
         }
         
         // Clean up cached raw incidents layer
-        const existingRawLayer = mapViewRef.current.map.layers.find(
-          (layer: any) => layer.title === "Raw Safety Incidents"
+        const existingRawLayer = currentMapView.map.layers.find(
+          (layer: __esri.Layer) => layer.title === "Raw Safety Incidents"
         );
         if (existingRawLayer) {
-          mapViewRef.current.map.remove(existingRawLayer);
+          currentMapView.map.remove(existingRawLayer);
         }
       }
     };
