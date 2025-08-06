@@ -637,32 +637,7 @@ export default function NewSafetyMap({
         style={{ width: '100%', height: '100%' }}
       />
 
-      {/* Visualization info overlay */}
-      <MuiBox
-        id="safety-visualization-info"
-        sx={{
-          position: 'absolute',
-          bottom: 16,
-          left: 16,
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          padding: 2,
-          borderRadius: 1,
-          boxShadow: 1,
-          maxWidth: 300,
-          fontSize: '0.875rem'
-        }}
-      >
-        <div id="safety-visualization-title" className="font-medium text-gray-900 mb-1">
-          {activeVisualization === 'raw-incidents' && 'Raw Safety Incidents'}
-          {activeVisualization === 'incident-heatmap' && 'Incident Density Heatmap'}
-          {activeVisualization === 'incident-to-volume-ratio' && 'Incident to Volume Ratio'}
-        </div>
-        <div id="safety-visualization-description" className="text-gray-600 text-xs">
-          {activeVisualization === 'raw-incidents' && 'Individual incidents colored by severity level'}
-          {activeVisualization === 'incident-heatmap' && 'Areas with higher incident density shown in warmer colors'}
-          {activeVisualization === 'incident-to-volume-ratio' && 'Risk areas based on incidents relative to traffic volume'}
-        </div>
-      </MuiBox>
+
     </MuiBox>
   );
 }
