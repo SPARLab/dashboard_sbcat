@@ -323,7 +323,7 @@ export class SafetyIncidentsDataService {
   /**
    * Join incidents with their related parties and weights
    */
-  private static joinIncidentData(
+  static joinIncidentData(
     incidents: SafetyIncident[],
     parties: IncidentParty[],
     weights: IncidentHeatmapWeight[]
