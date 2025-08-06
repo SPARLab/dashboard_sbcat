@@ -3,7 +3,7 @@ import Polygon from "@arcgis/core/geometry/Polygon";
 import Graphic from "@arcgis/core/Graphic";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import { ArcgisMap } from "@arcgis/map-components-react";
-import { Box as MuiBox } from "@mui/material";
+import { CircularProgress, Box as MuiBox } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { GeographicBoundariesService } from "../../../../lib/data-services/GeographicBoundariesService";
 import { SafetyIncidentsDataService } from "../../../../lib/data-services/SafetyIncidentsDataService";
@@ -48,6 +48,22 @@ export default function NewSafetyMap({
   // Data loading state
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
+  
+  // Cache for the weighted layer to avoid expensive recreation
+  const [cachedWeightedLayer, setCachedWeightedLayer] = useState<__esri.FeatureLayer | null>(null);
+  const [cachedExtentKey, setCachedExtentKey] = useState<string | null>(null);
+
+  // Generate a cache key based on filters only (not extent)
+  // For heatmap visualization, we don't need to reload data when panning/zooming
+  const generateCacheKey = (extent: __esri.Extent, filters: Partial<SafetyFilters>): string => {
+    const filtersKey = JSON.stringify({
+      dateRange: filters.dateRange ? `${filters.dateRange.start.getTime()}-${filters.dateRange.end.getTime()}` : null,
+      dataSource: filters.dataSource?.sort(),
+      roadUser: filters.roadUser?.sort(),
+      conflictType: filters.conflictType?.sort()
+    });
+    return filtersKey;
+  };
 
   // Handler to set map center/zoom when view is ready
   const handleArcgisViewReadyChange = (event: { target: { view: __esri.MapView } }) => {
@@ -341,10 +357,17 @@ export default function NewSafetyMap({
 
         // Clean up any existing weighted layer if not using incident-to-volume-ratio
         if (activeVisualization !== 'incident-to-volume-ratio') {
+          // Hide cached layer but don't destroy it
+          if (cachedWeightedLayer) {
+            cachedWeightedLayer.visible = false;
+            console.log('[DEBUG] Hiding cached weighted layer, but keeping it for later use');
+          }
+          
+          // Also clean up any other weighted layers
           const existingWeightedLayer = mapViewRef.current.map.layers.find(
             (layer: any) => layer.title === "Weighted Safety Incidents"
           );
-          if (existingWeightedLayer) {
+          if (existingWeightedLayer && existingWeightedLayer !== cachedWeightedLayer) {
             mapViewRef.current.map.remove(existingWeightedLayer);
           }
         }
@@ -367,15 +390,40 @@ export default function NewSafetyMap({
             break;
 
           case 'incident-to-volume-ratio':
-            // Use exposure-weighted heatmap renderer
-            if (weightsLayer) {
-              // For this visualization, we need to join incident and weight data
-              await createWeightedVisualization();
+            // Check if we have a cached layer first
+            const currentCacheKey = generateCacheKey(mapViewRef.current.extent, filters);
+            console.log('[DEBUG] Cache check:', {
+              hasCachedLayer: !!cachedWeightedLayer,
+              cachedKey: cachedExtentKey,
+              currentKey: currentCacheKey,
+              keysMatch: cachedExtentKey === currentCacheKey
+            });
+            
+            if (cachedWeightedLayer && cachedExtentKey === currentCacheKey) {
+              console.log('[DEBUG] Using cached layer - skipping loading state');
+              setDataLoading(false); // Cancel loading immediately
+              
+              // Use exposure-weighted heatmap renderer
+              if (weightsLayer) {
+                // For this visualization, we need to join incident and weight data
+                await createWeightedVisualization();
+              } else {
+                console.warn('Weights layer not available for incident-to-volume ratio visualization');
+                // Fallback to regular heatmap
+                incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
+                incidentsLayer.visible = true;
+              }
             } else {
-              console.warn('Weights layer not available for incident-to-volume ratio visualization');
-              // Fallback to regular heatmap
-              incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
-              incidentsLayer.visible = true;
+              // No cache available, proceed with loading
+              if (weightsLayer) {
+                // For this visualization, we need to join incident and weight data
+                await createWeightedVisualization();
+              } else {
+                console.warn('Weights layer not available for incident-to-volume ratio visualization');
+                // Fallback to regular heatmap
+                incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
+                incidentsLayer.visible = true;
+              }
             }
             break;
 
@@ -393,13 +441,33 @@ export default function NewSafetyMap({
     };
 
     updateVisualization();
-  }, [activeVisualization, filters, incidentsLayer, weightsLayer]);
+  }, [activeVisualization, filters, incidentsLayer, weightsLayer, cachedWeightedLayer, cachedExtentKey]);
 
   // Create weighted visualization for incident-to-volume ratio
   const createWeightedVisualization = async () => {
     if (!incidentsLayer || !weightsLayer || !mapViewRef.current) return;
 
     try {
+      // Check if we can use cached layer
+      const currentCacheKey = generateCacheKey(mapViewRef.current.extent, filters);
+      
+      if (cachedWeightedLayer && cachedExtentKey === currentCacheKey) {
+        console.log('[DEBUG] Using cached weighted layer - no reload needed');
+        
+        // Hide the regular incidents layer and show the cached weighted layer
+        incidentsLayer.visible = false;
+        cachedWeightedLayer.visible = true;
+        
+        // Make sure the cached layer is in the map
+        if (!mapViewRef.current.map.layers.includes(cachedWeightedLayer)) {
+          mapViewRef.current.map.add(cachedWeightedLayer);
+        }
+        
+        return;
+      }
+
+      console.log('[DEBUG] Cache miss - creating new weighted layer');
+
       // Query incidents and weights for current map extent
       const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
         mapViewRef.current.extent,
@@ -545,6 +613,11 @@ export default function NewSafetyMap({
       const normalizedRenderer = IncidentVolumeRatioRenderer.createNormalizedRenderer();
       weightedLayer.renderer = normalizedRenderer;
 
+      // Cache the weighted layer and extent key for future use
+      setCachedWeightedLayer(weightedLayer);
+      setCachedExtentKey(currentCacheKey);
+      console.log('[DEBUG] Cached weighted layer for future use');
+
       // Hide the regular incidents layer and show the weighted layer
       incidentsLayer.visible = false;
       weightedLayer.visible = true;
@@ -600,15 +673,20 @@ export default function NewSafetyMap({
       () => mapViewRef.current?.stationary,
       () => {
         if (mapViewRef.current?.stationary && incidentsLayer) {
-          // Refresh visualization when map stops moving
-          console.log('[DEBUG] Map extent changed, refreshing safety data');
-          // The layer will automatically re-query based on the new extent
+          // For incident-to-volume ratio, we don't need to invalidate cache on extent changes
+          // The heatmap visualization is based on the weighted incidents within the initial extent
+          // and doesn't need to re-query data when panning
+          
+          if (activeVisualization !== 'incident-to-volume-ratio') {
+            console.log('[DEBUG] Map extent changed, refreshing safety data');
+            // Other visualizations might need to refresh
+          }
         }
       }
     );
 
     return () => handle.remove();
-  }, [viewReady, incidentsLayer]);
+  }, [viewReady, incidentsLayer, filters, activeVisualization]);
 
   // Cleanup function
   useEffect(() => {
@@ -658,8 +736,14 @@ export default function NewSafetyMap({
             pointerEvents: 'none'
           }}
         >
-          <div id="safety-map-loading-text" className="text-gray-600 font-medium">
-            Loading safety data...
+          <div id="safety-map-loading-container" className="flex flex-col items-center gap-3">
+            <CircularProgress 
+              size={48} 
+              sx={{ color: '#3B82F6' }} // Tailwind blue-500
+            />
+            <div id="safety-map-loading-text" className="text-gray-600 font-medium">
+              Loading safety data...
+            </div>
           </div>
         </MuiBox>
       )}
