@@ -21,7 +21,8 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   let popupContent = `
     <div class="incident-popup" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.4; color: #333;">
       <style>
-        .incident-popup p { margin: 8px 0; }
+        .esri-feature-content .incident-popup p { margin: 0 !important; }
+        .incident-popup p { margin: 0 !important; }
         .incident-popup strong { color: #2563eb; }
         .incident-popup .section { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; }
         .incident-popup .section:last-child { border-bottom: none; margin-bottom: 0; }
@@ -32,51 +33,51 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   // Basic incident information section
   popupContent += '<div class="section">';
   if (incidentData.id) {
-    popupContent += `<p><strong>Incident ID:</strong> ${incidentData.id}</p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Incident ID:</strong> ${incidentData.id}</p>`;
   }
   
   if (incidentData.data_source) {
-    popupContent += `<p><strong>Source:</strong> ${incidentData.data_source}</p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Source:</strong> ${incidentData.data_source}</p>`;
   }
   
   if (incidentData.timestamp) {
     const date = new Date(incidentData.timestamp);
-    popupContent += `<p><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
   }
   popupContent += '</div>';
 
   // Incident details section
   popupContent += '<div class="section">';
   if (incidentData.conflict_type) {
-    popupContent += `<p><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;
   }
 
   // Severity information
   const severity = incidentData.severity || incidentData.maxSeverity;
   if (severity) {
     const severityColor = getSeverityColor(severity);
-    popupContent += `<p><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${severity}</span></p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${severity}</span></p>`;
   }
 
   // Involvement flags
   const involvement = getInvolvementText(incidentData);
   if (involvement.length > 0) {
-    popupContent += `<p><strong>Involved:</strong> ${involvement.join(', ')}</p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Involved:</strong> ${involvement.join(', ')}</p>`;
   }
   popupContent += '</div>';
 
   // Risk/weight information for incident-to-volume ratio
   if (incidentData.weightedExposure) {
     popupContent += '<div class="section">';
-    popupContent += `<p><strong>Risk Weight:</strong> ${incidentData.weightedExposure.toFixed(3)}</p>`;
-    popupContent += '<p style="font-size: 0.85em; color: #6b7280;">Higher values indicate greater risk relative to traffic volume</p>';
+    popupContent += `<p style="margin: 0 !important;"><strong>Risk Weight:</strong> ${incidentData.weightedExposure.toFixed(3)}</p>`;
+    popupContent += '<p style="margin: 0 !important; font-size: 0.85em; color: #6b7280;">Higher values indicate greater risk relative to traffic volume</p>';
     popupContent += '</div>';
   }
 
   // Parties information if available
   if (incidentData.parties && incidentData.parties.length > 0) {
     popupContent += '<div class="section">';
-    popupContent += '<p><strong>Parties Involved:</strong></p>';
+    popupContent += '<p style="margin: 0 !important;"><strong>Parties Involved:</strong></p>';
     popupContent += '<div class="parties">';
     
     incidentData.parties.forEach((party, index) => {
@@ -118,38 +119,39 @@ export function generateRawIncidentPopupContent(
   let popupContent = `
     <div class="incident-popup" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.4; color: #333;">
       <style>
-        .incident-popup p { margin: 4px 0 !important; }
+        .esri-feature-content .incident-popup p { margin: 0 !important; }
+        .incident-popup p { margin: 0 !important; }
         .incident-popup strong { color: #2563eb; }
         .incident-popup .parties { background: #f8fafc; padding: 4px 6px; border-radius: 4px; margin-top: 4px; }
       </style>
   `;
   
   if (incidentData.data_source) {
-    popupContent += `<p><strong>Source:</strong> ${incidentData.data_source}</p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Source:</strong> ${incidentData.data_source}</p>`;
   }
   if (incidentData.timestamp) {
     const date = new Date(incidentData.timestamp);
-    popupContent += `<p><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
   }
   if (incidentData.conflict_type) {
-    popupContent += `<p><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;
   }
   
   const severity = incidentData.severity || incidentData.maxSeverity;
   if (severity) {
     const severityColor = getSeverityColor(severity);
-    popupContent += `<p><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${severity}</span></p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${severity}</span></p>`;
   }
   
   // Involvement
   const involvement = getInvolvementText(incidentData);
   if (involvement.length > 0) {
-    popupContent += `<p><strong>Involved:</strong> ${involvement.join(', ')}</p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Involved:</strong> ${involvement.join(', ')}</p>`;
   }
   
   // Parties if available
   if (enrichedData && enrichedData.parties && enrichedData.parties.length > 0) {
-    popupContent += '<p><strong>Parties Involved:</strong></p>';
+    popupContent += '<p style="margin: 0 !important;"><strong>Parties Involved:</strong></p>';
     popupContent += '<div class="parties">';
     
     enrichedData.parties.forEach((party: any, index: number) => {

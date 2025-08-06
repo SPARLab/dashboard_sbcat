@@ -112,11 +112,11 @@ export default function NewSafetyMap({
           
           // Also clean up any other weighted layers
           if (mapViewRef.current?.map) {
-            const existingWeightedLayer = mapViewRef.current.map.layers.find(
+          const existingWeightedLayer = mapViewRef.current.map.layers.find(
               (layer: __esri.Layer) => layer.title === "Weighted Safety Incidents"
-            );
-            if (existingWeightedLayer && existingWeightedLayer !== cachedWeightedLayer) {
-              mapViewRef.current.map.remove(existingWeightedLayer);
+          );
+          if (existingWeightedLayer && existingWeightedLayer !== cachedWeightedLayer) {
+            mapViewRef.current.map.remove(existingWeightedLayer);
             }
           }
         }
@@ -148,7 +148,7 @@ export default function NewSafetyMap({
             break;
 
           case 'incident-to-volume-ratio':
-            if (weightsLayer) {
+              if (weightsLayer) {
               await WeightedVisualization.createVisualization(
                 mapViewRef.current!,
                 filters,
@@ -160,11 +160,11 @@ export default function NewSafetyMap({
                 setCachedWeightedLayer,
                 setCachedExtentKey
               );
-            } else {
-              console.warn('Weights layer not available for incident-to-volume ratio visualization');
-              // Fallback to regular heatmap
+              } else {
+                console.warn('Weights layer not available for incident-to-volume ratio visualization');
+                // Fallback to regular heatmap
               incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
-              incidentsLayer.visible = true;
+                incidentsLayer.visible = true;
             }
             break;
 
@@ -214,7 +214,7 @@ export default function NewSafetyMap({
         }
 
         if (mapViewRef.current) {
-          await boundaryService.switchGeographicLevel(boundaryLevel, mapViewRef.current);
+        await boundaryService.switchGeographicLevel(boundaryLevel, mapViewRef.current);
         }
         
       } catch (error) {
