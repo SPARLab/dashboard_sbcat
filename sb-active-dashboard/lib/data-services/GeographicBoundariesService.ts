@@ -363,14 +363,66 @@ export class GeographicBoundariesService {
         return;
       }
 
-      mapView.hitTest(event, { include: layers }).then(response => {
-          const graphic = response.results.length > 0 && response.results[0].type === "graphic"
-              ? response.results[0].graphic as Graphic
-              : null;
-          
+      // First check if we're clicking on an incident layer
+      // Get all layers that might be incident-related
+      if (!mapView.map) return;
+      
+      const allLayers = mapView.map.layers.toArray();
+      const incidentLayers = allLayers.filter(layer => 
+        layer.type === 'feature' && (
+          layer.title === 'Safety Incidents' || 
+          layer.title === 'Weighted Safety Incidents' ||
+          (layer as { id?: string }).id?.includes('incident')
+        )
+      );
 
-          
-          this.handleSelection(graphic);
+      // Do a hitTest to check for incident features
+      mapView.hitTest(event).then(allResults => {
+        // Check if any of the results are from incident layers and have graphics
+        const hasIncidentHit = allResults.results.some(result => {
+          if (result.type === 'graphic' && 'graphic' in result) {
+            return incidentLayers.some(incidentLayer => 
+              result.graphic.layer === incidentLayer
+            );
+          }
+          return false;
+        });
+
+        if (hasIncidentHit) {
+          console.log('[GeographicBoundaries] Click hit an incident - preserving current selection');
+          return; // Don't process boundary selection
+        }
+
+        // Now do the boundary-specific hitTest
+        mapView.hitTest(event, { include: layers }).then(response => {
+            const graphic = response.results.length > 0 && response.results[0].type === "graphic"
+                ? response.results[0].graphic as Graphic
+                : null;
+            
+            // Double-check: Even if we found a boundary, verify we didn't also click an incident
+            if (graphic) {
+              // Do another check specifically at this location to see if there's an incident
+              mapView.hitTest(event).then(checkResults => {
+                const hasIncidentAtLocation = checkResults.results.some(result => {
+                  if (result.type === 'graphic' && 'graphic' in result) {
+                    return incidentLayers.some(incidentLayer => 
+                      result.graphic.layer === incidentLayer
+                    );
+                  }
+                  return false;
+                });
+                
+                if (!hasIncidentAtLocation) {
+                  this.handleSelection(graphic);
+                } else {
+                  console.log('[GeographicBoundaries] Boundary click ignored - incident takes precedence');
+                }
+              });
+            } else {
+              // No boundary was clicked, clear selection
+              this.handleSelection(null);
+            }
+        });
       });
     });
 
@@ -392,7 +444,7 @@ export class GeographicBoundariesService {
       this.isInteractivityFullyReady = true;
       
       // Additional check: verify layers are still visible and queryable
-      layers.forEach(layer => {
+      layers.forEach(() => {
         // Layer ready state verification
       });
       
@@ -402,7 +454,7 @@ export class GeographicBoundariesService {
         testQuery.where = "1=1";
         testQuery.outFields = ["OBJECTID"];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        layers[0].queryFeatures(testQuery as any).then(result => {
+        layers[0].queryFeatures(testQuery as any).then(() => {
           // Test query completed
         }).catch(err => {
           console.error(`[DEBUG] Test query failed on ${layers[0].title}:`, err);
@@ -576,13 +628,21 @@ export class GeographicBoundariesService {
         this.hoveredGraphic = null;
     }
 
-    if (!clickedGraphic || clickedGraphic.attributes.OBJECTID === this.selectedFeature?.objectId) {
+    // Clear selection only if clicking outside any boundary (clickedGraphic is null)
+    // Don't toggle selection when clicking the same boundary again
+    if (!clickedGraphic) {
         this.clearSelection();
         this.selectedFeature = null;
         // Notify that selection was cleared
         if (this.onSelectionChange) {
           this.onSelectionChange(null);
         }
+        return;
+    }
+    
+    // If clicking the same boundary, keep it selected (don't toggle)
+    if (clickedGraphic.attributes.OBJECTID === this.selectedFeature?.objectId) {
+        console.log('[GeographicBoundaries] Same boundary clicked - maintaining selection');
         return;
     }
 

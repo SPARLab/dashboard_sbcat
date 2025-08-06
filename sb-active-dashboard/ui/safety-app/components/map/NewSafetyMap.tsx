@@ -1,5 +1,6 @@
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 import Polygon from "@arcgis/core/geometry/Polygon";
+import Graphic from "@arcgis/core/Graphic";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import { ArcgisMap } from "@arcgis/map-components-react";
 import { Box as MuiBox } from "@mui/material";
@@ -16,7 +17,7 @@ interface NewSafetyMapProps {
   filters: Partial<SafetyFilters>;
   onMapViewReady?: (mapView: __esri.MapView) => void;
   geographicLevel: string;
-  onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void;
+  onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | null) => void;
 }
 
 export default function NewSafetyMap({ 
@@ -117,6 +118,218 @@ export default function NewSafetyMap({
 
     initializeLayers();
   }, [viewReady]);
+
+  // Setup map click handlers for incident popups
+  useEffect(() => {
+    if (!viewReady || !mapViewRef.current || !incidentsLayer) return;
+
+    const handleMapClick = async (event: any) => {
+      try {
+        // First try hit test for point symbols (works for raw incidents)
+        const response = await mapViewRef.current!.hitTest(event);
+        
+        let graphicHit = null;
+        
+        if (response.results.length > 0) {
+          // Check if we clicked on an incident feature
+          const graphicHits = response.results.filter((result: any) => 
+            result.graphic && (
+              result.graphic.layer === incidentsLayer || 
+              result.graphic.layer?.title === "Weighted Safety Incidents"
+            )
+          );
+
+          if (graphicHits.length > 0) {
+            graphicHit = graphicHits[0];
+          }
+        }
+
+        // For heatmap visualizations, if no direct hit, query the layer at the click point
+        if (!graphicHit && (activeVisualization === 'incident-heatmap' || activeVisualization === 'incident-to-volume-ratio')) {
+          const currentLayer = activeVisualization === 'incident-to-volume-ratio' 
+            ? mapViewRef.current!.map.layers.find((layer: any) => layer.title === "Weighted Safety Incidents")
+            : incidentsLayer;
+            
+          if (currentLayer) {
+            // Create a small buffer around the click point to find nearby incidents
+            const buffer = 100; // meters
+            const point = event.mapPoint;
+            const circle = new Graphic({
+              geometry: {
+                type: "circle",
+                center: point,
+                radius: buffer,
+                radiusUnit: "meters"
+              } as any
+            });
+
+            try {
+              const query = (currentLayer as any).createQuery();
+              query.geometry = circle.geometry;
+              query.spatialRelationship = "intersects";
+              query.returnGeometry = true;
+              query.outFields = ["*"];
+              query.num = 1; // Just get the closest one
+
+              const queryResults = await (currentLayer as any).queryFeatures(query);
+              
+              if (queryResults.features.length > 0) {
+                graphicHit = { graphic: queryResults.features[0] };
+              }
+            } catch (queryError) {
+              console.warn('Could not query layer for heatmap click:', queryError);
+            }
+          }
+        }
+
+        if (graphicHit) {
+            const graphic = graphicHit.graphic;
+            const attributes = graphic.attributes;
+
+            // Try to get more detailed incident information if available
+            let enrichedData = null;
+            const incidentId = attributes.id || attributes.incident_id;
+            
+            if (incidentId) {
+              try {
+                // Get enriched data for this specific incident
+                const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
+                  mapViewRef.current!.extent,
+                  filters
+                );
+                enrichedData = safetyData.data.find(inc => inc.id === incidentId);
+              } catch (error) {
+                console.warn('Could not fetch enriched incident data:', error);
+              }
+            }
+
+            // Use enriched data if available, otherwise fall back to graphic attributes
+            const incidentData = enrichedData || attributes;
+
+            // Create popup content with better styling
+            let popupContent = `
+              <div class="incident-popup" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.4; color: #333;">
+                <style>
+                  .incident-popup p { margin: 8px 0; }
+                  .incident-popup strong { color: #2563eb; }
+                  .incident-popup .section { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; }
+                  .incident-popup .section:last-child { border-bottom: none; margin-bottom: 0; }
+                  .incident-popup .parties { background: #f8fafc; padding: 8px; border-radius: 4px; margin-top: 8px; }
+                </style>
+            `;
+            
+            // Basic incident information section
+            popupContent += '<div class="section">';
+            if (incidentData.id) {
+              popupContent += `<p><strong>Incident ID:</strong> ${incidentData.id}</p>`;
+            }
+            
+            if (incidentData.data_source) {
+              popupContent += `<p><strong>Source:</strong> ${incidentData.data_source}</p>`;
+            }
+            
+            if (incidentData.timestamp) {
+              const date = new Date(incidentData.timestamp);
+              popupContent += `<p><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
+            }
+            popupContent += '</div>';
+
+            // Incident details section
+            popupContent += '<div class="section">';
+            if (incidentData.conflict_type) {
+              popupContent += `<p><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;
+            }
+
+            // Severity information
+            const severity = incidentData.severity || incidentData.maxSeverity;
+            if (severity) {
+              const severityColor = severity === 'Fatality' ? '#dc2626' : 
+                                  severity === 'Severe Injury' ? '#ea580c' : 
+                                  severity === 'Injury' ? '#d97706' : '#65a30d';
+              popupContent += `<p><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${severity}</span></p>`;
+            }
+
+            // Involvement flags
+            const involvement = [];
+            if (incidentData.pedestrian_involved) involvement.push('Pedestrian');
+            if (incidentData.bicyclist_involved) involvement.push('Bicyclist');
+            if (incidentData.vehicle_involved) involvement.push('Vehicle');
+            
+            if (involvement.length > 0) {
+              popupContent += `<p><strong>Involved:</strong> ${involvement.join(', ')}</p>`;
+            }
+            popupContent += '</div>';
+
+            // Risk/weight information for incident-to-volume ratio
+            if (attributes.weightedExposure || (enrichedData && enrichedData.weightedExposure)) {
+              popupContent += '<div class="section">';
+              const weight = attributes.weightedExposure || enrichedData.weightedExposure;
+              popupContent += `<p><strong>Risk Weight:</strong> ${weight.toFixed(3)}</p>`;
+              popupContent += '<p style="font-size: 0.85em; color: #6b7280;">Higher values indicate greater risk relative to traffic volume</p>';
+              popupContent += '</div>';
+            }
+
+            // Parties information if available
+            if (enrichedData && enrichedData.parties && enrichedData.parties.length > 0) {
+              popupContent += '<div class="section">';
+              popupContent += '<p><strong>Parties Involved:</strong></p>';
+              popupContent += '<div class="parties">';
+              
+              enrichedData.parties.forEach((party, index) => {
+                popupContent += `<div style="margin-bottom: 6px;">`;
+                popupContent += `<strong>Party ${party.party_number || index + 1}:</strong> `;
+                
+                if (party.party_type) {
+                  popupContent += `${party.party_type}`;
+                }
+                
+                if (party.injury_severity) {
+                  const injuryColor = party.injury_severity === 'Fatal' ? '#dc2626' : 
+                                     party.injury_severity === 'Severe Injury' ? '#ea580c' : 
+                                     party.injury_severity === 'Other Visible Injury' ? '#d97706' : '#65a30d';
+                  popupContent += ` - <span style="color: ${injuryColor};">${party.injury_severity}</span>`;
+                }
+                
+                if (party.age) {
+                  popupContent += ` (Age: ${party.age})`;
+                }
+                
+                popupContent += '</div>';
+              });
+              
+              popupContent += '</div></div>';
+            }
+
+            popupContent += '</div>';
+
+            // Set popup content and location
+            mapViewRef.current!.popup.open({
+              title: "Safety Incident Details",
+              content: popupContent,
+              location: event.mapPoint
+            });
+
+            // Stop event propagation to prevent boundary selection changes
+            event.stopPropagation();
+            return; // Early return to prevent further processing
+        } else {
+          // Close popup if clicking somewhere else
+          mapViewRef.current!.popup.close();
+        }
+      } catch (error) {
+        console.error('Error handling map click:', error);
+      }
+    };
+
+    // Add click event listener
+    const clickHandle = mapViewRef.current.on('click', handleMapClick);
+
+    return () => {
+      if (clickHandle) {
+        clickHandle.remove();
+      }
+    };
+  }, [viewReady, incidentsLayer, activeVisualization, filters]);
 
   // Update layers when active visualization changes
   useEffect(() => {

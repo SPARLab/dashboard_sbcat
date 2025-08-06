@@ -19,8 +19,13 @@ export default function SafetyApp() {
     setMapView(view);
   };
 
-  const handleSelectionChange = (data: { geometry: __esri.Polygon | null; areaName?: string | null }) => {
-    setSelectedGeometry(data.geometry);
+  const handleSelectionChange = (data: { geometry: __esri.Polygon | null; areaName?: string | null } | null) => {
+    // Handle both object format and direct null
+    if (data === null) {
+      setSelectedGeometry(null);
+    } else {
+      setSelectedGeometry(data.geometry);
+    }
   };
 
   return (
