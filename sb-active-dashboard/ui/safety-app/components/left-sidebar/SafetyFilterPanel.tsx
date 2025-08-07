@@ -68,11 +68,17 @@ export default function SafetyFilterPanel({
       <hr className="border-gray-200" />
 
       {/* Time of Day */}
-      <TimeOfDaySection />
+      <TimeOfDaySection 
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
       <hr className="border-gray-200" />
 
       {/* Weekdays vs Weekends */}
-      <WeekdaysWeekendsSection />
+      <WeekdaysWeekendsSection 
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
       <hr className="border-gray-200" />
 
       {/* Geographic Level - Reused from New Volume */}
@@ -363,15 +369,52 @@ function ConflictToggle({ label, checked, onChange }: { label: string; checked: 
   );
 }
 
-function TimeOfDaySection() {
-  const [timeOfDayEnabled, setTimeOfDayEnabled] = useState(true);
-  const [selectedTime, setSelectedTime] = useState('morning');
-
+function TimeOfDaySection({
+  filters,
+  onFiltersChange
+}: {
+  filters: Partial<SafetyFilters>;
+  onFiltersChange: (filters: Partial<SafetyFilters>) => void;
+}) {
+  const timeOfDayFilter = filters.timeOfDay || { enabled: true, periods: ['morning'] };
+  
   const timeOptions = [
     { id: 'morning', label: 'Morning' },
     { id: 'afternoon', label: 'Afternoon' },
     { id: 'evening', label: 'Evening' }
-  ];
+  ] as const;
+
+  const handleToggleEnabled = (enabled: boolean) => {
+    onFiltersChange({
+      timeOfDay: {
+        ...timeOfDayFilter,
+        enabled
+      }
+    });
+  };
+
+  const handlePeriodToggle = (period: 'morning' | 'afternoon' | 'evening') => {
+    const currentPeriods = timeOfDayFilter.periods || [];
+    let newPeriods: ('morning' | 'afternoon' | 'evening')[];
+
+    if (currentPeriods.includes(period)) {
+      // Remove the period if it's currently selected, but ensure at least one remains
+      newPeriods = currentPeriods.filter(p => p !== period);
+      if (newPeriods.length === 0) {
+        newPeriods = [period]; // Keep at least one selected
+      }
+    } else {
+      // Add the period if it's not currently selected
+      newPeriods = [...currentPeriods, period];
+    }
+
+    onFiltersChange({
+      timeOfDay: {
+        ...timeOfDayFilter,
+        periods: newPeriods
+      }
+    });
+  };
 
   return (
     <div id="safety-time-of-day-section" className="px-4 py-4">
@@ -381,15 +424,15 @@ function TimeOfDaySection() {
           <input
             id="safety-time-of-day-toggle-input"
             type="checkbox"
-            checked={timeOfDayEnabled}
-            onChange={(e) => setTimeOfDayEnabled(e.target.checked)}
+            checked={timeOfDayFilter.enabled}
+            onChange={(e) => handleToggleEnabled(e.target.checked)}
             className="sr-only"
           />
           <div
             id="safety-time-of-day-toggle-visual"
-            onClick={() => setTimeOfDayEnabled(!timeOfDayEnabled)}
+            onClick={() => handleToggleEnabled(!timeOfDayFilter.enabled)}
             className={`w-8 h-5 rounded-full flex items-center p-0.5 cursor-pointer transition-all duration-200 focus:outline-none active:outline-none ${
-              timeOfDayEnabled ? 'bg-blue-500 justify-end' : 'bg-gray-300 justify-start'
+              timeOfDayFilter.enabled ? 'bg-blue-500 justify-end' : 'bg-gray-300 justify-start'
             }`}
           >
             <div id="safety-time-of-day-toggle-dot" className="w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200"></div>
@@ -397,36 +440,62 @@ function TimeOfDaySection() {
         </div>
       </div>
 
-      {timeOfDayEnabled && (
+      {timeOfDayFilter.enabled && (
         <div id="safety-time-of-day-options" className="bg-gray-100 p-2 rounded-md flex gap-1">
-          {timeOptions.map((option) => (
-            <button
-              key={option.id}
-              id={`safety-time-of-day-${option.id}-button`}
-              onClick={() => setSelectedTime(option.id)}
-              className={`flex-1 px-1.5 py-1 rounded text-xs font-medium transition-colors focus:outline-none active:outline-none ${
-                selectedTime === option.id
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+          {timeOptions.map((option) => {
+            const isSelected = timeOfDayFilter.periods?.includes(option.id) || false;
+            return (
+              <button
+                key={option.id}
+                id={`safety-time-of-day-${option.id}-button`}
+                onClick={() => handlePeriodToggle(option.id)}
+                className={`flex-1 px-1.5 py-1 rounded text-xs font-medium transition-colors focus:outline-none active:outline-none ${
+                  isSelected
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-function WeekdaysWeekendsSection() {
-  const [weekdayEnabled, setWeekdayEnabled] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState('weekdays');
+function WeekdaysWeekendsSection({
+  filters,
+  onFiltersChange
+}: {
+  filters: Partial<SafetyFilters>;
+  onFiltersChange: (filters: Partial<SafetyFilters>) => void;
+}) {
+  const weekdayFilter = filters.weekdayFilter || { enabled: true, type: 'weekdays' };
 
   const periodOptions = [
     { id: 'weekdays', label: 'Weekdays' },
     { id: 'weekends', label: 'Weekends' }
-  ];
+  ] as const;
+
+  const handleToggleEnabled = (enabled: boolean) => {
+    onFiltersChange({
+      weekdayFilter: {
+        ...weekdayFilter,
+        enabled
+      }
+    });
+  };
+
+  const handlePeriodChange = (type: 'weekdays' | 'weekends') => {
+    onFiltersChange({
+      weekdayFilter: {
+        ...weekdayFilter,
+        type
+      }
+    });
+  };
 
   return (
     <div id="safety-weekdays-weekends-section" className="px-4 py-4">
@@ -436,15 +505,15 @@ function WeekdaysWeekendsSection() {
           <input
             id="safety-weekdays-weekends-toggle-input"
             type="checkbox"
-            checked={weekdayEnabled}
-            onChange={(e) => setWeekdayEnabled(e.target.checked)}
+            checked={weekdayFilter.enabled}
+            onChange={(e) => handleToggleEnabled(e.target.checked)}
             className="sr-only"
           />
           <div
             id="safety-weekdays-weekends-toggle-visual"
-            onClick={() => setWeekdayEnabled(!weekdayEnabled)}
+            onClick={() => handleToggleEnabled(!weekdayFilter.enabled)}
             className={`w-8 h-5 rounded-full flex items-center p-0.5 cursor-pointer transition-all duration-200 focus:outline-none active:outline-none ${
-              weekdayEnabled ? 'bg-blue-500 justify-end' : 'bg-gray-300 justify-start'
+              weekdayFilter.enabled ? 'bg-blue-500 justify-end' : 'bg-gray-300 justify-start'
             }`}
           >
             <div id="safety-weekdays-weekends-toggle-dot" className="w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200"></div>
@@ -452,15 +521,15 @@ function WeekdaysWeekendsSection() {
         </div>
       </div>
 
-      {weekdayEnabled && (
+      {weekdayFilter.enabled && (
         <div id="safety-weekdays-weekends-options" className="bg-gray-100 p-2 rounded-md flex gap-1">
           {periodOptions.map((option) => (
             <button
               key={option.id}
               id={`safety-weekdays-weekends-${option.id}-button`}
-              onClick={() => setSelectedPeriod(option.id)}
+              onClick={() => handlePeriodChange(option.id)}
               className={`flex-1 px-1.5 py-1 rounded text-xs font-medium transition-colors focus:outline-none active:outline-none ${
-                selectedPeriod === option.id
+                weekdayFilter.type === option.id
                   ? 'bg-blue-500 text-white'
                   : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}

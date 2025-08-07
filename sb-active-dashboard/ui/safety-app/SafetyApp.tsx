@@ -18,6 +18,14 @@ export default function SafetyApp() {
     dateRange: {
       start: new Date(new Date().getFullYear() - 3, 0, 1), // 3 years ago, January 1st
       end: new Date() // Today
+    },
+    timeOfDay: {
+      enabled: true,
+      periods: ['morning', 'afternoon', 'evening']
+    },
+    weekdayFilter: {
+      enabled: true,
+      type: 'weekdays'
     }
   });
 

@@ -62,6 +62,14 @@ export interface SafetyFilters {
   roadUser: ('pedestrian' | 'bicyclist')[];
   showPedestrian: boolean;
   showBicyclist: boolean;
+  timeOfDay?: {
+    enabled: boolean;
+    periods: ('morning' | 'afternoon' | 'evening')[];
+  };
+  weekdayFilter?: {
+    enabled: boolean;
+    type: 'weekdays' | 'weekends';
+  };
 }
 
 // Chart data interfaces

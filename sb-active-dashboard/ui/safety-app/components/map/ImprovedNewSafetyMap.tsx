@@ -141,6 +141,7 @@ export default function ImprovedNewSafetyMap({
         severityTypes: filters.severityTypes || [],
         conflictTypes: filters.conflictType || [],
         dateRange: filters.dateRange,
+        timeOfDay: filters.timeOfDay,
       });
 
       // Also apply the same filter to the client-side raw incidents layer
@@ -196,6 +197,35 @@ export default function ImprovedNewSafetyMap({
           const startStr = start.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
           const endStr = end.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
           whereClauses.push(`(timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}')`);
+        }
+        
+        // Time of day filter
+        if (filters.timeOfDay?.enabled && filters.timeOfDay.periods.length > 0) {
+          if (filters.timeOfDay.periods.length < 3) {
+            // Only add filter if not all time periods are selected
+            const timeConditions: string[] = [];
+            
+            filters.timeOfDay.periods.forEach(period => {
+              switch (period) {
+                case 'morning':
+                  // Morning: 00:00 to 11:59 (midnight to noon)
+                  timeConditions.push("EXTRACT(HOUR FROM timestamp) >= 0 AND EXTRACT(HOUR FROM timestamp) < 12");
+                  break;
+                case 'afternoon':
+                  // Afternoon: 12:00 to 16:59 (noon to 5pm)
+                  timeConditions.push("EXTRACT(HOUR FROM timestamp) >= 12 AND EXTRACT(HOUR FROM timestamp) < 17");
+                  break;
+                case 'evening':
+                  // Evening: 17:00 to 23:59 (5pm to midnight)
+                  timeConditions.push("EXTRACT(HOUR FROM timestamp) >= 17 AND EXTRACT(HOUR FROM timestamp) <= 23");
+                  break;
+              }
+            });
+            
+            if (timeConditions.length > 0) {
+              whereClauses.push(`(${timeConditions.join(' OR ')})`);
+            }
+          }
         }
         
         const whereClause = whereClauses.length > 0 ? whereClauses.join(' AND ') : "1=1";
