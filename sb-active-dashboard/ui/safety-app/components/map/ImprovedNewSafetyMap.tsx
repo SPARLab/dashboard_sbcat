@@ -300,10 +300,11 @@ export default function ImprovedNewSafetyMap({
           }
         }}
       >
-        <ArcgisMap
-          basemap="topo-vector"
-          onArcgisViewReadyChange={handleArcgisViewReadyChange}
-        />
+                  <ArcgisMap
+            basemap="topo-vector"
+            onArcgisViewReadyChange={handleArcgisViewReadyChange}
+            popupEnabled={true}
+          />
       </MuiBox>
     </div>
   );

@@ -94,7 +94,12 @@ export class RawIncidentsVisualization {
         // 6. Restore the pop-up template
         popupTemplate: {
           title: "Safety Incident Details",
-          content: generateRawIncidentPopupContent,
+          content: ({ graphic }: { graphic: __esri.Graphic }) => {
+            // The `graphic` object is destructured from the function parameter.
+            // We pass the graphic's attributes and the full `enrichedIncidents` array
+            // to the content generation function.
+            return generateRawIncidentPopupContent(graphic.attributes, enrichedIncidents);
+          },
         },
       });
 
