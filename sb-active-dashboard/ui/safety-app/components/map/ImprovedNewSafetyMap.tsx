@@ -142,6 +142,7 @@ export default function ImprovedNewSafetyMap({
         conflictTypes: filters.conflictType || [],
         dateRange: filters.dateRange,
         timeOfDay: filters.timeOfDay,
+        weekdayFilter: filters.weekdayFilter,
       });
 
       // Also apply the same filter to the client-side raw incidents layer
@@ -226,6 +227,19 @@ export default function ImprovedNewSafetyMap({
               whereClauses.push(`(${timeConditions.join(' OR ')})`);
             }
           }
+        }
+        
+        // Weekday filter
+        if (filters.weekdayFilter?.enabled) {
+          let weekdayClause = '';
+          if (filters.weekdayFilter.type === 'weekdays') {
+            // Weekdays: Monday(2) through Friday(6)
+            weekdayClause = "MOD(CAST((timestamp - DATE '2000-01-01') AS INT) + 6, 7) + 1 BETWEEN 2 AND 6";
+          } else {
+            // Weekends: Saturday(7) and Sunday(1)  
+            weekdayClause = "MOD(CAST((timestamp - DATE '2000-01-01') AS INT) + 6, 7) + 1 IN (1, 7)";
+          }
+          whereClauses.push(`(${weekdayClause})`);
         }
         
         const whereClause = whereClauses.length > 0 ? whereClauses.join(' AND ') : "1=1";

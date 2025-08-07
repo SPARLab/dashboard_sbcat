@@ -344,6 +344,10 @@ export class SafetyLayerService {
       enabled: boolean;
       periods: ('morning' | 'afternoon' | 'evening')[];
     };
+    weekdayFilter?: {
+      enabled: boolean;
+      type: 'weekdays' | 'weekends';
+    };
   }): void {
     if (!this.safetyLayerView) {
       console.warn("SafetyLayerService: Layer view not initialized");
@@ -459,6 +463,28 @@ export class SafetyLayerService {
       } else {
         console.log('[DEBUG] All 3 time periods selected, no time filter needed');
       }
+    }
+
+    // Weekday filter
+    if (filters.weekdayFilter?.enabled) {
+      console.log('[DEBUG] Weekday filtering - selected type:', filters.weekdayFilter.type);
+      
+      // Calculate day of week using mathematical approach
+      // We'll use a reference date approach: January 1, 2000 was a Saturday (day 7)
+      // Formula: MOD((days_since_reference + reference_day_offset), 7) + 1
+      // Where: 1=Sunday, 2=Monday, 3=Tuesday, 4=Wednesday, 5=Thursday, 6=Friday, 7=Saturday
+      
+      let weekdayClause = '';
+      if (filters.weekdayFilter.type === 'weekdays') {
+        // Weekdays: Monday(2) through Friday(6)
+        weekdayClause = "MOD(CAST((timestamp - DATE '2000-01-01') AS INT) + 6, 7) + 1 BETWEEN 2 AND 6";
+      } else {
+        // Weekends: Saturday(7) and Sunday(1)  
+        weekdayClause = "MOD(CAST((timestamp - DATE '2000-01-01') AS INT) + 6, 7) + 1 IN (1, 7)";
+      }
+      
+      console.log('[DEBUG] Generated weekday clause:', weekdayClause);
+      whereClauses.push(`(${weekdayClause})`);
     }
 
     // Combine all where clauses
