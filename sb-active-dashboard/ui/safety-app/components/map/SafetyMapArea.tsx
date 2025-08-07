@@ -7,13 +7,15 @@ interface SafetyMapAreaProps {
   geographicLevel?: string;
   onMapViewReady?: (mapView: __esri.MapView) => void;
   onSelectionChange?: (data: { geometry: __esri.Polygon | null; areaName?: string | null } | null) => void;
+  selectedAreaName?: string | null;
 }
 
 export default function SafetyMapArea({ 
   filters = {},
   geographicLevel = 'cities',
   onMapViewReady,
-  onSelectionChange
+  onSelectionChange,
+  selectedAreaName
 }: SafetyMapAreaProps) {
   const [activeMapTab, setActiveMapTab] = useState<SafetyVisualizationType>('raw-incidents');
 
@@ -27,7 +29,9 @@ export default function SafetyMapArea({
     <div id="safety-map-area-container" className="flex-1 bg-white flex flex-col">
       {/* Geographic Area Header */}
       <div id="safety-geographic-header" className="bg-gray-100 border-b border-gray-200 px-4 py-[1.15rem] flex-shrink-0">
-        <h2 id="safety-current-geographic-area" className="text-base font-bold text-gray-700">Census Tract 23</h2>
+        <h2 id="safety-current-geographic-area" className="text-base font-bold text-gray-700">
+          {selectedAreaName || 'No area selected'}
+        </h2>
       </div>
 
       {/* Map Area */}

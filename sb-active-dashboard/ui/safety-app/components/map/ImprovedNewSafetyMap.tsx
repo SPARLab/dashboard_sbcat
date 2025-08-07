@@ -1,5 +1,8 @@
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 import Polygon from "@arcgis/core/geometry/Polygon";
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
+import SketchViewModel from "@arcgis/core/widgets/Sketch/SketchViewModel";
 import { ArcgisMap } from "@arcgis/map-components-react";
 import { CircularProgress, Box as MuiBox } from "@mui/material";
 import { useEffect, useRef, useState, useMemo } from "react";
@@ -39,6 +42,10 @@ export default function ImprovedNewSafetyMap({
   
   // Layer references - keep both improved and original layers
   const [safetyGroupLayer, setSafetyGroupLayer] = useState<__esri.GroupLayer | null>(null);
+  
+  // Sketch functionality state (same as volume page)
+  const [sketchViewModel, setSketchViewModel] = useState<SketchViewModel | null>(null);
+  const [sketchLayer, setSketchLayer] = useState<GraphicsLayer | null>(null);
   
   // Use layer cache hook for complex visualizations
   const {
@@ -108,6 +115,11 @@ export default function ImprovedNewSafetyMap({
         // Add boundary layers
         const boundaryLayers = boundaryService.current.getBoundaryLayers();
         boundaryLayers.forEach(layer => mapViewRef.current!.map.add(layer));
+
+        // Create and add sketch layer for custom draw tool
+        const graphicsLayer = new GraphicsLayer();
+        mapViewRef.current!.map.add(graphicsLayer);
+        setSketchLayer(graphicsLayer);
 
         // Initialize geographic boundaries
         boundaryService.current.switchGeographicLevel(geographicLevel as any, mapViewRef.current!);
@@ -315,14 +327,70 @@ export default function ImprovedNewSafetyMap({
     // Re-run this effect when the visualization type changes. Filter changes are handled separately.
   }, [activeVisualization, incidentsLayer, weightsLayer, viewReady]);
 
-  // Handle geographic level changes
+  // Handle geographic level changes and custom draw tool (combined like volume page)
   useEffect(() => {
-    if (!viewReady || !mapViewRef.current) return;
+    if (viewReady && boundaryService.current && geographicLevel && mapViewRef.current) {
+      console.log('[DEBUG] ImprovedNewSafetyMap - Switching geographic level to:', geographicLevel);
+      
+      if (geographicLevel === 'custom' && sketchLayer) {
+        console.log('[DEBUG] Entering custom draw mode with sketchLayer:', sketchLayer);
+        // Disable boundary service interactivity and hide its layers
+        boundaryService.current.cleanupInteractivity();
+        // Also hide the layers associated with the service
+        boundaryService.current.getBoundaryLayers().forEach(layer => {
+          if (layer.type === 'feature' || layer.type === 'graphics') {
+            layer.visible = false;
+          }
+        });
 
-    console.log('[DEBUG] ImprovedNewSafetyMap - Switching geographic level to:', geographicLevel);
-    boundaryService.current.switchGeographicLevel(geographicLevel as any, mapViewRef.current);
+        // Mark that layer recreation will be needed after SketchViewModel usage
+        boundaryService.current.markLayerRecreationNeeded();
 
-  }, [geographicLevel, viewReady]);
+        const sketchVM = new SketchViewModel({
+          view: mapViewRef.current,
+          layer: sketchLayer,
+          polygonSymbol: new SimpleFillSymbol({
+            color: [138, 43, 226, 0.2], // BlueViolet
+            outline: {
+              color: [138, 43, 226, 1],
+              width: 2,
+            },
+          }),
+        });
+
+        setSketchViewModel(sketchVM);
+
+        sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
+          if (event.state === 'complete') {
+            if (onSelectionChange) {
+              onSelectionChange(event.graphic.geometry as Polygon);
+            }
+          }
+        });
+
+        sketchVM.create('polygon');
+        console.log('[DEBUG] Custom polygon drawing started');
+      } else {
+        console.log('[DEBUG] Exiting custom mode or switching to regular geographic level:', geographicLevel);
+        if (sketchViewModel) {
+          sketchViewModel.destroy();
+          setSketchViewModel(null);
+        }
+        if (sketchLayer) {
+          sketchLayer.removeAll();
+        }
+        // Re-enable boundary service interactivity with layer recreation
+        boundaryService.current.switchGeographicLevel(geographicLevel as any, mapViewRef.current);
+      }
+    }
+
+    return () => {
+      if (sketchViewModel) {
+        sketchViewModel.destroy();
+        setSketchViewModel(null);
+      }
+    };
+  }, [geographicLevel, sketchLayer, viewReady]); // Removed sketchViewModel and onSelectionChange from dependencies
 
   // Handle selection changes
   useEffect(() => {

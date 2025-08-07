@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useSelection } from "../../lib/hooks/useSelection";
 import { SafetyFilters } from "../../lib/safety-app/types";
 import SafetyMapArea from "./components/map/SafetyMapArea";
 import SafetyLeftSidebar from "./layout/SafetyLeftSidebar";
@@ -6,8 +7,11 @@ import SafetyRightSidebar from "./layout/SafetyRightSidebar";
 
 export default function SafetyApp() {
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
-  const [selectedGeometry, setSelectedGeometry] = useState<__esri.Polygon | null>(null);
-  const [geographicLevel, setGeographicLevel] = useState('cities');
+  
+  // Selection hook for polygon selection (same as volume page)
+  const { selectedGeometry, selectedAreaName, onSelectionChange } = useSelection();
+  
+  const [geographicLevel, setGeographicLevel] = useState('city-service-area');
   const [filters, setFilters] = useState<Partial<SafetyFilters>>({
     showPedestrian: true,
     showBicyclist: true,
@@ -42,14 +46,7 @@ export default function SafetyApp() {
     setMapView(view);
   };
 
-  const handleSelectionChange = (data: { geometry: __esri.Polygon | null; areaName?: string | null } | null) => {
-    // Handle both object format and direct null
-    if (data === null) {
-      setSelectedGeometry(null);
-    } else {
-      setSelectedGeometry(data.geometry);
-    }
-  };
+
 
   return (
     <div id="safety-app-container" className="flex flex-col h-[calc(100vh-70px)] bg-white">
@@ -64,12 +61,14 @@ export default function SafetyApp() {
           filters={filters}
           geographicLevel={geographicLevel}
           onMapViewReady={handleMapViewReady}
-          onSelectionChange={handleSelectionChange}
+          onSelectionChange={onSelectionChange}
+          selectedAreaName={selectedAreaName}
         />
         <SafetyRightSidebar 
           mapView={mapView}
           filters={filters}
           selectedGeometry={selectedGeometry}
+          selectedAreaName={selectedAreaName}
         />
       </div>
       {/* Footer */}

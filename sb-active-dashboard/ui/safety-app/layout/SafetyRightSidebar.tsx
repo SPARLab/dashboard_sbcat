@@ -10,12 +10,14 @@ interface SafetyRightSidebarProps {
   mapView: __esri.MapView | null;
   filters: Partial<SafetyFilters>;
   selectedGeometry: __esri.Polygon | null;
+  selectedAreaName?: string | null;
 }
 
 export default function SafetyRightSidebar({
   mapView,
   filters,
-  selectedGeometry
+  selectedGeometry,
+  selectedAreaName
 }: SafetyRightSidebarProps) {
   return (
     <div id="safety-analysis-sidebar" className="w-[412px] bg-white border-l border-gray-200 flex flex-col h-full">
@@ -27,36 +29,12 @@ export default function SafetyRightSidebar({
       {/* Scrollable Analysis Content */}
       <div id="safety-analysis-content" className="flex-1 overflow-y-auto no-scrollbar">
         <div id="safety-analysis-components" className="space-y-3 px-3.5 py-2">
-          <SummaryStatistics 
-            mapView={mapView}
-            filters={filters}
-            selectedGeometry={selectedGeometry}
-          />
-          <MostDangerousAreas 
-            mapView={mapView}
-            filters={filters}
-            selectedGeometry={selectedGeometry}
-          />
-          <AnnualIncidentsComparison 
-            mapView={mapView}
-            filters={filters}
-            selectedGeometry={selectedGeometry}
-          />
-          <IncidentsVsTrafficRatios 
-            mapView={mapView}
-            filters={filters}
-            selectedGeometry={selectedGeometry}
-          />
-          <SeverityBreakdown 
-            mapView={mapView}
-            filters={filters}
-            selectedGeometry={selectedGeometry}
-          />
-          <ConflictTypeBreakdown 
-            mapView={mapView}
-            filters={filters}
-            selectedGeometry={selectedGeometry}
-          />
+          <SummaryStatistics />
+          <MostDangerousAreas />
+          <AnnualIncidentsComparison />
+          <IncidentsVsTrafficRatios />
+          <SeverityBreakdown />
+          <ConflictTypeBreakdown />
         </div>
       </div>
     </div>
