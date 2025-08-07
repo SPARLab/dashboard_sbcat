@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import { queryAADTWithinPolygon, queryVolumeCountSitesWithinPolygon, getSelectedAreaDescription } from '../utilities/spatialQueries';
+import { SafetyIncidentsDataService } from '../data-services/SafetyIncidentsDataService';
+import { SafetyFilters, SafetyAnalysisResult } from '../safety-app/types';
 
 interface SpatialQueryResult {
   aadtFeatures: Array<{
@@ -131,5 +133,67 @@ export const useVolumeSpatialQuery = (
     isLoading,
     error,
     areaDescription,
+  };
+};
+
+/**
+ * Hook for safety app spatial queries
+ * Queries safety incidents within a selected polygon with applied filters
+ */
+export const useSafetySpatialQuery = (
+  selectedGeometry: Polygon | null,
+  filters?: Partial<SafetyFilters>
+): {
+  result: SafetyAnalysisResult | null;
+  isLoading: boolean;
+  error: string | null;
+} => {
+  const [result, setResult] = useState<SafetyAnalysisResult | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const performQuery = async () => {
+      if (!selectedGeometry) {
+        setResult(null);
+        setError(null);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        console.log('[DEBUG] useSafetySpatialQuery - Starting spatial query with filters:', filters);
+        console.log('[DEBUG] useSafetySpatialQuery - Geometry:', selectedGeometry);
+        
+        const queryResult = await SafetyIncidentsDataService.getEnrichedSafetyData(
+          selectedGeometry,
+          filters
+        );
+
+        console.log('[DEBUG] useSafetySpatialQuery - Query result:', {
+          dataCount: queryResult.data.length,
+          summary: queryResult.summary,
+          error: queryResult.error
+        });
+
+        setResult(queryResult);
+      } catch (err) {
+        console.error('Safety spatial query failed:', err);
+        setError('Failed to query safety incidents within selected area');
+        setResult(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    performQuery();
+  }, [selectedGeometry, JSON.stringify(filters)]); // Stringify filters to ensure proper dependency tracking
+
+  return {
+    result,
+    isLoading,
+    error,
   };
 };

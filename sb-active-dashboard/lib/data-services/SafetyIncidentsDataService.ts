@@ -414,7 +414,7 @@ export class SafetyIncidentsDataService {
       const incidentWeights = weightsByIncident.get(incident.id) || [];
 
       // Calculate max severity from all parties
-      const severityOrder = ['fatal', 'severe_injury', 'injury', 'property_damage_only', ''];
+      const severityOrder = ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown', ''];
       const maxSeverity = incidentParties.reduce((max, party) => {
         const currentSeverityIndex = severityOrder.indexOf(party.injury_severity);
         const maxSeverityIndex = severityOrder.indexOf(max);
@@ -455,14 +455,16 @@ export class SafetyIncidentsDataService {
     const bikeIncidents = incidents.filter(inc => inc.bicyclist_involved === 1).length;
     const pedIncidents = incidents.filter(inc => inc.pedestrian_involved === 1).length;
     
-    const fatalIncidents = incidents.filter(inc => inc.maxSeverity === 'fatal').length;
+    // Calculate severity statistics based on actual database values
+    
+    const fatalIncidents = incidents.filter(inc => inc.maxSeverity === 'Fatality').length;
     const injuryIncidents = incidents.filter(inc => 
-      inc.maxSeverity === 'injury' || inc.maxSeverity === 'severe_injury'
+      inc.maxSeverity === 'Injury' || inc.maxSeverity === 'Severe Injury'
     ).length;
     
-    // Near misses are incidents without injury severity (from BikeMaps.org)
+    // Near misses are "No Injury" incidents from BikeMaps.org
     const nearMissIncidents = incidents.filter(inc => 
-      inc.data_source === 'BikeMaps.org' && !inc.maxSeverity
+      inc.data_source === 'BikeMaps.org' && inc.maxSeverity === 'No Injury'
     ).length;
 
     // Data source breakdown
