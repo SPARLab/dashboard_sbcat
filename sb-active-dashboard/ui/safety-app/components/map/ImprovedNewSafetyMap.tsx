@@ -139,6 +139,7 @@ export default function ImprovedNewSafetyMap({
       safetyLayerService.applyAdditionalFilters({
         dataSources: filters.dataSource || [],
         severityTypes: filters.severityTypes || [],
+        conflictTypes: filters.conflictType || [],
       });
 
       // Also apply the same filter to the client-side raw incidents layer
@@ -170,6 +171,20 @@ export default function ImprovedNewSafetyMap({
           
           if (severityConditions.length > 0) {
             whereClauses.push(`(${severityConditions.join(' OR ')})`);
+          }
+        }
+        
+        // Conflict type filter
+        const conflictTypes = filters.conflictType || [];
+        if (conflictTypes.length === 0) {
+          // If no conflict types selected, show nothing
+          whereClauses.push('1=0');
+        } else if (conflictTypes.length < 7) {
+          // Only add filter if not all conflict types are selected
+          const conflictConditions = conflictTypes.map(type => `conflict_type = '${type}'`);
+          
+          if (conflictConditions.length > 0) {
+            whereClauses.push(`(${conflictConditions.join(' OR ')})`);
           }
         }
         

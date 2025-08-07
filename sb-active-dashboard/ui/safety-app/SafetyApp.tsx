@@ -13,7 +13,8 @@ export default function SafetyApp() {
     showBicyclist: true,
     roadUser: ['pedestrian', 'bicyclist'],
     dataSource: ['SWITRS', 'BikeMaps.org'],
-    severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown']
+    severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'],
+    conflictType: ['Bike vs vehicle', 'Pedestrian vs vehicle', 'Bike vs other', 'Bike vs bike', 'Bike vs pedestrian', 'Bike vs infrastructure', 'Pedestrian vs other']
   });
 
   const handleFiltersChange = useCallback((newFilters: Partial<SafetyFilters>) => {

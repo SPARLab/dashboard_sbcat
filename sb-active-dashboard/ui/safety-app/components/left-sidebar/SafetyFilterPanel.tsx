@@ -49,7 +49,10 @@ export default function SafetyFilterPanel({
       <hr className="border-gray-200" />
 
       {/* Conflict Type */}
-      <ConflictTypeSection />
+      <ConflictTypeSection 
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
       <hr className="border-gray-200" />
 
       {/* Date Range - Reused from New Volume */}
@@ -247,50 +250,56 @@ function DataSourceSection({
   );
 }
 
-function ConflictTypeSection() {
-  const [conflictMode, setConflictMode] = useState<'all' | 'none' | 'individual'>('all');
-  const [individualConflicts, setIndividualConflicts] = useState({
-    bikeVsCar: true,
-    bikeVsBike: true,
-    bikeVsPedestrian: true,
-    bikeVsInfrastructure: true,
-    bikeVsOther: true,
-    pedestrianVsCar: true,
-    pedestrianVsPedestrian: true,
-    pedestrianVsInfrastructure: true,
-  });
+function ConflictTypeSection({ 
+  filters, 
+  onFiltersChange 
+}: { 
+  filters: Partial<SafetyFilters>; 
+  onFiltersChange: (filters: Partial<SafetyFilters>) => void; 
+}) {
+  // Available conflict types from the user's data
+  const availableConflictTypes = [
+    'Bike vs vehicle',
+    'Pedestrian vs vehicle', 
+    'Bike vs other',
+    'Bike vs bike',
+    'Bike vs pedestrian',
+    'Bike vs infrastructure',
+    'Pedestrian vs other'
+  ];
 
-  const toggleIndividualConflict = (key: keyof typeof individualConflicts) => {
-    setIndividualConflicts(prev => ({ ...prev, [key]: !prev[key] }));
-    setConflictMode('individual');
+  const currentConflictTypes = filters.conflictType || [];
+  
+  const toggleConflictType = (conflictType: string) => {
+    let newConflictTypes: string[];
+    
+    if (currentConflictTypes.includes(conflictType)) {
+      // Remove conflict type if it's currently selected
+      newConflictTypes = currentConflictTypes.filter(type => type !== conflictType);
+    } else {
+      // Add conflict type if it's not currently selected
+      newConflictTypes = [...currentConflictTypes, conflictType];
+    }
+    
+    // Sort the array to ensure the cache key is consistent
+    newConflictTypes.sort();
+    
+    // Only pass the conflictType change, not the entire filters object
+    onFiltersChange({ conflictType: newConflictTypes });
   };
 
   const handleModeChange = (mode: 'all' | 'none') => {
-    setConflictMode(mode);
     if (mode === 'all') {
-      setIndividualConflicts({
-        bikeVsCar: true,
-        bikeVsBike: true,
-        bikeVsPedestrian: true,
-        bikeVsInfrastructure: true,
-        bikeVsOther: true,
-        pedestrianVsCar: true,
-        pedestrianVsPedestrian: true,
-        pedestrianVsInfrastructure: true,
-      });
+      onFiltersChange({ conflictType: [...availableConflictTypes] });
     } else {
-      setIndividualConflicts({
-        bikeVsCar: false,
-        bikeVsBike: false,
-        bikeVsPedestrian: false,
-        bikeVsInfrastructure: false,
-        bikeVsOther: false,
-        pedestrianVsCar: false,
-        pedestrianVsPedestrian: false,
-        pedestrianVsInfrastructure: false,
-      });
+      onFiltersChange({ conflictType: [] });
     }
   };
+
+  // Determine current mode based on selected conflict types
+  const allSelected = availableConflictTypes.every(type => currentConflictTypes.includes(type));
+  const noneSelected = currentConflictTypes.length === 0;
+  const currentMode = allSelected ? 'all' : noneSelected ? 'none' : 'individual';
 
   return (
     <div id="safety-conflict-type-section" className="px-4 py-4">
@@ -302,7 +311,7 @@ function ConflictTypeSection() {
           id="safety-conflict-type-all-button"
           onClick={() => handleModeChange('all')}
           className={`px-2 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none active:outline-none ${
-            conflictMode === 'all' 
+            currentMode === 'all' 
               ? 'bg-blue-500 text-white' 
               : 'bg-white border border-blue-500 text-blue-500 hover:bg-blue-50'
           }`}
@@ -313,7 +322,7 @@ function ConflictTypeSection() {
           id="safety-conflict-type-none-button"
           onClick={() => handleModeChange('none')}
           className={`px-2 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none active:outline-none ${
-            conflictMode === 'none' 
+            currentMode === 'none' 
               ? 'bg-blue-500 text-white' 
               : 'bg-white border border-blue-500 text-blue-500 hover:bg-blue-50'
           }`}
@@ -324,62 +333,18 @@ function ConflictTypeSection() {
 
       {/* Individual conflict toggles */}
       <div id="safety-conflict-type-toggles" className="space-y-0.5">
-        <div id="safety-conflict-type-bike-vs-car-container">
-          <ConflictToggle 
-            label="Bike vs car" 
-            checked={individualConflicts.bikeVsCar}
-            onChange={() => toggleIndividualConflict('bikeVsCar')}
-          />
-        </div>
-        <div id="safety-conflict-type-bike-vs-bike-container">
-          <ConflictToggle 
-            label="Bike vs bike" 
-            checked={individualConflicts.bikeVsBike}
-            onChange={() => toggleIndividualConflict('bikeVsBike')}
-          />
-        </div>
-        <div id="safety-conflict-type-bike-vs-pedestrian-container">
-          <ConflictToggle 
-            label="Bike vs pedestrian" 
-            checked={individualConflicts.bikeVsPedestrian}
-            onChange={() => toggleIndividualConflict('bikeVsPedestrian')}
-          />
-        </div>
-        <div id="safety-conflict-type-bike-vs-infrastructure-container">
-          <ConflictToggle 
-            label="Bike vs infrastructure" 
-            checked={individualConflicts.bikeVsInfrastructure}
-            onChange={() => toggleIndividualConflict('bikeVsInfrastructure')}
-          />
-        </div>
-        <div id="safety-conflict-type-bike-vs-other-container">
-          <ConflictToggle 
-            label="Bike vs other" 
-            checked={individualConflicts.bikeVsOther}
-            onChange={() => toggleIndividualConflict('bikeVsOther')}
-          />
-        </div>
-        <div id="safety-conflict-type-pedestrian-vs-car-container">
-          <ConflictToggle 
-            label="Pedestrian vs car" 
-            checked={individualConflicts.pedestrianVsCar}
-            onChange={() => toggleIndividualConflict('pedestrianVsCar')}
-          />
-        </div>
-        <div id="safety-conflict-type-pedestrian-vs-pedestrian-container">
-          <ConflictToggle 
-            label="Pedestrian vs pedestrian" 
-            checked={individualConflicts.pedestrianVsPedestrian}
-            onChange={() => toggleIndividualConflict('pedestrianVsPedestrian')}
-          />
-        </div>
-        <div id="safety-conflict-type-pedestrian-vs-infrastructure-container">
-          <ConflictToggle 
-            label="Pedestrian vs infrastructure" 
-            checked={individualConflicts.pedestrianVsInfrastructure}
-            onChange={() => toggleIndividualConflict('pedestrianVsInfrastructure')}
-          />
-        </div>
+        {availableConflictTypes.map((conflictType) => {
+          const labelId = conflictType.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          return (
+            <div key={conflictType} id={`safety-conflict-type-${labelId}-container`}>
+              <ConflictToggle 
+                label={conflictType} 
+                checked={currentConflictTypes.includes(conflictType)}
+                onChange={() => toggleConflictType(conflictType)}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

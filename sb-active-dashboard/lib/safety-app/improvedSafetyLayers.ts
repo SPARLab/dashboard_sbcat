@@ -391,9 +391,25 @@ export class SafetyLayerService {
     }
 
     // Conflict type filter
-    if (filters.conflictTypes && filters.conflictTypes.length > 0) {
-      const conflictConditions = filters.conflictTypes.map(type => `conflict_type = '${type}'`);
-      whereClauses.push(`(${conflictConditions.join(' OR ')})`);
+    if (filters.conflictTypes !== undefined) {
+      console.log('[DEBUG] Conflict type filtering - selected types:', filters.conflictTypes);
+      
+      if (filters.conflictTypes.length === 0) {
+        // If no conflict types selected, show nothing
+        console.log('[DEBUG] No conflict types selected, hiding all incidents');
+        whereClauses.push('1=0');
+      } else if (filters.conflictTypes.length < 7) {
+        // Only add filter if not all conflict types are selected
+        const conflictConditions = filters.conflictTypes.map(type => `conflict_type = '${type}'`);
+        
+        if (conflictConditions.length > 0) {
+          const conflictClause = `(${conflictConditions.join(' OR ')})`;
+          console.log('[DEBUG] Generated conflict type clause:', conflictClause);
+          whereClauses.push(conflictClause);
+        }
+      } else {
+        console.log('[DEBUG] All 7 conflict types selected, no conflict type filter needed');
+      }
     }
 
     // Date range filter
