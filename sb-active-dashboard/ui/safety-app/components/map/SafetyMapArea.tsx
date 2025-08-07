@@ -15,7 +15,7 @@ export default function SafetyMapArea({
   onMapViewReady,
   onSelectionChange
 }: SafetyMapAreaProps) {
-  const [activeMapTab, setActiveMapTab] = useState<SafetyVisualizationType>('incident-to-volume-ratio');
+  const [activeMapTab, setActiveMapTab] = useState<SafetyVisualizationType>('raw-incidents');
 
   const mapTabs: Array<{ id: SafetyVisualizationType; label: string }> = [
     { id: 'raw-incidents', label: 'Raw Incidents' },

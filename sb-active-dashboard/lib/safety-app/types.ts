@@ -12,7 +12,7 @@ export interface SafetyIncident {
   pedestrian_involved: number; // 0 or 1
   bicyclist_involved: number; // 0 or 1  
   vehicle_involved: number; // 0 or 1
-  data_source: string; // 'SWITRS' | 'BikeMaps'
+  data_source: string; // 'SWITRS' | 'BikeMaps.org'
   strava_id?: number;
   geometry: __esri.Point;
 }
@@ -56,7 +56,7 @@ export interface SafetyFilters {
     start: Date;
     end: Date;
   };
-  dataSource: ('SWITRS' | 'BikeMaps')[];
+  dataSource: ('SWITRS' | 'BikeMaps.org')[];
   conflictType: string[];
   severityLevel: string[];
   roadUser: ('pedestrian' | 'bicyclist')[];

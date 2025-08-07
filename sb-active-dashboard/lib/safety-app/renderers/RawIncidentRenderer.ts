@@ -177,17 +177,17 @@ export class RawIncidentRenderer {
           label: "SWITRS (Official Reports)"
         },
         {
-          value: "BikeMaps",
+          value: "BikeMaps.org",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [32, 178, 170, 0.8], // Light sea green for BikeMaps (user reports)
+            color: [32, 178, 170, 0.8], // Light sea green for BikeMaps.org (user reports)
             size: 6,
             outline: {
               color: [255, 255, 255, 0.8],
               width: 1
             }
           }),
-          label: "BikeMaps (User Reports)"
+          label: "BikeMaps.org (User Reports)"
         }
       ]
     });

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SafetyFilters } from "../../../../lib/safety-app/types";
 import DateRangeSection from "../../../components/filters/DateRangeSection";
 import GeographicLevelSection from "../../../components/filters/GeographicLevelSection";
 
@@ -7,7 +8,19 @@ interface DateRangeValue {
   endDate: Date;
 }
 
-export default function SafetyFilterPanel() {
+interface SafetyFilterPanelProps {
+  filters: Partial<SafetyFilters>;
+  onFiltersChange: (newFilters: Partial<SafetyFilters>) => void;
+  geographicLevel: string;
+  onGeographicLevelChange: (level: string) => void;
+}
+
+export default function SafetyFilterPanel({
+  filters,
+  onFiltersChange,
+  geographicLevel,
+  onGeographicLevelChange
+}: SafetyFilterPanelProps) {
   // Date range state for safety data filtering
   const [dateRange, setDateRange] = useState<DateRangeValue>(() => {
     const endDate = new Date();
@@ -26,7 +39,10 @@ export default function SafetyFilterPanel() {
       <hr className="border-gray-200" />
 
       {/* Data Source */}
-      <DataSourceSection />
+      <DataSourceSection 
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
       <hr className="border-gray-200" />
 
       {/* Conflict Type */}
@@ -49,7 +65,10 @@ export default function SafetyFilterPanel() {
       <hr className="border-gray-200" />
 
       {/* Geographic Level - Reused from New Volume */}
-      <GeographicLevelSection />
+      <GeographicLevelSection 
+        geographicLevel={geographicLevel}
+        onGeographicLevelChange={onGeographicLevelChange}
+      />
     </>
   );
 }
@@ -142,14 +161,39 @@ function SeverityToggle({ label, checked, onChange }: { label: string; checked: 
   );
 }
 
-function DataSourceSection() {
-  const [dataSource, setDataSource] = useState({
-    policeReports: true,
-    selfReports: true,
-  });
+function DataSourceSection({ 
+  filters, 
+  onFiltersChange 
+}: { 
+  filters: Partial<SafetyFilters>; 
+  onFiltersChange: (filters: Partial<SafetyFilters>) => void; 
+}) {
+  const currentDataSources = filters.dataSource || [];
+  const policeReports = currentDataSources.includes('SWITRS');
+  const selfReports = currentDataSources.includes('BikeMaps.org');
 
-  const toggleDataSource = (key: keyof typeof dataSource) => {
-    setDataSource(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleDataSource = (sourceType: 'police' | 'self') => {
+    let newDataSources: ('SWITRS' | 'BikeMaps.org')[] = [...currentDataSources];
+    
+    if (sourceType === 'police') {
+      if (policeReports) {
+        newDataSources = newDataSources.filter(src => src !== 'SWITRS');
+      } else {
+        newDataSources.push('SWITRS');
+      }
+    } else {
+      if (selfReports) {
+        newDataSources = newDataSources.filter(src => src !== 'BikeMaps.org');
+      } else {
+        newDataSources.push('BikeMaps.org');
+      }
+    }
+    
+    // Sort the array to ensure the cache key is consistent
+    newDataSources.sort();
+    
+    // Only pass the dataSource change, not the entire filters object
+    onFiltersChange({ dataSource: newDataSources });
   };
 
   return (
@@ -159,15 +203,15 @@ function DataSourceSection() {
         <div id="safety-data-source-police-container">
           <SeverityToggle 
             label="Police Reports" 
-            checked={dataSource.policeReports}
-            onChange={() => toggleDataSource('policeReports')}
+            checked={policeReports}
+            onChange={() => toggleDataSource('police')}
           />
         </div>
         <div id="safety-data-source-self-reports-container" className="flex items-center gap-1">
           <SeverityToggle 
             label="Self-Reports (BikeMaps.org" 
-            checked={dataSource.selfReports}
-            onChange={() => toggleDataSource('selfReports')}
+            checked={selfReports}
+            onChange={() => toggleDataSource('self')}
           />
           <img 
             id="safety-data-source-bikemaps-logo"

@@ -90,15 +90,23 @@ export default function NewSafetyMap({
   useEffect(() => {
     const currentFiltersKey = JSON.stringify(filters);
     if (rawDataFiltersKey && rawDataFiltersKey !== currentFiltersKey) {
+      console.log('[DEBUG] NewSafetyMap - Filter key changed, clearing cache');
+      console.log('[DEBUG] Old key:', rawDataFiltersKey);
+      console.log('[DEBUG] New key:', currentFiltersKey);
       clearRawIncidentsCache(mapViewRef.current || undefined);
     }
-  }, [filters, rawDataFiltersKey, clearRawIncidentsCache, cachedRawIncidentsLayer]);
+  }, [filters]); // Remove rawDataFiltersKey from dependencies to prevent loop
 
   // Update layers when active visualization changes
   useEffect(() => {
     if (!incidentsLayer || !viewReady || !mapViewRef.current) return;
 
     const updateVisualization = async () => {
+      console.log('[DEBUG] NewSafetyMap.updateVisualization - Starting update', {
+        activeVisualization,
+        filters: JSON.stringify(filters),
+        hasIncidentsLayer: !!incidentsLayer
+      });
       try {
         setDataLoading(true);
 
@@ -182,7 +190,7 @@ export default function NewSafetyMap({
     };
 
     updateVisualization();
-  }, [activeVisualization, filters, incidentsLayer, weightsLayer, cachedWeightedLayer, cachedExtentKey, cachedRawIncidentsLayer, cachedRawIncidentsData, rawDataFiltersKey, generateCacheKey, setCachedWeightedLayer, setCachedExtentKey, setCachedRawIncidentsLayer, setCachedRawIncidentsData, setRawDataFiltersKey]);
+  }, [activeVisualization, filters, incidentsLayer, weightsLayer, viewReady]); // Simplified dependencies
 
 
 

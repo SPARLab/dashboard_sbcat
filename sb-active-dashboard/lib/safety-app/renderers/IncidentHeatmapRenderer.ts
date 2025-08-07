@@ -140,7 +140,7 @@ export class IncidentHeatmapRenderer {
   /**
    * Create a data source specific heatmap renderer
    */
-  static createDataSourceHeatmap(dataSource: 'SWITRS' | 'BikeMaps'): HeatmapRenderer {
+  static createDataSourceHeatmap(dataSource: 'SWITRS' | 'BikeMaps.org'): HeatmapRenderer {
     let colorStops;
     
     if (dataSource === 'SWITRS') {
@@ -183,7 +183,7 @@ export class IncidentHeatmapRenderer {
     options?: {
       timeFilter?: 'peak' | 'off_peak' | 'night';
       roadUser?: 'bicyclist' | 'pedestrian';
-      dataSource?: 'SWITRS' | 'BikeMaps';
+      dataSource?: 'SWITRS' | 'BikeMaps.org';
     }
   ): HeatmapRenderer {
     switch (type) {

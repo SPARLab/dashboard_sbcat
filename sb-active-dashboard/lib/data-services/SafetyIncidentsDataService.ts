@@ -9,14 +9,14 @@ import Polygon from "@arcgis/core/geometry/Polygon";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 
 import {
-    EnrichedSafetyIncident,
-    IncidentHeatmapWeight,
-    IncidentParty,
-    SafetyAnalysisResult,
-    SafetyDataQueryResult,
-    SafetyFilters,
-    SafetyIncident,
-    SafetySummaryData
+  EnrichedSafetyIncident,
+  IncidentHeatmapWeight,
+  IncidentParty,
+  SafetyAnalysisResult,
+  SafetyDataQueryResult,
+  SafetyFilters,
+  SafetyIncident,
+  SafetySummaryData
 } from "../safety-app/types";
 
 export class SafetyIncidentsDataService {
@@ -85,20 +85,76 @@ export class SafetyIncidentsDataService {
 
       // Build where clause for incidents
       const whereClause = this.buildWhereClause(filters);
-      
-      // Query incidents
-      const incidentsQuery = incidentsLayer.createQuery();
-      incidentsQuery.where = whereClause;
-      incidentsQuery.outFields = ["*"];
-      incidentsQuery.returnGeometry = true;
-      
-      if (extent) {
-        incidentsQuery.geometry = extent;
-        incidentsQuery.spatialRelationship = "intersects";
-      }
+      console.log('[DEBUG] SafetyIncidentsDataService.querySafetyData - WHERE clause:', whereClause);
+      console.log('[DEBUG] SafetyIncidentsDataService.querySafetyData - filters:', filters);
 
-      const incidentsResult = await incidentsLayer.queryFeatures(incidentsQuery);
-      const incidents = incidentsResult.features.map(feature => this.mapIncidentFeature(feature));
+      // Query with pagination to get ALL incidents
+      const incidents: SafetyIncident[] = [];
+      let hasMore = true;
+      let offsetId = 0;
+      const pageSize = 2000; // Match typical ArcGIS limit
+      
+      while (hasMore) {
+        const paginatedQuery = incidentsLayer.createQuery();
+        paginatedQuery.where = offsetId > 0 
+          ? `(${whereClause}) AND objectid > ${offsetId}`
+          : whereClause;
+        paginatedQuery.outFields = ["*"];
+        paginatedQuery.returnGeometry = true;
+        paginatedQuery.orderByFields = ["objectid"];
+        paginatedQuery.num = pageSize;
+        
+        if (extent) {
+          paginatedQuery.geometry = extent;
+          paginatedQuery.spatialRelationship = "intersects";
+        }
+        
+        const pageResult = await incidentsLayer.queryFeatures(paginatedQuery);
+        const pageFeatures = pageResult.features;
+        
+        if (pageFeatures.length === 0) {
+          hasMore = false;
+        } else {
+          pageFeatures.forEach(feature => {
+            incidents.push(this.mapIncidentFeature(feature));
+            offsetId = Math.max(offsetId, feature.attributes.objectid || feature.attributes.OBJECTID || 0);
+          });
+          
+          // If we got less than pageSize, we've reached the end
+          if (pageFeatures.length < pageSize) {
+            hasMore = false;
+          }
+        }
+        
+        console.log(`[DEBUG] Loaded ${incidents.length} incidents so far...`);
+      }
+      
+      console.log(`[DEBUG] Total incidents loaded: ${incidents.length}`);
+      
+      // Also get the total count to verify pagination worked
+      const countQuery = incidentsLayer.createQuery();
+      countQuery.where = whereClause;
+      countQuery.returnCountOnly = true;
+      if (extent) {
+        countQuery.geometry = extent;
+        countQuery.spatialRelationship = "intersects";
+      }
+      const totalCount = await incidentsLayer.queryFeatureCount(countQuery);
+      console.log(`[DEBUG] Total incidents in database matching query: ${totalCount}`);
+      
+      if (totalCount > incidents.length) {
+        console.warn(`[WARNING] Pagination may have missed some records! Got ${incidents.length} but total is ${totalCount}`);
+      }
+      
+      // Debug: Check if there's any BikeMaps.org data at all
+      if (filters?.dataSource?.includes('BikeMaps.org') && incidents.length === 0) {
+        console.log('[DEBUG] No BikeMaps.org incidents found. Checking if ANY BikeMaps.org data exists...');
+        const testQuery = incidentsLayer.createQuery();
+        testQuery.where = "data_source = 'BikeMaps.org'";
+        testQuery.returnCountOnly = true;
+        const countResult = await incidentsLayer.queryFeatureCount(testQuery);
+        console.log('[DEBUG] Total BikeMaps.org records in database:', countResult);
+      }
       
       if (incidents.length === 0) {
         return {
@@ -198,6 +254,7 @@ export class SafetyIncidentsDataService {
       conditions.push(`timestamp >= ${startDate} AND timestamp <= ${endDate}`);
     }
 
+    // Only apply data source filter if it's specified and not empty
     if (filters?.dataSource && filters.dataSource.length > 0) {
       const sources = filters.dataSource.map(src => `'${src}'`).join(',');
       conditions.push(`data_source IN (${sources})`);
@@ -293,7 +350,7 @@ export class SafetyIncidentsDataService {
     console.log('Refreshing weights cache...');
     
     let weightResultLength = 10000;
-    let weightArr: IncidentHeatmapWeight[] = [];
+    const weightArr: IncidentHeatmapWeight[] = [];
     let offsetId = 0;
 
     while (weightResultLength === 10000) {
@@ -397,14 +454,14 @@ export class SafetyIncidentsDataService {
       inc.maxSeverity === 'injury' || inc.maxSeverity === 'severe_injury'
     ).length;
     
-    // Near misses are incidents without injury severity (from BikeMaps)
+    // Near misses are incidents without injury severity (from BikeMaps.org)
     const nearMissIncidents = incidents.filter(inc => 
-      inc.data_source === 'BikeMaps' && !inc.maxSeverity
+      inc.data_source === 'BikeMaps.org' && !inc.maxSeverity
     ).length;
 
     // Data source breakdown
     const switrsCount = incidents.filter(inc => inc.data_source === 'SWITRS').length;
-    const bikemapsCount = incidents.filter(inc => inc.data_source === 'BikeMaps').length;
+    const bikemapsCount = incidents.filter(inc => inc.data_source === 'BikeMaps.org').length;
 
     // Calculate date range for incidents per day
     const dates = incidents.map(inc => new Date(inc.timestamp));

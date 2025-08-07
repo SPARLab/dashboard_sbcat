@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { SafetyFilters } from "../../lib/safety-app/types";
 import SafetyMapArea from "./components/map/SafetyMapArea";
 import SafetyLeftSidebar from "./layout/SafetyLeftSidebar";
@@ -12,8 +12,17 @@ export default function SafetyApp() {
     showPedestrian: true,
     showBicyclist: true,
     roadUser: ['pedestrian', 'bicyclist'],
-    dataSource: ['SWITRS', 'BikeMaps']
+    dataSource: ['SWITRS', 'BikeMaps.org']
   });
+
+  const handleFiltersChange = useCallback((newFilters: Partial<SafetyFilters>) => {
+    console.log('[DEBUG] SafetyApp.handleFiltersChange - newFilters:', newFilters);
+    setFilters(prevFilters => {
+      const updated = { ...prevFilters, ...newFilters };
+      console.log('[DEBUG] SafetyApp.handleFiltersChange - updated filters:', updated);
+      return updated;
+    });
+  }, []);
 
   const handleMapViewReady = (view: __esri.MapView) => {
     setMapView(view);
@@ -33,7 +42,7 @@ export default function SafetyApp() {
       <div id="safety-main-content" className="flex flex-1 overflow-hidden">
         <SafetyLeftSidebar 
           filters={filters}
-          onFiltersChange={setFilters}
+          onFiltersChange={handleFiltersChange}
           geographicLevel={geographicLevel}
           onGeographicLevelChange={setGeographicLevel}
         />
@@ -59,4 +68,4 @@ export default function SafetyApp() {
       </div>
     </div>
   );
-} 
+}
