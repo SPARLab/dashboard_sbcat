@@ -250,7 +250,7 @@ export class SafetyChartDataService {
 
     if (timeScale === 'Day') {
       // Group by day of week
-      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const dayData = years.map(year => {
         const yearIncidents = yearData.find(yd => yd.year === year)?.incidents || [];
         const dayCounts = new Array(7).fill(0);
