@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { SafetyFilters, SafetyVisualizationType } from "../../../../lib/safety-app/types";
-import NewSafetyMap from "./NewSafetyMap";
+import ImprovedNewSafetyMap from "./ImprovedNewSafetyMap";
 
 interface SafetyMapAreaProps {
   filters?: Partial<SafetyFilters>;
   geographicLevel?: string;
   onMapViewReady?: (mapView: __esri.MapView) => void;
-  onSelectionChange?: (data: { geometry: __esri.Polygon | null; areaName?: string | null }) => void;
+  onSelectionChange?: (data: { geometry: __esri.Polygon | null; areaName?: string | null } | null) => void;
 }
 
 export default function SafetyMapArea({ 
@@ -54,7 +54,7 @@ export default function SafetyMapArea({
         </div>
         {/* Actual Map Component */}
         <div id="safety-map-container" className="w-full h-full">
-          <NewSafetyMap
+          <ImprovedNewSafetyMap
             activeVisualization={activeMapTab}
             filters={filters}
             geographicLevel={geographicLevel}
