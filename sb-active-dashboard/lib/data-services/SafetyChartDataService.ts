@@ -164,16 +164,72 @@ export class SafetyChartDataService {
   async getAnnualIncidentsComparisonData(
     mapView: MapView,
     filters?: Partial<SafetyFilters>,
+    timeScale: 'Day' | 'Month' | 'Year' = 'Year',
     years?: number[]
   ): Promise<AnnualIncidentsComparisonData> {
-    // If no years specified, get available years from data
+    // Get available years from data if not specified
     if (!years) {
       const result = await SafetyIncidentsDataService.getEnrichedSafetyData(mapView.extent, filters);
       const allYears = result.data.map(inc => new Date(inc.timestamp).getFullYear());
-      years = Array.from(new Set(allYears)).sort();
+      const uniqueYears = Array.from(new Set(allYears)).sort();
+      // Use all available years
+      years = uniqueYears;
     }
 
-    const yearlyData = await Promise.all(
+    if (timeScale === 'Year') {
+      // Year histogram showing total incidents per year
+      const yearlyData = await Promise.all(
+        years.map(async year => {
+          const yearFilters = {
+            ...filters,
+            dateRange: {
+              start: new Date(year, 0, 1),
+              end: new Date(year, 11, 31)
+            }
+          };
+          
+          const result = await SafetyIncidentsDataService.getEnrichedSafetyData(
+            mapView.extent,
+            yearFilters
+          );
+          
+          return {
+            year,
+            totalIncidents: result.summary.totalIncidents
+          };
+        })
+      );
+
+      const categories = years.map(y => y.toString());
+      const series = yearlyData.map((d, index) => {
+        const data = new Array(categories.length).fill(null);
+        data[index] = d.totalIncidents;
+        return {
+          name: d.year.toString(),
+          data: data
+        };
+      });
+
+      return {
+        categories: categories,
+        series: series
+      };
+    }
+
+    // For Day and Month scales, compare patterns between years
+    return await this.getTemporalComparisonData(mapView, filters, timeScale, years);
+  }
+
+  /**
+   * Get temporal comparison data for Day and Month time scales
+   */
+  private async getTemporalComparisonData(
+    mapView: MapView,
+    filters: Partial<SafetyFilters> = {},
+    timeScale: 'Day' | 'Month',
+    years: number[]
+  ): Promise<AnnualIncidentsComparisonData> {
+    const yearData = await Promise.all(
       years.map(async year => {
         const yearFilters = {
           ...filters,
@@ -188,27 +244,66 @@ export class SafetyChartDataService {
           yearFilters
         );
         
-        return {
-          year,
-          bikeIncidents: result.summary.bikeIncidents,
-          pedIncidents: result.summary.pedIncidents
-        };
+        return { year, incidents: result.data };
       })
     );
 
-    return {
-      categories: years.map(y => y.toString()),
-      series: [
-        {
-          name: 'Bicycle Incidents',
-          data: yearlyData.map(d => d.bikeIncidents)
-        },
-        {
-          name: 'Pedestrian Incidents',
-          data: yearlyData.map(d => d.pedIncidents)
-        }
-      ]
-    };
+    if (timeScale === 'Day') {
+      // Group by day of week
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayData = years.map(year => {
+        const yearIncidents = yearData.find(yd => yd.year === year)?.incidents || [];
+        const dayCounts = new Array(7).fill(0);
+        
+        yearIncidents.forEach(incident => {
+          const dayOfWeek = new Date(incident.timestamp).getDay();
+          dayCounts[dayOfWeek]++;
+        });
+        
+        return { year, data: dayCounts };
+      });
+
+      const categories = dayNames;
+      const seriesData = years.map(year => ({
+        name: `${year}`,
+        data: dayData.find(d => d.year === year)?.data || new Array(7).fill(0)
+      }));
+
+      return {
+        categories,
+        series: seriesData
+      };
+    }
+
+    if (timeScale === 'Month') {
+      // Group by month
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthData = years.map(year => {
+        const yearIncidents = yearData.find(yd => yd.year === year)?.incidents || [];
+        const monthCounts = new Array(12).fill(0);
+        
+        yearIncidents.forEach(incident => {
+          const month = new Date(incident.timestamp).getMonth();
+          monthCounts[month]++;
+        });
+        
+        return { year, data: monthCounts };
+      });
+
+      const categories = monthNames;
+      const seriesData = years.map(year => ({
+        name: `${year}`,
+        data: monthData.find(d => d.year === year)?.data || new Array(12).fill(0)
+      }));
+
+      return {
+        categories,
+        series: seriesData
+      };
+    }
+
+    // Fallback
+    return { categories: [], series: [] };
   }
 
   /**
