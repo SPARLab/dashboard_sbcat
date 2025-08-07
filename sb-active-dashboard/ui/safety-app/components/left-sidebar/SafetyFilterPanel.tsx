@@ -35,7 +35,10 @@ export default function SafetyFilterPanel({
   return (
     <>
       {/* Severity of Incident */}
-      <SeverityOfIncidentSection />
+      <SeverityOfIncidentSection 
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
       <hr className="border-gray-200" />
 
       {/* Data Source */}
@@ -73,16 +76,27 @@ export default function SafetyFilterPanel({
   );
 }
 
-function SeverityOfIncidentSection() {
-  const [severityFilters, setSeverityFilters] = useState({
-    fatality: true,
-    severeInjury: true,
-    injury: false,
-    nearMiss: false,
-  });
+function SeverityOfIncidentSection({
+  filters,
+  onFiltersChange
+}: {
+  filters: Partial<SafetyFilters>;
+  onFiltersChange: (filters: Partial<SafetyFilters>) => void;
+}) {
 
-  const toggleSeverity = (key: keyof typeof severityFilters) => {
-    setSeverityFilters(prev => ({ ...prev, [key]: !prev[key] }));
+  const currentSeverityTypes = filters.severityTypes || [];
+
+  const toggleSeverity = (severity: 'Fatality' | 'Severe Injury' | 'Injury' | 'No Injury' | 'Unknown') => {
+    let newSeverityTypes: ('Fatality' | 'Severe Injury' | 'Injury' | 'No Injury' | 'Unknown')[] = [...currentSeverityTypes];
+
+    if (newSeverityTypes.includes(severity)) {
+      newSeverityTypes = newSeverityTypes.filter(s => s !== severity);
+    } else {
+      newSeverityTypes.push(severity);
+    }
+
+    newSeverityTypes.sort();
+    onFiltersChange({ severityTypes: newSeverityTypes });
   };
 
   return (
@@ -92,29 +106,36 @@ function SeverityOfIncidentSection() {
         <div id="safety-severity-fatality-container">
           <SeverityToggle 
             label="Fatality" 
-            checked={severityFilters.fatality}
-            onChange={() => toggleSeverity('fatality')}
+            checked={currentSeverityTypes.includes('Fatality')}
+            onChange={() => toggleSeverity('Fatality')}
           />
         </div>
         <div id="safety-severity-severe-injury-container">
           <SeverityToggle 
             label="Severe Injury" 
-            checked={severityFilters.severeInjury}
-            onChange={() => toggleSeverity('severeInjury')}
+            checked={currentSeverityTypes.includes('Severe Injury')}
+            onChange={() => toggleSeverity('Severe Injury')}
           />
         </div>
         <div id="safety-severity-injury-container">
           <SeverityToggle 
             label="Injury" 
-            checked={severityFilters.injury}
-            onChange={() => toggleSeverity('injury')}
+            checked={currentSeverityTypes.includes('Injury')}
+            onChange={() => toggleSeverity('Injury')}
           />
         </div>
-        <div id="safety-severity-near-miss-container">
+        <div id="safety-severity-no-injury-container">
           <SeverityToggle 
-            label="Near-miss" 
-            checked={severityFilters.nearMiss}
-            onChange={() => toggleSeverity('nearMiss')}
+            label="No Injury" 
+            checked={currentSeverityTypes.includes('No Injury')}
+            onChange={() => toggleSeverity('No Injury')}
+          />
+        </div>
+        <div id="safety-severity-unknown-container">
+          <SeverityToggle 
+            label="Unknown" 
+            checked={currentSeverityTypes.includes('Unknown')}
+            onChange={() => toggleSeverity('Unknown')}
           />
         </div>
       </div>

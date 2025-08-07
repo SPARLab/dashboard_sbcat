@@ -12,7 +12,8 @@ export default function SafetyApp() {
     showPedestrian: true,
     showBicyclist: true,
     roadUser: ['pedestrian', 'bicyclist'],
-    dataSource: ['SWITRS', 'BikeMaps.org']
+    dataSource: ['SWITRS', 'BikeMaps.org'],
+    severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown']
   });
 
   const handleFiltersChange = useCallback((newFilters: Partial<SafetyFilters>) => {

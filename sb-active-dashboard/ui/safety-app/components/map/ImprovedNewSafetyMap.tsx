@@ -138,23 +138,42 @@ export default function ImprovedNewSafetyMap({
       // Apply filter to the main incidents layer (for heatmaps)
       safetyLayerService.applyAdditionalFilters({
         dataSources: filters.dataSource || [],
+        severityTypes: filters.severityTypes || [],
       });
 
       // Also apply the same filter to the client-side raw incidents layer
       if (rawIncidentsLayer) {
-        let whereClause = "1=1"; // Default to all
+        const whereClauses: string[] = [];
+        
+        // Data source filter
         const dataSources = filters.dataSource || [];
-        if (dataSources.length === 1) {
+        if (dataSources.length === 0) {
+          whereClauses.push("1=0"); // Hide all
+        } else if (dataSources.length === 1) {
           const source = dataSources[0];
           if (source === 'SWITRS') {
-            whereClause = "(data_source = 'SWITRS' OR data_source = 'Police')";
+            whereClauses.push("(data_source = 'SWITRS' OR data_source = 'Police')");
           } else {
-            whereClause = "(data_source = 'BikeMaps.org' OR data_source = 'BikeMaps')";
+            whereClauses.push("(data_source = 'BikeMaps.org' OR data_source = 'BikeMaps')");
           }
-        } else if (dataSources.length === 0) {
-          whereClause = "1=0"; // Hide all
+        }
+        // If both sources selected, no need to add data source filter
+        
+        // Severity filter
+        const severityTypes = filters.severityTypes || [];
+        if (severityTypes.length === 0) {
+          // If no severity types selected, show nothing
+          whereClauses.push('1=0');
+        } else if (severityTypes.length < 5) {
+          // Use severity values directly - no special handling needed
+          const severityConditions = severityTypes.map(type => `maxSeverity = '${type}'`);
+          
+          if (severityConditions.length > 0) {
+            whereClauses.push(`(${severityConditions.join(' OR ')})`);
+          }
         }
         
+        const whereClause = whereClauses.length > 0 ? whereClauses.join(' AND ') : "1=1";
         rawIncidentsLayer.definitionExpression = whereClause;
         console.log(`[DEBUG] Applied filter to raw incidents layer: ${whereClause}`);
       }

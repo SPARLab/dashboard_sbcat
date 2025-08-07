@@ -58,7 +58,7 @@ export interface SafetyFilters {
   };
   dataSource: ('SWITRS' | 'BikeMaps.org')[];
   conflictType: string[];
-  severityLevel: string[];
+  severityTypes: ('Fatality' | 'Severe Injury' | 'Injury' | 'No Injury' | 'Unknown')[];
   roadUser: ('pedestrian' | 'bicyclist')[];
   showPedestrian: boolean;
   showBicyclist: boolean;

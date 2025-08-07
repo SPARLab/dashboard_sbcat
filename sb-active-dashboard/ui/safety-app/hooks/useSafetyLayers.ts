@@ -2,6 +2,7 @@ import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import { useEffect, useState } from "react";
 import { GeographicBoundariesService } from "../../../lib/data-services/GeographicBoundariesService";
 import { SafetyIncidentsDataService } from "../../../lib/data-services/SafetyIncidentsDataService";
+import { createEnrichedSafetyIncidentsLayer } from "../../../lib/safety-app/improvedSafetyLayers";
 
 export function useSafetyLayers(
   viewReady: boolean,
@@ -23,10 +24,14 @@ export function useSafetyLayers(
         setDataLoading(true);
         setDataError(null);
 
-        // Initialize the feature layers
+        // Create the enriched incidents layer with maxSeverity field
+        console.log('[DEBUG] Creating enriched safety incidents layer...');
+        const enrichedIncidentsLayer = await createEnrichedSafetyIncidentsLayer();
+        
+        // Also initialize the standard layers for data access (parties and weights)
         const layers = SafetyIncidentsDataService.initializeLayers();
         
-        setIncidentsLayer(layers.incidentsLayer);
+        setIncidentsLayer(enrichedIncidentsLayer); // Use enriched layer instead!
         setPartiesLayer(layers.partiesLayer);
         setWeightsLayer(layers.weightsLayer);
 
@@ -34,13 +39,10 @@ export function useSafetyLayers(
         const boundaryLayers = boundaryService.getBoundaryLayers();
         boundaryLayers.forEach(layer => mapView.map.add(layer));
 
-        // Add layers to map
-        mapView.map.addMany([
-          layers.incidentsLayer,
-          // Note: parties and weights layers are not added to map as they're for data only
-        ]);
+        // Add enriched layer to map
+        mapView.map.add(enrichedIncidentsLayer);
 
-        console.log('[DEBUG] Safety layers initialized successfully');
+        console.log('[DEBUG] Enriched safety layers initialized successfully with maxSeverity field');
         setDataLoading(false);
 
       } catch (error) {
