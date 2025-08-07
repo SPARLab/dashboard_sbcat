@@ -21,16 +21,21 @@ export default function SafetyFilterPanel({
   geographicLevel,
   onGeographicLevelChange
 }: SafetyFilterPanelProps) {
-  // Date range state for safety data filtering
-  const [dateRange, setDateRange] = useState<DateRangeValue>(() => {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setFullYear(endDate.getFullYear() - 3); // Default to 3 years of data
-    return { startDate, endDate };
-  });
+  // Convert SafetyFilters dateRange format to DateRangeValue format for the component
+  const dateRangeFromFilters: DateRangeValue = {
+    startDate: filters.dateRange?.start || new Date(new Date().getFullYear() - 3, 0, 1),
+    endDate: filters.dateRange?.end || new Date()
+  };
 
   const handleDateRangeChange = (newDateRange: DateRangeValue) => {
-    setDateRange(newDateRange);
+    // Convert back to SafetyFilters format and update filters
+    onFiltersChange({
+      ...filters,
+      dateRange: {
+        start: newDateRange.startDate,
+        end: newDateRange.endDate
+      }
+    });
   };
   return (
     <>
@@ -57,7 +62,7 @@ export default function SafetyFilterPanel({
 
       {/* Date Range - Reused from New Volume */}
       <DateRangeSection 
-        dateRange={dateRange}
+        dateRange={dateRangeFromFilters}
         onDateRangeChange={handleDateRangeChange}
       />
       <hr className="border-gray-200" />

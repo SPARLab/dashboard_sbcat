@@ -249,9 +249,10 @@ export class SafetyIncidentsDataService {
     const conditions: string[] = ["1=1"]; // Base condition
 
     if (filters?.dateRange) {
-      const startDate = filters.dateRange.start.getTime();
-      const endDate = filters.dateRange.end.getTime();
-      conditions.push(`timestamp >= ${startDate} AND timestamp <= ${endDate}`);
+      // Format dates for ArcGIS TIMESTAMP queries (YYYY-MM-DD HH:MI:SS)
+      const startStr = filters.dateRange.start.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
+      const endStr = filters.dateRange.end.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
+      conditions.push(`timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}'`);
     }
 
     // Apply data source filter - if empty array, show nothing

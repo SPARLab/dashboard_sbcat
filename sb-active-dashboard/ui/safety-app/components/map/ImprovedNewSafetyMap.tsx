@@ -140,6 +140,7 @@ export default function ImprovedNewSafetyMap({
         dataSources: filters.dataSource || [],
         severityTypes: filters.severityTypes || [],
         conflictTypes: filters.conflictType || [],
+        dateRange: filters.dateRange,
       });
 
       // Also apply the same filter to the client-side raw incidents layer
@@ -186,6 +187,15 @@ export default function ImprovedNewSafetyMap({
           if (conflictConditions.length > 0) {
             whereClauses.push(`(${conflictConditions.join(' OR ')})`);
           }
+        }
+        
+        // Date range filter
+        if (filters.dateRange) {
+          const { start, end } = filters.dateRange;
+          // Format dates for ArcGIS TIMESTAMP queries (YYYY-MM-DD HH:MI:SS)
+          const startStr = start.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
+          const endStr = end.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
+          whereClauses.push(`(timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}')`);
         }
         
         const whereClause = whereClauses.length > 0 ? whereClauses.join(' AND ') : "1=1";

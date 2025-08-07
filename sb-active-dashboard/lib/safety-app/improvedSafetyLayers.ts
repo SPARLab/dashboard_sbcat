@@ -414,9 +414,12 @@ export class SafetyLayerService {
 
     // Date range filter
     if (filters.dateRange) {
-      const startDate = filters.dateRange.start.toISOString().split('T')[0];
-      const endDate = filters.dateRange.end.toISOString().split('T')[0];
-      whereClauses.push(`incident_date >= '${startDate}' AND incident_date <= '${endDate}'`);
+      const { start, end } = filters.dateRange;
+      // Format dates for ArcGIS TIMESTAMP queries (YYYY-MM-DD HH:MI:SS)
+      const startStr = start.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
+      const endStr = end.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
+      whereClauses.push(`timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}'`);
+      console.log(`[DEBUG] Generated date range clause: timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}'`);
     }
 
     // Combine all where clauses
