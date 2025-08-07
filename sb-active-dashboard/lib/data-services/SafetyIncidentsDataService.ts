@@ -254,10 +254,15 @@ export class SafetyIncidentsDataService {
       conditions.push(`timestamp >= ${startDate} AND timestamp <= ${endDate}`);
     }
 
-    // Only apply data source filter if it's specified and not empty
-    if (filters?.dataSource && filters.dataSource.length > 0) {
-      const sources = filters.dataSource.map(src => `'${src}'`).join(',');
-      conditions.push(`data_source IN (${sources})`);
+    // Apply data source filter - if empty array, show nothing
+    if (filters?.dataSource !== undefined) {
+      if (filters.dataSource.length === 0) {
+        // When no data sources are selected, return no results
+        conditions.push('1=0'); // This will always be false, returning no results
+      } else {
+        const sources = filters.dataSource.map(src => `'${src}'`).join(',');
+        conditions.push(`data_source IN (${sources})`);
+      }
     }
 
     if (filters?.conflictType && filters.conflictType.length > 0) {
