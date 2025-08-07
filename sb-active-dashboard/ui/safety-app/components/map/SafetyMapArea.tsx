@@ -64,7 +64,7 @@ export default function SafetyMapArea({
         </div>
 
         {/* Legend - positioned in bottom right with proper z-index */}
-        <div id="safety-map-legend" className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-32 z-10">
+        <div id="safety-map-legend" className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-36 z-10">
           <h4 id="safety-legend-title" className="text-xs font-normal text-gray-900 mb-3">Legend</h4>
           <div id="safety-legend-items" className="space-y-2">
             <div id="safety-legend-fatality" className="flex items-center gap-2">
@@ -76,12 +76,16 @@ export default function SafetyMapArea({
               <span id="safety-legend-severe-injury-label" className="text-xs text-gray-700">Severe Injury</span>
             </div>
             <div id="safety-legend-injury" className="flex items-center gap-2">
-              <div id="safety-legend-injury-dot" className="w-3 h-3 bg-orange-500 rounded-full"></div>
+              <div id="safety-legend-injury-dot" className="w-3 h-3 bg-red-300 rounded-full"></div>
               <span id="safety-legend-injury-label" className="text-xs text-gray-700">Injury</span>
             </div>
-            <div id="safety-legend-near-miss" className="flex items-center gap-2">
-              <div id="safety-legend-near-miss-dot" className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span id="safety-legend-near-miss-label" className="text-xs text-gray-700">Near-miss</span>
+            <div id="safety-legend-no-injury" className="flex items-center gap-2">
+              <div id="safety-legend-no-injury-dot" className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <span id="safety-legend-no-injury-label" className="text-xs text-gray-700">No Injury</span>
+            </div>
+            <div id="safety-legend-unknown" className="flex items-center gap-2">
+              <div id="safety-legend-unknown-dot" className="w-3 h-3 bg-gray-500 rounded-full"></div>
+              <span id="safety-legend-unknown-label" className="text-xs text-gray-700">Unknown</span>
             </div>
           </div>
         </div>

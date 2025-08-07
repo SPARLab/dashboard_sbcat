@@ -6,6 +6,8 @@ import FeatureFilter from "@arcgis/core/layers/support/FeatureFilter";
 import HeatmapRenderer from "@arcgis/core/renderers/HeatmapRenderer";
 import Graphic from "@arcgis/core/Graphic";
 import Field from "@arcgis/core/layers/support/Field";
+import { RawIncidentRenderer } from "./renderers/RawIncidentRenderer";
+import { SafetyFilters } from "./types";
 
 // Colors for heatmap visualization
 const colors = [
@@ -200,33 +202,8 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     fields: layerFields,
     objectIdField: "OBJECTID",
     title: "Safety Incidents (Enriched)",
-    renderer: new HeatmapRenderer({
-      colorStops: [
-        { color: colors[0], ratio: 0 },
-        { color: colors[1], ratio: 0.083 },
-        { color: colors[2], ratio: 0.166 },
-        { color: colors[3], ratio: 0.249 },
-        { color: colors[4], ratio: 0.332 },
-        { color: colors[5], ratio: 0.415 },
-        { color: colors[6], ratio: 0.498 },
-        { color: colors[7], ratio: 0.581 },
-        { color: colors[8], ratio: 0.664 },
-        { color: colors[9], ratio: 0.747 },
-        { color: colors[10], ratio: 0.83 },
-        { color: colors[11], ratio: 0.913 },
-        { color: colors[12], ratio: 1 },
-      ],
-      radius: 15,
-      maxDensity: 0.015,
-      minDensity: 0.005,
-      referenceScale: 35000,
-      legendOptions: {
-        title: "Safety Incidents",
-        minLabel: "Low Risk",
-        maxLabel: "High Risk",
-      },
-    }),
-    opacity: 0.6,
+    renderer: RawIncidentRenderer.createSeverityRenderer(),
+    opacity: 0.8,
   });
 
     console.log("[DEBUG] Enriched safety incidents layer created successfully with maxSeverity field");

@@ -26,14 +26,14 @@ export class RawIncidentRenderer {
       }),
       uniqueValueInfos: [
         {
-          value: "Fatal",
+          value: "Fatality",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
             color: [0, 0, 0, 0.9], // Black for fatalities
             size: 12,
             outline: { color: [255, 255, 255, 1], width: 2 }
           }),
-          label: "Fatal"
+          label: "Fatality"
         },
         {
           value: "Severe Injury",
@@ -49,21 +49,31 @@ export class RawIncidentRenderer {
           value: "Injury",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [255, 140, 0, 0.8], // Orange for injury
+            color: [255, 102, 102, 0.8], // Light red for injury
             size: 8,
             outline: { color: [255, 255, 255, 0.8], width: 1 }
           }),
           label: "Injury"
         },
         {
-          value: "Near-miss",
+          value: "No Injury",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [255, 255, 0, 0.8], // Yellow for near-miss
+            color: [255, 255, 0, 0.8], // Yellow for no injury
             size: 6,
             outline: { color: [255, 255, 255, 0.8], width: 1 }
           }),
-          label: "Near-miss"
+          label: "No Injury"
+        },
+        {
+          value: "Unknown",
+          symbol: new SimpleMarkerSymbol({
+            style: "circle",
+            color: [128, 128, 128, 0.8], // Gray for unknown
+            size: 6,
+            outline: { color: [255, 255, 255, 0.8], width: 1 }
+          }),
+          label: "Unknown"
         }
       ]
     });
