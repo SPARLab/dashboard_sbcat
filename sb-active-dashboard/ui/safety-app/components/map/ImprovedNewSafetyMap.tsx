@@ -125,6 +125,8 @@ export default function ImprovedNewSafetyMap({
 
 
 
+  const [rawIncidentsLayer, setRawIncidentsLayer] = useState<__esri.FeatureLayer | null>(null);
+
   // This single effect handles ALL filter changes by applying a client-side FeatureFilter.
   // It is completely decoupled from the visualization logic and does NOT trigger data reloads.
   useEffect(() => {
@@ -132,24 +134,38 @@ export default function ImprovedNewSafetyMap({
 
     const applyFilters = () => {
       console.log('[DEBUG] Applying FeatureFilter for filter changes:', filters);
+      
+      // Apply filter to the main incidents layer (for heatmaps)
       safetyLayerService.applyAdditionalFilters({
         dataSources: filters.dataSource || [],
-        // Future filters can be added here, e.g.:
-        // severityTypes: filters.severityTypes, 
-        // conflictTypes: filters.conflictTypes,
       });
+
+      // Also apply the same filter to the client-side raw incidents layer
+      if (rawIncidentsLayer) {
+        let whereClause = "1=1"; // Default to all
+        const dataSources = filters.dataSource || [];
+        if (dataSources.length === 1) {
+          const source = dataSources[0];
+          if (source === 'SWITRS') {
+            whereClause = "(data_source = 'SWITRS' OR data_source = 'Police')";
+          } else {
+            whereClause = "(data_source = 'BikeMaps.org' OR data_source = 'BikeMaps')";
+          }
+        } else if (dataSources.length === 0) {
+          whereClause = "1=0"; // Hide all
+        }
+        
+        rawIncidentsLayer.definitionExpression = whereClause;
+        console.log(`[DEBUG] Applied filter to raw incidents layer: ${whereClause}`);
+      }
     };
 
     applyFilters();
-  }, [filters, safetyLayerService]);
+  }, [filters, safetyLayerService, rawIncidentsLayer]);
 
   // Handle visualization type changes using original logic
   useEffect(() => {
     if (!incidentsLayer || !viewReady || !mapViewRef.current) return;
-
-    // This effect should only run when the activeVisualization or its dependencies change
-    // NOT when filters change, to prevent data reloading on simple filter toggles.
-    const filtersKey = JSON.stringify(filters);
 
     const updateVisualization = async () => {
       console.log(`[DEBUG] Updating visualization to: ${activeVisualization}`);
@@ -158,14 +174,18 @@ export default function ImprovedNewSafetyMap({
 
         // Hide all layers before showing the active one
         if (incidentsLayer) incidentsLayer.visible = false;
-        if (cachedRawIncidentsLayer) cachedRawIncidentsLayer.visible = false;
+        if (rawIncidentsLayer) rawIncidentsLayer.visible = false;
         if (cachedWeightedLayer) cachedWeightedLayer.visible = false;
 
         switch (activeVisualization) {
           case 'raw-incidents':
-            await RawIncidentsVisualization.apply(
-              mapViewRef.current!, incidentsLayer, filters
+            const clientSideLayer = await RawIncidentsVisualization.getLayer(
+              mapViewRef.current!, filters, setDataLoading
             );
+            if (clientSideLayer) {
+              setRawIncidentsLayer(clientSideLayer);
+              clientSideLayer.visible = true;
+            }
             break;
 
           case 'incident-heatmap':
