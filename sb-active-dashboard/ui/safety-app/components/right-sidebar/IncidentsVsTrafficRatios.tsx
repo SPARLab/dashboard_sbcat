@@ -277,13 +277,17 @@ export default function IncidentsVsTrafficRatios({
       
       {!isCollapsed && (
         <>
-          <hr className="border-gray-200 mb-2" />
-          <p id="safety-incidents-vs-traffic-description" className="w-full text-sm text-gray-600 mb-6">
-            Relationship between traffic volume levels and incident counts by location
-            <span id="safety-incidents-vs-traffic-info-icon-container" className="ml-1 inline-flex align-middle">
-              <MoreInformationIcon />
-            </span>
-          </p>
+          {selectedGeometry && (
+            <>
+              <hr className="border-gray-200 mb-2" />
+              <p id="safety-incidents-vs-traffic-description" className="w-full text-sm text-gray-600 mb-6">
+                Relationship between traffic volume levels and incident counts by location
+                <span id="safety-incidents-vs-traffic-info-icon-container" className="ml-1 inline-flex align-middle">
+                  <MoreInformationIcon />
+                </span>
+              </p>
+            </>
+          )}
 
           <div id="safety-incidents-vs-traffic-chart-container" className="relative">
             {hoveredPoint ? (
@@ -295,18 +299,18 @@ export default function IncidentsVsTrafficRatios({
                 <div>{hoveredPoint.location}</div>
                 <div>{hoveredPoint.incidentCount} incidents</div>
               </div>
-            ) : (
+            ) : hasData ? (
               <div
                 id="safety-incidents-vs-traffic-hover-hint"
                 className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 text-sm italic text-gray-400 whitespace-nowrap"
               >
                 Hover over point to see details
               </div>
-            )}
+            ) : null}
 
             {/* No selection state */}
             {!selectedGeometry && (
-              <div id="safety-incidents-vs-traffic-no-selection" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[320px]">
+              <div id="safety-incidents-vs-traffic-no-selection" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[120px]">
                 <div id="safety-incidents-vs-traffic-instruction-icon" className="mb-2 text-gray-400">
                   <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
