@@ -45,7 +45,11 @@ export default function SafetyRightSidebar({
             filters={filters}
             mapView={mapView}
           />
-          <ConflictTypeBreakdown />
+          <ConflictTypeBreakdown 
+            selectedGeometry={selectedGeometry}
+            filters={filters}
+            mapView={mapView}
+          />
         </div>
       </div>
     </div>

@@ -9,11 +9,15 @@ export interface SafetyIncident {
   source_id: string;
   timestamp: Date;
   conflict_type: string;
+  severity: string;
   pedestrian_involved: number; // 0 or 1
   bicyclist_involved: number; // 0 or 1  
   vehicle_involved: number; // 0 or 1
+  loc_desc: string;
   data_source: string; // 'SWITRS' | 'BikeMaps.org'
   strava_id?: number;
+  bike_traffic?: string; // 'low' | 'medium' | 'high'
+  ped_traffic?: string; // 'low' | 'medium' | 'high'
   geometry: __esri.Point;
 }
 
@@ -41,13 +45,13 @@ export interface IncidentHeatmapWeight {
 // Joined data structure for analysis
 export interface EnrichedSafetyIncident extends SafetyIncident {
   parties: IncidentParty[];
-  weights: IncidentHeatmapWeight[];
   
   // Computed fields
-  maxSeverity: string; // Most severe injury from all parties
+  maxSeverity: string; // Most severe injury from all parties or from incident severity
   totalParties: number;
-  hasWeight: boolean;
-  weightedExposure?: number;
+  hasTrafficData: boolean;
+  bikeTrafficLevel?: string; // 'low' | 'medium' | 'high'
+  pedTrafficLevel?: string; // 'low' | 'medium' | 'high'
 }
 
 // Filter interfaces
@@ -156,7 +160,6 @@ export interface SafetyMapState {
 export interface SafetyDataQueryResult {
   incidents: SafetyIncident[];
   parties: IncidentParty[];
-  weights: IncidentHeatmapWeight[];
   isLoading: boolean;
   error: string | null;
 }

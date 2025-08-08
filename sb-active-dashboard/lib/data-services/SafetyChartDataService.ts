@@ -21,13 +21,13 @@ import { SafetyIncidentsDataService } from "./SafetyIncidentsDataService";
 export class SafetyChartDataService {
   private incidentsLayer: FeatureLayer;
   private partiesLayer: FeatureLayer;
-  private weightsLayer: FeatureLayer;
+  private weightsLayer: FeatureLayer | null;
 
   constructor() {
     const layers = SafetyIncidentsDataService.initializeLayers();
     this.incidentsLayer = layers.incidentsLayer;
     this.partiesLayer = layers.partiesLayer;
-    this.weightsLayer = layers.weightsLayer;
+    this.weightsLayer = null; // No longer needed
   }
 
   /**
@@ -132,11 +132,13 @@ export class SafetyChartDataService {
    */
   async getConflictTypeBreakdownData(
     mapView: MapView,
-    filters?: Partial<SafetyFilters>
+    filters?: Partial<SafetyFilters>,
+    geometry?: __esri.Polygon
   ): Promise<ConflictTypeBreakdownData> {
     const result = await SafetyIncidentsDataService.getEnrichedSafetyData(
       mapView.extent,
-      filters
+      filters,
+      geometry
     );
 
     const incidents = result.data;
@@ -342,15 +344,15 @@ export class SafetyChartDataService {
       filters
     );
 
-    // Filter incidents that have exposure weights
-    const weightedIncidents = result.data.filter(inc => inc.hasWeight && inc.weightedExposure);
+    // Filter incidents that have traffic data
+    const incidentsWithTrafficData = result.data.filter(inc => inc.hasTrafficData);
 
-    if (weightedIncidents.length === 0) {
+    if (incidentsWithTrafficData.length === 0) {
       return { areas: [] };
     }
 
     // Group incidents by geographic areas (simplified clustering)
-    const areaData = await this.calculateRiskByArea(weightedIncidents);
+    const areaData = await this.calculateRiskByArea(incidentsWithTrafficData);
 
     return { areas: areaData };
   }
@@ -394,7 +396,7 @@ export class SafetyChartDataService {
         const pedIncidents = cluster.incidents.filter(inc => inc.pedestrian_involved === 1).length;
         const fatalityCount = cluster.incidents.filter(inc => inc.maxSeverity === 'fatal').length;
         
-        // Calculate severity score (weighted by exposure if available)
+        // Calculate severity score (using traffic data if available)
         const severityScore = cluster.incidents.reduce((sum, inc) => {
           let weight = 1;
           if (inc.maxSeverity === 'fatal') weight = 10;
@@ -402,7 +404,9 @@ export class SafetyChartDataService {
           else if (inc.maxSeverity === 'injury') weight = 3;
           else if (inc.maxSeverity === 'property_damage_only') weight = 1;
           
-          return sum + (weight * (inc.weightedExposure || 1));
+          // Use traffic level as a multiplier if available
+          const trafficMultiplier = inc.hasTrafficData ? 1.5 : 1;
+          return sum + (weight * trafficMultiplier);
         }, 0);
 
         const conflictTypes = Array.from(new Set(
@@ -456,7 +460,16 @@ export class SafetyChartDataService {
       
       const area = areaMap.get(areaKey)!;
       area.incidents += 1;
-      area.totalExposure += incident.weightedExposure || 0;
+      // Use traffic level as exposure (High=3, Medium=2, Low=1) - case insensitive
+      const getTrafficExposure = (level: string | undefined) => {
+        if (!level) return 1;
+        const normalizedLevel = level.toLowerCase();
+        if (normalizedLevel === 'high') return 3;
+        if (normalizedLevel === 'medium') return 2;
+        return 1; // low or unknown
+      };
+      const trafficExposure = getTrafficExposure(incident.bikeTrafficLevel);
+      area.totalExposure += trafficExposure;
       area.geometries.push(incident.geometry);
     });
 

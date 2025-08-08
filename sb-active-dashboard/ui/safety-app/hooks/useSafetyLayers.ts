@@ -13,7 +13,6 @@ export function useSafetyLayers(
 ) {
   const [incidentsLayer, setIncidentsLayer] = useState<FeatureLayer | null>(null);
   const [partiesLayer, setPartiesLayer] = useState<FeatureLayer | null>(null);
-  const [weightsLayer, setWeightsLayer] = useState<FeatureLayer | null>(null);
 
   // Initialize safety data layers when map view is ready
   useEffect(() => {
@@ -28,19 +27,24 @@ export function useSafetyLayers(
     
         const enrichedIncidentsLayer = await createEnrichedSafetyIncidentsLayer();
         
-        // Also initialize the standard layers for data access (parties and weights)
+        // Also initialize the standard layers for data access (parties)
         const layers = SafetyIncidentsDataService.initializeLayers();
         
         setIncidentsLayer(enrichedIncidentsLayer); // Use enriched layer instead!
         setPartiesLayer(layers.partiesLayer);
-        setWeightsLayer(layers.weightsLayer);
+        
+        // Log layer initialization status
+        console.log('Safety layers initialized:', {
+          incidents: !!enrichedIncidentsLayer,
+          parties: !!layers.partiesLayer
+        });
 
         // Add boundary layers to map
         const boundaryLayers = boundaryService.getBoundaryLayers();
-        boundaryLayers.forEach(layer => mapView.map.add(layer));
+        boundaryLayers.forEach(layer => mapView.map?.add(layer));
 
         // Add enriched layer to map
-        mapView.map.add(enrichedIncidentsLayer);
+        mapView.map?.add(enrichedIncidentsLayer);
 
   
         setDataLoading(false);
@@ -57,7 +61,6 @@ export function useSafetyLayers(
 
   return {
     incidentsLayer,
-    partiesLayer,
-    weightsLayer
+    partiesLayer
   };
 }

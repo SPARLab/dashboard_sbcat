@@ -13,7 +13,7 @@ export class IncidentProcessingService {
    */
   static async getSafetySummaryStatistics(
     incidentsLayer: __esri.FeatureLayer,
-    weightsLayer: __esri.FeatureLayer,
+    weightsLayer: __esri.FeatureLayer | null,
     mapView: __esri.MapView,
     filters: any
   ): Promise<{
@@ -99,8 +99,17 @@ export class IncidentProcessingService {
    */
   static async joinIncidentsWithWeights(
     incidents: any[],
-    weightsLayer: __esri.FeatureLayer
+    weightsLayer: __esri.FeatureLayer | null
   ): Promise<any[]> {
+    // If weights layer is not available, return incidents without weights
+    if (!weightsLayer) {
+      return incidents.map(incident => ({
+        ...incident,
+        weights: [],
+        weightedExposure: 0
+      }));
+    }
+    
     // Get all weight records (paginated)
     const weights = await this.fetchAllWeights(weightsLayer);
     
@@ -118,7 +127,10 @@ export class IncidentProcessingService {
   /**
    * Fetch all weights with pagination (based on your existing pattern)
    */
-  private static async fetchAllWeights(weightsLayer: __esri.FeatureLayer): Promise<any[]> {
+  private static async fetchAllWeights(weightsLayer: __esri.FeatureLayer | null): Promise<any[]> {
+    if (!weightsLayer) {
+      return [];
+    }
     let weightResultLength = 10000;
     let weightArr: Record<string, any>[] = [];
     let weightObjectIds: string[] = [];

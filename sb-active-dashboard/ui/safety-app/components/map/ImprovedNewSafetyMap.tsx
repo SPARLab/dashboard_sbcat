@@ -64,7 +64,7 @@ export default function ImprovedNewSafetyMap({
   } = useLayerCache();
 
   // Use safety layers hook for the original layer infrastructure
-  const { incidentsLayer, weightsLayer } = useSafetyLayers(
+  const { incidentsLayer } = useSafetyLayers(
     viewReady,
     mapViewRef.current,
     boundaryService.current,
@@ -296,19 +296,11 @@ export default function ImprovedNewSafetyMap({
             break;
 
           case 'incident-to-volume-ratio':
-            if (weightsLayer) {
-              await WeightedVisualization.createVisualization(
-                mapViewRef.current!, filters, incidentsLayer, weightsLayer,
-                cachedWeightedLayer, cachedExtentKey, generateCacheKey,
-                setCachedWeightedLayer, setCachedExtentKey
-              );
-            } else {
-              console.warn('Weights layer not available for incident-to-volume ratio visualization');
-              if (incidentsLayer) {
-                incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
-                incidentsLayer.visible = true;
-              }
-            }
+            await WeightedVisualization.createVisualization(
+              mapViewRef.current!, filters, incidentsLayer,
+              cachedWeightedLayer, cachedExtentKey, generateCacheKey,
+              setCachedWeightedLayer, setCachedExtentKey
+            );
             break;
 
           default:
@@ -325,7 +317,7 @@ export default function ImprovedNewSafetyMap({
 
     updateVisualization();
     // Re-run this effect when the visualization type changes. Filter changes are handled separately.
-  }, [activeVisualization, incidentsLayer, weightsLayer, viewReady]);
+  }, [activeVisualization, incidentsLayer, viewReady]);
 
   // Handle geographic level changes and custom draw tool (combined like volume page)
   useEffect(() => {
