@@ -17,10 +17,10 @@ export class RawIncidentRenderer {
       field: "maxSeverity", // This field is computed from joined parties data
       defaultSymbol: new SimpleMarkerSymbol({
         style: "circle",
-        color: [128, 128, 128, 0.8], // Gray for unknown severity
+        color: [128, 128, 128, 1], // Gray for unknown severity
         size: 6,
         outline: {
-          color: [255, 255, 255, 0.8],
+          color: [255, 255, 255, 1],
           width: 1
         }
       }),
@@ -29,7 +29,7 @@ export class RawIncidentRenderer {
           value: "Fatality",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [0, 0, 0, 0.9], // Black for fatalities
+            color: [0, 0, 0, 1], // Black for fatalities
             size: 12,
             outline: { color: [255, 255, 255, 1], width: 2 }
           }),
@@ -39,9 +39,9 @@ export class RawIncidentRenderer {
           value: "Severe Injury",
           symbol: new SimpleMarkerSymbol({
             style: "circle", 
-            color: [255, 0, 0, 0.8], // Red for severe injury
+            color: [255, 0, 0, 1], // Red for severe injury
             size: 10,
-            outline: { color: [255, 255, 255, 0.8], width: 1.5 }
+            outline: { color: [255, 255, 255, 1], width: 1.5 }
           }),
           label: "Severe Injury"
         },
@@ -49,9 +49,9 @@ export class RawIncidentRenderer {
           value: "Injury",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [255, 165, 0, 0.95], // Orange for injury with higher opacity
+            color: [255, 165, 0, 1], // Orange for injury
             size: 8,
-            outline: { color: [255, 255, 255, 0.9], width: 1 }
+            outline: { color: [255, 255, 255, 1], width: 1 }
           }),
           label: "Injury"
         },
@@ -59,9 +59,9 @@ export class RawIncidentRenderer {
           value: "No Injury",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [34, 197, 94, 0.95], // Green for no injury
+            color: [34, 197, 94, 1], // Green for no injury
             size: 8,
-            outline: { color: [255, 255, 255, 0.9], width: 1 }
+            outline: { color: [255, 255, 255, 1], width: 1 }
           }),
           label: "No Injury"
         },
@@ -69,9 +69,9 @@ export class RawIncidentRenderer {
           value: "Unknown",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [128, 128, 128, 0.8], // Gray for unknown
+            color: [128, 128, 128, 1], // Gray for unknown
             size: 8,
-            outline: { color: [255, 255, 255, 0.8], width: 1 }
+            outline: { color: [255, 255, 255, 1], width: 1 }
           }),
           label: "Unknown"
         }
@@ -91,10 +91,10 @@ export class RawIncidentRenderer {
         return new SimpleRenderer({
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [128, 128, 128, 0.8],
+            color: [128, 128, 128, 1],
             size: 6,
             outline: {
-              color: [255, 255, 255, 0.8],
+              color: [255, 255, 255, 1],
               width: 1
             }
           })
