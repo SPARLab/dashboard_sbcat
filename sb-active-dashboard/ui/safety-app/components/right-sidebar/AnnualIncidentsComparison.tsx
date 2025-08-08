@@ -359,22 +359,26 @@ export default function AnnualIncidentsComparison({
             </div>
           )}
 
-          {/* Loading state */}
-          {isLoading && selectedGeometry && (
-            <div id="safety-annual-incidents-loading" className="bg-blue-50 flex justify-center items-center px-1 py-2 rounded-md text-xs min-h-[120px]">
-              <span id="safety-annual-incidents-loading-text" className="text-blue-700">Loading annual trends data...</span>
-            </div>
-          )}
-          
-          {/* Error state */}
-          {error && selectedGeometry && (
-            <div id="safety-annual-incidents-error" className="bg-red-50 flex justify-center items-center px-1 py-2 rounded-md text-xs min-h-[120px]">
-              <span id="safety-annual-incidents-error-text" className="text-red-700">Error loading data: {error}</span>
-            </div>
-          )}
-          
-          {/* Data display */}
-          {!isLoading && !error && selectedGeometry && chartData && (
+          {/* Data display with loading overlay */}
+          {selectedGeometry && (
+            <div id="safety-annual-incidents-data-container" className="relative">
+              {/* Loading overlay */}
+              {isLoading && (
+                <div 
+                  id="safety-annual-incidents-loading-overlay" 
+                  className="absolute inset-0 bg-white bg-opacity-75 backdrop-blur-sm flex justify-center items-center z-20 rounded-md"
+                >
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-3"></div>
+                    <span className="text-sm text-gray-700 font-medium">Loading annual trends...</span>
+                    <span className="text-xs text-gray-500 mt-1">Querying {selectedGeometry ? 'selected area' : 'default data'}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Data content */}
+              <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'}`}>
+                {chartData && !error ? (
             <>
               <div id="safety-annual-incidents-buttons-container" className="flex space-x-1 mt-2">
                 {timeScales.map(scale => (
@@ -433,23 +437,55 @@ export default function AnnualIncidentsComparison({
                   />
                 </div>
               </div>
-            </>
-          )}
+                  </>
+                ) : error ? (
+                  <div id="safety-annual-incidents-error" className="bg-red-50 border border-red-200 rounded-md p-3 min-h-[120px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-sm text-red-800">
+                        <strong>Data Error:</strong> {error}
+                      </div>
+                      <div className="text-xs text-red-600 mt-1">
+                        Unable to load annual trends data.
+                      </div>
+                    </div>
+                  </div>
+                ) : chartData && categories.length === 0 ? (
+                  <div id="safety-annual-incidents-no-data" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[120px]">
+                    <div id="safety-annual-incidents-no-data-icon" className="mb-2 text-gray-400">
+                      <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L4.18 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                    <p id="safety-annual-incidents-no-data-text" className="text-sm text-gray-600 mb-1">
+                      No historical data available
+                    </p>
+                    <p id="safety-annual-incidents-no-data-subtext" className="text-xs text-gray-500">
+                      This area may not have sufficient incident data for year-over-year comparison
+                    </p>
+                  </div>
+                ) : (
+                  <div 
+                    id="safety-annual-incidents-loading-placeholder" 
+                    className="flex justify-center items-center min-h-[120px]"
+                  >
+                    <div className="text-center">
+                      <div className="text-gray-400 text-sm">No data available for selected area</div>
+                      <div className="text-gray-300 text-xs mt-1">Try selecting a different area or adjusting filters</div>
+                    </div>
+                  </div>
+                )}
 
-          {/* Empty data state */}
-          {!isLoading && !error && selectedGeometry && chartData && categories.length === 0 && (
-            <div id="safety-annual-incidents-no-data" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[120px]">
-              <div id="safety-annual-incidents-no-data-icon" className="mb-2 text-gray-400">
-                <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L4.18 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
+                {/* Background preloading indicator */}
+                {isPreloading && !isLoading && (
+                  <div 
+                    id="safety-annual-incidents-preload-indicator" 
+                    className="absolute top-2 right-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full flex items-center z-10"
+                  >
+                    <div className="animate-spin rounded-full h-3 w-3 border border-blue-400 border-t-transparent mr-1"></div>
+                    Preloading...
+                  </div>
+                )}
               </div>
-              <p id="safety-annual-incidents-no-data-text" className="text-sm text-gray-600 mb-1">
-                No historical data available
-              </p>
-              <p id="safety-annual-incidents-no-data-subtext" className="text-xs text-gray-500">
-                This area may not have sufficient incident data for year-over-year comparison
-              </p>
             </div>
           )}
         </div>

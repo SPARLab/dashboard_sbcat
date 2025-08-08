@@ -208,22 +208,26 @@ export default function SeverityBreakdown({
             </div>
           )}
 
-          {/* Loading state */}
-          {isLoading && selectedGeometry && (
-            <div id="safety-severity-breakdown-loading" className="bg-blue-50 flex justify-center items-center px-1 py-2 rounded-md text-xs" style={{ width: '349px', height: '250px' }}>
-              <span id="safety-severity-breakdown-loading-text" className="text-blue-700">Loading severity breakdown data...</span>
-            </div>
-          )}
-          
-          {/* Error state */}
-          {error && selectedGeometry && (
-            <div id="safety-severity-breakdown-error" className="bg-red-50 flex justify-center items-center px-1 py-2 rounded-md text-xs min-h-[120px]">
-              <span id="safety-severity-breakdown-error-text" className="text-red-700">Error loading data: {error}</span>
-            </div>
-          )}
-          
-          {/* Data display */}
-          {!isLoading && !error && selectedGeometry && chartData && (
+          {/* Data display with loading overlay */}
+          {selectedGeometry && (
+            <div id="safety-severity-breakdown-data-container" className="relative">
+              {/* Loading overlay */}
+              {isLoading && (
+                <div 
+                  id="safety-severity-breakdown-loading-overlay" 
+                  className="absolute inset-0 bg-white bg-opacity-75 backdrop-blur-sm flex justify-center items-center z-20 rounded-md"
+                >
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-3"></div>
+                    <span className="text-sm text-gray-700 font-medium">Loading severity breakdown...</span>
+                    <span className="text-xs text-gray-500 mt-1">Analyzing incident severity</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Data content */}
+              <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'}`}>
+                {chartData && !error ? (
             <>
               <div id="safety-severity-breakdown-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
               <p id="safety-severity-breakdown-description" className="w-full text-sm text-gray-600">
@@ -254,23 +258,44 @@ export default function SeverityBreakdown({
                   />
                 </div>
               </div>
-            </>
-          )}
-
-          {/* Empty data state */}
-          {!isLoading && !error && selectedGeometry && chartData && chartData.totalByCategory.every(count => count === 0) && (
-            <div id="safety-severity-breakdown-no-data" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[120px]">
-              <div id="safety-severity-breakdown-no-data-icon" className="mb-2 text-gray-400">
-                <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L4.18 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
+                  </>
+                ) : error ? (
+                  <div id="safety-severity-breakdown-error" className="bg-red-50 border border-red-200 rounded-md p-3 min-h-[120px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-sm text-red-800">
+                        <strong>Data Error:</strong> {error}
+                      </div>
+                      <div className="text-xs text-red-600 mt-1">
+                        Unable to load severity breakdown data.
+                      </div>
+                    </div>
+                  </div>
+                ) : chartData && chartData.totalByCategory.every(count => count === 0) ? (
+                  <div id="safety-severity-breakdown-no-data" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[120px]">
+                    <div id="safety-severity-breakdown-no-data-icon" className="mb-2 text-gray-400">
+                      <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L4.18 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                    <p id="safety-severity-breakdown-no-data-text" className="text-sm text-gray-600 mb-1">
+                      No severity data available
+                    </p>
+                    <p id="safety-severity-breakdown-no-data-subtext" className="text-xs text-gray-500">
+                      This area may not have sufficient incident data for severity analysis
+                    </p>
+                  </div>
+                ) : (
+                  <div 
+                    id="safety-severity-breakdown-loading-placeholder" 
+                    className="flex justify-center items-center min-h-[120px]"
+                  >
+                    <div className="text-center">
+                      <div className="text-gray-400 text-sm">No data available for selected area</div>
+                      <div className="text-gray-300 text-xs mt-1">Try selecting a different area or adjusting filters</div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <p id="safety-severity-breakdown-no-data-text" className="text-sm text-gray-600 mb-1">
-                No severity data available
-              </p>
-              <p id="safety-severity-breakdown-no-data-subtext" className="text-xs text-gray-500">
-                This area may not have sufficient incident data for severity analysis
-              </p>
             </div>
           )}
         </div>

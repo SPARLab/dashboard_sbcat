@@ -325,46 +325,61 @@ export default function IncidentsVsTrafficRatios({
               </div>
             )}
 
-            {/* Loading state */}
-            {isLoading && selectedGeometry && (
-              <div id="safety-incidents-vs-traffic-loading" className="bg-blue-50 flex justify-center items-center px-1 py-2 rounded-md text-xs min-h-[320px]">
-                <span id="safety-incidents-vs-traffic-loading-text" className="text-blue-700">Loading traffic ratio data...</span>
-              </div>
-            )}
-            
-            {/* Error state */}
-            {hasError && selectedGeometry && (
-              <div id="safety-incidents-vs-traffic-error" className="bg-red-50 flex justify-center items-center px-1 py-2 rounded-md text-xs min-h-[320px]">
-                <span id="safety-incidents-vs-traffic-error-text" className="text-red-700">Error loading data</span>
-              </div>
-            )}
-            
-            {/* No data state */}
-            {!isLoading && !hasError && selectedGeometry && !hasData && (
-              <div id="safety-incidents-vs-traffic-no-data" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[320px]">
-                <div id="safety-incidents-vs-traffic-no-data-icon" className="mb-2 text-gray-400">
-                  <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <p id="safety-incidents-vs-traffic-no-data-text" className="text-sm text-gray-600">
-                  No incident data available
-                </p>
-                <p id="safety-incidents-vs-traffic-no-data-subtext" className="text-xs text-gray-500">
-                  Try adjusting your filters or selecting a different area
-                </p>
-              </div>
-            )}
+            {/* Data display with loading overlay */}
+            {selectedGeometry && (
+              <div id="safety-incidents-vs-traffic-data-container" className="relative">
+                {/* Loading overlay */}
+                {isLoading && (
+                  <div 
+                    id="safety-incidents-vs-traffic-loading-overlay" 
+                    className="absolute inset-0 bg-white bg-opacity-75 backdrop-blur-sm flex justify-center items-center z-20 rounded-md"
+                  >
+                    <div className="flex flex-col items-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-3"></div>
+                      <span className="text-sm text-gray-700 font-medium">Loading traffic ratios...</span>
+                      <span className="text-xs text-gray-500 mt-1">Analyzing incident patterns</span>
+                    </div>
+                  </div>
+                )}
 
-            {/* Chart display */}
-            {!isLoading && !hasError && selectedGeometry && hasData && (
-              <div id="safety-incidents-vs-traffic-chart">
-                <ReactECharts
-                  option={option}
-                  style={{ height: '320px', width: '100%' }}
-                  opts={{ renderer: 'canvas' }}
-                  onEvents={onEvents}
-                />
+                {/* Data content */}
+                <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'} min-h-[320px]`}>
+                  {hasData && !hasError ? (
+                    <div id="safety-incidents-vs-traffic-chart">
+                      <ReactECharts
+                        option={option}
+                        style={{ height: '320px', width: '100%' }}
+                        opts={{ renderer: 'canvas' }}
+                        onEvents={onEvents}
+                      />
+                    </div>
+                  ) : hasError ? (
+                    <div id="safety-incidents-vs-traffic-error" className="bg-red-50 border border-red-200 rounded-md p-3 min-h-[320px] flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-sm text-red-800">
+                          <strong>Data Error:</strong> Unable to load traffic ratio data
+                        </div>
+                        <div className="text-xs text-red-600 mt-1">
+                          Try selecting a different area or adjusting filters.
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div id="safety-incidents-vs-traffic-no-data" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[320px]">
+                      <div id="safety-incidents-vs-traffic-no-data-icon" className="mb-2 text-gray-400">
+                        <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <p id="safety-incidents-vs-traffic-no-data-text" className="text-sm text-gray-600">
+                        No incident data available
+                      </p>
+                      <p id="safety-incidents-vs-traffic-no-data-subtext" className="text-xs text-gray-500">
+                        Try adjusting your filters or selecting a different area
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
