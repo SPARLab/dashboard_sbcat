@@ -20,8 +20,8 @@ export class RawIncidentsVisualization {
     filters: Partial<SafetyFilters>,
     setDataLoading: (loading: boolean) => void
   ): Promise<FeatureLayer | null> {
-    // Create a unique key for this map view
-    const mapKey = mapView.container?.id || `map-${Date.now()}`;
+    // Create a stable key for this map view - use a consistent identifier
+    const mapKey = mapView.container?.id || 'default-map';
     
     // Check if we have a cached layer for this specific map
     if (this.layerCache.has(mapKey)) {
@@ -45,6 +45,7 @@ export class RawIncidentsVisualization {
 
       // 1. Fetch all necessary data from the service
       const rawData = await SafetyIncidentsDataService.querySafetyData(undefined, filters);
+      
       if (rawData.error || rawData.incidents.length === 0) {
         this.loadingCache.set(mapKey, false);
         return null;

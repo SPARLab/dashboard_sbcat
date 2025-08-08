@@ -10,7 +10,8 @@ import { GeographicBoundariesService } from "../../../../lib/data-services/Geogr
 import { SafetyFilters, SafetyVisualizationType } from "../../../../lib/safety-app/types";
 import { SafetyLayerService } from "../../../../lib/safety-app/improvedSafetyLayers";
 import { IncidentHeatmapRenderer } from "../../../../lib/safety-app/renderers/IncidentHeatmapRenderer";
-import { RawIncidentsVisualization } from "./visualizations/RawIncidentsVisualization";
+import { RawIncidentRenderer } from "../../../../lib/safety-app/renderers/RawIncidentRenderer";
+
 import { WeightedVisualization } from "./visualizations/WeightedVisualization";
 import { useLayerCache } from "../../hooks/useLayerCache";
 import { useSafetyLayers } from "../../hooks/useSafetyLayers";
@@ -53,14 +54,7 @@ export default function NewSafetyMap({
     setCachedWeightedLayer,
     cachedExtentKey,
     setCachedExtentKey,
-    cachedRawIncidentsData,
-    setCachedRawIncidentsData,
-    cachedRawIncidentsLayer,
-    setCachedRawIncidentsLayer,
-    rawDataFiltersKey,
-    setRawDataFiltersKey,
-    generateCacheKey,
-    clearRawIncidentsCache
+    generateCacheKey
   } = useLayerCache();
 
   // Use safety layers hook for the original layer infrastructure
@@ -140,7 +134,7 @@ export default function NewSafetyMap({
 
 
 
-  const [rawIncidentsLayer, setRawIncidentsLayer] = useState<__esri.FeatureLayer | null>(null);
+
 
   // This single effect handles ALL filter changes by applying a client-side FeatureFilter.
   // It is completely decoupled from the visualization logic and does NOT trigger data reloads.
@@ -160,115 +154,19 @@ export default function NewSafetyMap({
         weekdayFilter: filters.weekdayFilter,
       });
 
-      // Also apply the same filter to the client-side raw incidents layer
-      if (rawIncidentsLayer) {
-        const whereClauses: string[] = [];
-        
-        // Data source filter
-        const dataSources = filters.dataSource || [];
-        if (dataSources.length === 0) {
-          whereClauses.push("1=0"); // Hide all
-        } else if (dataSources.length === 1) {
-          const source = dataSources[0];
-          if (source === 'SWITRS') {
-            whereClauses.push("(data_source = 'SWITRS' OR data_source = 'Police')");
-          } else {
-            whereClauses.push("(data_source = 'BikeMaps.org' OR data_source = 'BikeMaps')");
-          }
-        }
-        // If both sources selected, no need to add data source filter
-        
-        // Severity filter
-        const severityTypes = filters.severityTypes || [];
-        if (severityTypes.length === 0) {
-          // If no severity types selected, show nothing
-          whereClauses.push('1=0');
-        } else if (severityTypes.length < 5) {
-          // Use severity values directly - no special handling needed
-          const severityConditions = severityTypes.map(type => `maxSeverity = '${type}'`);
-          
-          if (severityConditions.length > 0) {
-            whereClauses.push(`(${severityConditions.join(' OR ')})`);
-          }
-        }
-        
-        // Conflict type filter
-        const conflictTypes = filters.conflictType || [];
-        if (conflictTypes.length === 0) {
-          // If no conflict types selected, show nothing
-          whereClauses.push('1=0');
-        } else if (conflictTypes.length < 7) {
-          // Only add filter if not all conflict types are selected
-          const conflictConditions = conflictTypes.map(type => `conflict_type = '${type}'`);
-          
-          if (conflictConditions.length > 0) {
-            whereClauses.push(`(${conflictConditions.join(' OR ')})`);
-          }
-        }
-        
-        // Date range filter
-        if (filters.dateRange) {
-          const { start, end } = filters.dateRange;
-          // Format dates for ArcGIS TIMESTAMP queries (YYYY-MM-DD HH:MI:SS)
-          const startStr = start.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
-          const endStr = end.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
-          whereClauses.push(`(timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}')`);
-        }
-        
-        // Time of day filter
-        if (filters.timeOfDay?.enabled && filters.timeOfDay.periods.length > 0) {
-          if (filters.timeOfDay.periods.length < 3) {
-            // Only add filter if not all time periods are selected
-            const timeConditions: string[] = [];
-            
-            filters.timeOfDay.periods.forEach(period => {
-              switch (period) {
-                case 'morning':
-                  // Morning: 00:00 to 11:59 (midnight to noon)
-                  timeConditions.push("EXTRACT(HOUR FROM timestamp) >= 0 AND EXTRACT(HOUR FROM timestamp) < 12");
-                  break;
-                case 'afternoon':
-                  // Afternoon: 12:00 to 16:59 (noon to 5pm)
-                  timeConditions.push("EXTRACT(HOUR FROM timestamp) >= 12 AND EXTRACT(HOUR FROM timestamp) < 17");
-                  break;
-                case 'evening':
-                  // Evening: 17:00 to 23:59 (5pm to midnight)
-                  timeConditions.push("EXTRACT(HOUR FROM timestamp) >= 17 AND EXTRACT(HOUR FROM timestamp) <= 23");
-                  break;
-              }
-            });
-            
-            if (timeConditions.length > 0) {
-              whereClauses.push(`(${timeConditions.join(' OR ')})`);
-            }
-          }
-        }
-        
-        // Weekday filter
-        if (filters.weekdayFilter?.enabled) {
-          let weekdayClause = '';
-          if (filters.weekdayFilter.type === 'weekdays') {
-            // Weekdays: Monday(2) through Friday(6)
-            weekdayClause = "MOD(CAST((timestamp - DATE '2000-01-01') AS INT) + 6, 7) + 1 BETWEEN 2 AND 6";
-          } else {
-            // Weekends: Saturday(7) and Sunday(1)  
-            weekdayClause = "MOD(CAST((timestamp - DATE '2000-01-01') AS INT) + 6, 7) + 1 IN (1, 7)";
-          }
-          whereClauses.push(`(${weekdayClause})`);
-        }
-        
-        const whereClause = whereClauses.length > 0 ? whereClauses.join(' AND ') : "1=1";
-        rawIncidentsLayer.definitionExpression = whereClause;
-
-      }
+      // Raw incidents now use the same incidentsLayer with different renderer,
+      // so they get filtered automatically by the SafetyLayerService above
     };
 
     applyFilters();
-  }, [filters, safetyLayerService, rawIncidentsLayer]);
+  }, [filters, safetyLayerService]);
 
   // Handle visualization type changes using original logic
   useEffect(() => {
-    if (!incidentsLayer || !viewReady || !mapViewRef.current) return;
+    if (!viewReady || !mapViewRef.current) return;
+    
+    // For raw incidents, we don't need incidentsLayer, so only check it for other visualizations
+    if (activeVisualization !== 'raw-incidents' && !incidentsLayer) return;
 
     const updateVisualization = async () => {
 
@@ -277,17 +175,16 @@ export default function NewSafetyMap({
 
         // Hide all layers before showing the active one
         if (incidentsLayer) incidentsLayer.visible = false;
-        if (rawIncidentsLayer) rawIncidentsLayer.visible = false;
+
         if (cachedWeightedLayer) cachedWeightedLayer.visible = false;
 
         switch (activeVisualization) {
           case 'raw-incidents':
-            const clientSideLayer = await RawIncidentsVisualization.getLayer(
-              mapViewRef.current!, filters, setDataLoading
-            );
-            if (clientSideLayer) {
-              setRawIncidentsLayer(clientSideLayer);
-              clientSideLayer.visible = true;
+            // Use the same efficient pattern as incident-heatmap
+            if (incidentsLayer) {
+              incidentsLayer.renderer = RawIncidentRenderer.getRenderer('severity', filters as SafetyFilters);
+              incidentsLayer.visible = true;
+              setDataLoading(false);
             }
             break;
 
@@ -322,17 +219,7 @@ export default function NewSafetyMap({
     // Re-run this effect when the visualization type changes. Filter changes are handled separately.
   }, [activeVisualization, incidentsLayer, viewReady]);
 
-  // Cleanup effect to clear cache when component unmounts or map view changes
-  useEffect(() => {
-    return () => {
-      // Clear the raw incidents cache for this map view when component unmounts
-      if (mapViewRef.current) {
-        RawIncidentsVisualization.clearCacheForMap(mapViewRef.current);
-        // Also clear the layer cache from the hook
-        clearRawIncidentsCache(mapViewRef.current);
-      }
-    };
-  }, [clearRawIncidentsCache]);
+  // Raw incidents now use the same layer as heatmaps, so no special cleanup needed
 
   // Handle geographic level changes and custom draw tool (combined like volume page)
   useEffect(() => {
