@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { SafetyFilters, SafetyVisualizationType } from "../../../../lib/safety-app/types";
-import ImprovedNewSafetyMap from "./ImprovedNewSafetyMap";
+import NewSafetyMap from "./NewSafetyMap";
 
 interface SafetyMapAreaProps {
   filters?: Partial<SafetyFilters>;
@@ -58,7 +58,7 @@ export default function SafetyMapArea({
         </div>
         {/* Actual Map Component */}
         <div id="safety-map-container" className="w-full h-full">
-          <ImprovedNewSafetyMap
+          <NewSafetyMap
             activeVisualization={activeMapTab}
             filters={filters}
             geographicLevel={geographicLevel}

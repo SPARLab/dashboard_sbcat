@@ -21,12 +21,12 @@ export class RawIncidentsVisualization {
     setDataLoading: (loading: boolean) => void
   ): Promise<FeatureLayer | null> {
     // Create a unique key for this map view
-    const mapKey = mapView.id || `map-${Date.now()}`;
+    const mapKey = mapView.container?.id || `map-${Date.now()}`;
     
     // Check if we have a cached layer for this specific map
     if (this.layerCache.has(mapKey)) {
       const cachedLayer = this.layerCache.get(mapKey);
-      if (cachedLayer && mapView.map.layers.includes(cachedLayer)) {
+      if (cachedLayer && mapView.map && mapView.map.layers.includes(cachedLayer)) {
         return cachedLayer;
       } else {
         // Layer exists in cache but not on map, remove from cache
@@ -53,8 +53,7 @@ export class RawIncidentsVisualization {
       // 2. Process the data: join incidents with parties to compute maxSeverity
       const enrichedIncidents = SafetyIncidentsDataService.joinIncidentData(
         rawData.incidents,
-        rawData.parties,
-        [] // No weights needed for raw incidents
+        rawData.parties
       );
 
       // 3. Create ArcGIS Graphic objects from the processed data
@@ -114,7 +113,9 @@ export class RawIncidentsVisualization {
       // 7. Cache the layer for this specific map and add to map
       this.layerCache.set(mapKey, clientSideLayer);
       this.loadingCache.set(mapKey, false);
-      mapView.map.add(clientSideLayer);
+      if (mapView.map) {
+        mapView.map.add(clientSideLayer);
+      }
 
       return clientSideLayer;
 
@@ -130,17 +131,16 @@ export class RawIncidentsVisualization {
    * Clear the cache for a specific map view when it's destroyed
    */
   static clearCacheForMap(mapView: __esri.MapView): void {
-    const mapKey = mapView.id || `map-${Date.now()}`;
+    const mapKey = mapView.container?.id || `map-${Date.now()}`;
     const cachedLayer = this.layerCache.get(mapKey);
     
-    if (cachedLayer && mapView.map.layers.includes(cachedLayer)) {
+    if (cachedLayer && mapView.map && mapView.map.layers.includes(cachedLayer)) {
       mapView.map.remove(cachedLayer);
     }
     
     this.layerCache.delete(mapKey);
     this.loadingCache.delete(mapKey);
   }
-
   /**
    * Clear all caches (useful for cleanup)
    */
