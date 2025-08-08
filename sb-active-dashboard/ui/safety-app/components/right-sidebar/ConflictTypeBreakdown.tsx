@@ -239,7 +239,7 @@ export default function ConflictTypeBreakdown({
 
   return (
     <div id="safety-conflict-type-breakdown" className="bg-white border border-gray-200 rounded-md p-4">
-      <div id="safety-conflict-type-header" className="flex items-center justify-between mb-2">
+      <div id="safety-conflict-type-header" className="flex items-center justify-between">
         <h3 id="safety-conflict-type-title" className="text-base font-medium text-gray-700">Conflict Type Breakdown</h3>
         <CollapseExpandIcon isCollapsed={isCollapsed} onClick={toggleCollapse} />
       </div>

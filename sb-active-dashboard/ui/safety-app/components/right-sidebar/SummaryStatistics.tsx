@@ -22,7 +22,7 @@ export default function SummaryStatistics({
 
   return (
     <div id="safety-summary-statistics" className="bg-white border border-gray-200 rounded-md p-4">
-      <div id="safety-summary-header" className="flex items-center justify-between mb-2">
+      <div id="safety-summary-header" className="flex items-center justify-between">
         <h3 id="safety-summary-title" className="text-base font-medium text-gray-700">Summary Statistics</h3>
         <CollapseExpandIcon isCollapsed={isCollapsed} onClick={() => setIsCollapsed(!isCollapsed)} />
       </div>
@@ -63,7 +63,7 @@ export default function SummaryStatistics({
           {/* Data display */}
           {!isLoading && !error && selectedGeometry && summaryData && (
             <>
-              <div id="safety-summary-total" className="bg-gray-100 flex justify-between items-center px-1 py-0.5 rounded-md text-xs">
+              <div id="safety-summary-total" className="bg-gray-100 flex justify-between items-center px-1 py-0.5 rounded-md text-xs mt-2">
                 <span id="safety-summary-total-label" className="text-gray-900">Total Incidents</span>
                 <span id="safety-summary-total-value" className="text-gray-900">{summaryData.totalIncidents.toLocaleString()}</span>
               </div>
