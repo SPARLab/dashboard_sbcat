@@ -39,25 +39,12 @@ export class WeightedVisualization {
   
 
       // Query incidents for current map extent
-      console.log('Querying with extent:', mapView.extent);
-      console.log('Querying with filters:', filters);
-      
       const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
         mapView.extent,
         filters
       );
 
-      console.log('Safety data received:', {
-        totalIncidents: safetyData.data.length,
-        incidentsWithTrafficData: safetyData.data.filter(inc => inc.hasTrafficData).length,
-        sampleIncident: safetyData.data[0] ? {
-          hasTrafficData: safetyData.data[0].hasTrafficData,
-          bikeTrafficLevel: safetyData.data[0].bikeTrafficLevel,
-          pedTrafficLevel: safetyData.data[0].pedTrafficLevel,
-          bike_traffic: safetyData.data[0].bike_traffic,
-          ped_traffic: safetyData.data[0].ped_traffic
-        } : null
-      });
+
 
       // Filter incidents that have traffic data
       let incidentsWithTrafficData = safetyData.data.filter(inc => inc.hasTrafficData);
@@ -96,10 +83,7 @@ export class WeightedVisualization {
           {}
         );
         
-        console.log('Data without filters:', {
-          totalIncidents: safetyDataNoFilters.data.length,
-          incidentsWithTrafficData: safetyDataNoFilters.data.filter(inc => inc.hasTrafficData).length
-        });
+
         
         // Create a visualization using all incidents with severity-based scoring
         const allIncidents = safetyData.data.length > 0 ? safetyData.data : 
@@ -259,12 +243,7 @@ export class WeightedVisualization {
       // Add the new traffic layer
       mapView.map.add(trafficLayer);
       
-      console.log('Traffic layer created and added:', {
-        layerTitle: trafficLayer.title,
-        featureCount: trafficFeatures.length,
-        fields: trafficLayer.fields?.map(f => f.name),
-        renderer: trafficLayer.renderer
-      });
+
       
       // Create a custom renderer for traffic-based visualization
       const trafficRenderer = new (await import("@arcgis/core/renderers/HeatmapRenderer")).default({
@@ -286,11 +265,7 @@ export class WeightedVisualization {
       
       trafficLayer.renderer = trafficRenderer;
 
-      console.log('Renderer applied to traffic layer:', {
-        rendererField: trafficRenderer.field,
-        rendererBlurRadius: trafficRenderer.blurRadius,
-        layerVisible: trafficLayer.visible
-      });
+
 
       // Cache the traffic layer and extent key for future use
       setCachedWeightedLayer(trafficLayer);
@@ -301,10 +276,7 @@ export class WeightedVisualization {
       incidentsLayer.visible = false;
       trafficLayer.visible = true;
       
-      console.log('Layer visibility set:', {
-        incidentsLayerVisible: incidentsLayer.visible,
-        trafficLayerVisible: trafficLayer.visible
-      });
+
 
     } catch (error) {
   

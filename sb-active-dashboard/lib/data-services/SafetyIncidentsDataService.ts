@@ -75,7 +75,7 @@ export class SafetyIncidentsDataService {
       let offsetId = 0;
       const pageSize = 2000; // Match typical ArcGIS limit
       
-      console.log('Querying incidents with where clause:', whereClause);
+
       
       while (hasMore) {
         const paginatedQuery = incidentsLayer.createQuery();
@@ -111,7 +111,7 @@ export class SafetyIncidentsDataService {
         
       }
       
-      console.log(`Loaded ${incidents.length} incidents total`);
+
       
       // Also get the total count to verify pagination worked
       const countQuery = incidentsLayer.createQuery();
@@ -330,16 +330,6 @@ export class SafetyIncidentsDataService {
 
       const hasTrafficData = !!(incident.bike_traffic || incident.ped_traffic);
       
-      // Debug: Log traffic data for first few incidents
-      if (Math.random() < 0.01) { // Log ~1% of incidents to avoid spam
-        console.log('Traffic data check:', {
-          id: incident.id,
-          bike_traffic: incident.bike_traffic,
-          ped_traffic: incident.ped_traffic,
-          hasTrafficData: hasTrafficData
-        });
-      }
-      
       return {
         ...incident,
         parties: incidentParties,
@@ -409,11 +399,7 @@ export class SafetyIncidentsDataService {
    * Map ArcGIS feature to SafetyIncident interface
    */
   private static mapIncidentFeature(feature: any): SafetyIncident {
-    // Debug: Log available fields for the first few features
-    if (Math.random() < 0.01) { // Log ~1% of features to avoid spam
-      console.log('Available incident fields:', Object.keys(feature.attributes));
-      console.log('Sample incident attributes:', feature.attributes);
-    }
+
     
     return {
       OBJECTID: feature.attributes.objectid || feature.attributes.OBJECTID,
