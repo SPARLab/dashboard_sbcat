@@ -60,28 +60,24 @@ export default function NewVolumeLeftSidebar({
         dateRange={dateRange}
         onDateRangeChange={onDateRangeChange}
       />
-      <hr className="border-gray-200" />
-      <div
-  id="custom-draw-tool-activation"
-  className={`p-4 cursor-pointer ${
-    geographicLevel === 'custom'
-      ? 'bg-blue-100 border-l-4 border-blue-500'
-      : 'hover:bg-gray-50'
-  }`}
-  onClick={() => onGeographicLevelChange(geographicLevel === 'custom' ? '' : 'custom')}
->
-  <h3 className="text-base font-medium text-gray-900">Custom Draw Tool</h3>
-  <p className="text-sm text-gray-600 mt-1">
-    {geographicLevel === 'custom'
-      ? 'Exit drawing mode and clear custom polygons.'
-      : 'Click to draw a custom area on the map.'}
-  </p>
-</div>
-<hr className="border-gray-200" />
-<GeographicLevelSection 
-  geographicLevel={geographicLevel}
-  onGeographicLevelChange={onGeographicLevelChange}
-/>
+      <GeographicLevelSection 
+        geographicLevel={geographicLevel}
+        onGeographicLevelChange={onGeographicLevelChange}
+      />
+      {geographicLevel === 'custom' && (
+        <>
+          <hr className="border-gray-200" />
+          <div
+            id="custom-draw-tool-instructions"
+            className="p-4 bg-blue-100 border-l-4 border-blue-500"
+          >
+            <h3 className="text-base font-medium text-gray-900">Custom Draw Tool</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Click on the map to draw a custom area. Click the first point again to complete the polygon.
+            </p>
+          </div>
+        </>
+      )}
     </div>
   );
 }
