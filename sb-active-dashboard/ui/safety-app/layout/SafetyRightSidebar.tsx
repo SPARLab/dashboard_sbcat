@@ -39,7 +39,10 @@ export default function SafetyRightSidebar({
             filters={filters}
             mapView={mapView}
           />
-          <IncidentsVsTrafficRatios />
+          <IncidentsVsTrafficRatios 
+            selectedGeometry={selectedGeometry}
+            filters={filters}
+          />
           <SeverityBreakdown 
             selectedGeometry={selectedGeometry}
             filters={filters}

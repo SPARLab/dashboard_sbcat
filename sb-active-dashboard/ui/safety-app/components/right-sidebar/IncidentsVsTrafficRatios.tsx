@@ -1,49 +1,142 @@
 'use client';
 import ReactECharts from 'echarts-for-react';
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import CollapseExpandIcon from "../../../components/CollapseExpandIcon";
 import MoreInformationIcon from './MoreInformationIcon';
+import { SafetyChartDataService } from "../../../../lib/data-services/SafetyChartDataService";
+import { SafetyFilters } from "../../../../lib/safety-app/types";
+import { useSafetySpatialQuery } from "../../../../lib/hooks/useSpatialQuery";
 
-// Sample data for traffic volume vs incident ratios
-// Each point represents [traffic_volume, incident_ratio, location_name]
-const scatterData: [number, number, string][] = [
-  [1200, 0.15, 'State Street & Carrillo'],
-  [2500, 0.32, 'State Street & Canon Perdido'],
-  [1800, 0.22, 'State Street & Cota'],
-  [3200, 0.45, 'State Street & Haley'],
-  [950, 0.08, 'Chapala Street & Montecito'],
-  [2100, 0.28, 'Milpas Street & Canon Perdido'],
-  [1650, 0.18, 'Garden Street & Cota'],
-  [2800, 0.38, 'Garden Street & Haley'],
-  [1400, 0.12, 'Santa Barbara Street & Canon Perdido'],
-  [3500, 0.52, 'Hollister Avenue & Fairview'],
-  [2200, 0.25, 'Hollister Avenue & Patterson'],
-  [1750, 0.19, 'De La Vina Street & Canon Perdido'],
-  [2900, 0.41, 'Castillo Street & Haley'],
-  [1100, 0.09, 'Anacapa Street & Canon Perdido'],
-  [2600, 0.35, 'Bath Street & Cota'],
-  [1900, 0.23, 'Victoria Street & Canon Perdido'],
-  [3100, 0.47, 'Milpas Street & Haley'],
-  [1350, 0.14, 'Chapala Street & Canon Perdido'],
-  [2400, 0.29, 'Garden Street & Canon Perdido'],
-  [2050, 0.26, 'Santa Barbara Street & Cota']
-];
-
-interface HoveredPointData {
-  value: [number, number, string];
-  dataIndex: number;
+interface IncidentsVsTrafficRatiosProps {
+  selectedGeometry?: __esri.Polygon | null;
+  filters?: Partial<SafetyFilters>;
 }
 
-export default function IncidentsVsTrafficRatios() {
+interface ScatterDataPoint {
+  location: string;
+  incidentCount: number;
+  trafficLevel: 'low' | 'medium' | 'high';
+  x: number; // 1 for low, 2 for medium, 3 for high
+}
+
+export default function IncidentsVsTrafficRatios({ 
+  selectedGeometry = null, 
+  filters = {} 
+}: IncidentsVsTrafficRatiosProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [hoveredPoint, setHoveredPoint] = useState<HoveredPointData | null>(null);
+  const [scatterData, setScatterData] = useState<ScatterDataPoint[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<ScatterDataPoint | null>(null);
+
+  // Use spatial query to get filtered data
+  const { result, isLoading: spatialLoading, error: spatialError } = useSafetySpatialQuery(selectedGeometry, filters);
+
+  // Process data when spatial query result changes
+  useEffect(() => {
+    const processData = async () => {
+      if (!result?.data || result.data.length === 0) {
+        setScatterData([]);
+        setIsProcessing(false);
+        setError(null);
+        return;
+      }
+
+      setIsProcessing(true);
+      setError(null);
+
+      try {
+        // Group incidents by location
+        const locationMap = new Map<string, {
+          incidents: number;
+          bikeTrafficLevels: string[];
+          pedTrafficLevels: string[];
+        }>();
+
+        // Process each incident
+        result.data.forEach(incident => {
+          const locationKey = incident.loc_desc || 'Unknown Location';
+          
+          if (!locationMap.has(locationKey)) {
+            locationMap.set(locationKey, {
+              incidents: 0,
+              bikeTrafficLevels: [],
+              pedTrafficLevels: []
+            });
+          }
+          
+          const location = locationMap.get(locationKey)!;
+          location.incidents += 1;
+          
+          // Collect traffic levels for this location
+          if (incident.bike_traffic) {
+            location.bikeTrafficLevels.push(incident.bike_traffic.toLowerCase());
+          }
+          if (incident.ped_traffic) {
+            location.pedTrafficLevels.push(incident.ped_traffic.toLowerCase());
+          }
+        });
+
+        // Convert to scatter plot data
+        const processedData: ScatterDataPoint[] = Array.from(locationMap.entries())
+          .map(([locationName, data]) => {
+            // Determine the highest traffic level for this location
+            const getHighestTrafficLevel = (levels: string[]): 'low' | 'medium' | 'high' => {
+              if (levels.length === 0) return 'low';
+              
+              const hasHigh = levels.some(level => level === 'high');
+              const hasMedium = levels.some(level => level === 'medium');
+              
+              if (hasHigh) return 'high';
+              if (hasMedium) return 'medium';
+              return 'low';
+            };
+
+            // Get the highest traffic level between bike and pedestrian traffic
+            const bikeLevel = getHighestTrafficLevel(data.bikeTrafficLevels);
+            const pedLevel = getHighestTrafficLevel(data.pedTrafficLevels);
+            
+            // Use the highest level between the two
+            const trafficLevels = [bikeLevel, pedLevel];
+            const highestLevel = trafficLevels.includes('high') ? 'high' : 
+                               trafficLevels.includes('medium') ? 'medium' : 'low';
+
+            // Convert traffic level to x-coordinate
+            const x = highestLevel === 'low' ? 1 : highestLevel === 'medium' ? 2 : 3;
+
+            return {
+              location: locationName,
+              incidentCount: data.incidents,
+              trafficLevel: highestLevel as 'low' | 'medium' | 'high',
+              x: x
+            };
+          })
+          .filter(point => point.incidentCount > 0) // Only include locations with incidents
+          .sort((a, b) => b.incidentCount - a.incidentCount); // Sort by incident count
+
+        setScatterData(processedData);
+      } catch (err) {
+        console.error('Error processing traffic ratios data:', err);
+        setError('Failed to process traffic ratios data');
+        setScatterData([]);
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+
+    processData();
+  }, [result]);
 
   const onEvents = useMemo(
     () => ({
       mouseover: (params: any) => {
-        setHoveredPoint({ 
-          value: params.value, 
-          dataIndex: params.dataIndex
+        const [x, y, location] = params.value;
+        const trafficLevel = x === 1 ? 'low' : x === 2 ? 'medium' : 'high';
+        setHoveredPoint({
+          location,
+          incidentCount: y,
+          trafficLevel: trafficLevel as 'low' | 'medium' | 'high',
+          x
         });
       },
       mouseout: () => {
@@ -52,18 +145,6 @@ export default function IncidentsVsTrafficRatios() {
     }),
     [],
   );
-
-  // Calculate dynamic axis ranges
-  const trafficValues = scatterData.map(point => point[0]);
-  const incidentValues = scatterData.map(point => point[1]);
-  
-  const minTraffic = Math.min(...trafficValues);
-  const maxTraffic = Math.max(...trafficValues);
-  const minIncident = Math.min(...incidentValues);
-  const maxIncident = Math.max(...incidentValues);
-  
-  const trafficPadding = (maxTraffic - minTraffic) * 0.1;
-  const incidentPadding = (maxIncident - minIncident) * 0.1;
 
   const option = useMemo(
     () => ({
@@ -79,7 +160,7 @@ export default function IncidentsVsTrafficRatios() {
       },
       xAxis: {
         type: 'value',
-        name: 'Average Daily Traffic Volume',
+        name: 'Traffic Volume Level',
         nameLocation: 'middle',
         nameGap: 40,
         nameTextStyle: {
@@ -87,8 +168,8 @@ export default function IncidentsVsTrafficRatios() {
           fontSize: 12,
           fontWeight: 500,
         },
-        min: Math.max(0, minTraffic - trafficPadding),
-        max: maxTraffic + trafficPadding,
+        min: 0.5,
+        max: 3.5,
         axisLine: {
           show: true,
           lineStyle: {
@@ -103,34 +184,26 @@ export default function IncidentsVsTrafficRatios() {
           color: '#6b7280',
           fontSize: 11,
           formatter: (value: number) => {
-            if (value >= 1000) {
-              return `${(value / 1000).toFixed(1)}k`;
-            }
-            return value.toString();
+            if (value === 1) return 'Low';
+            if (value === 2) return 'Medium';
+            if (value === 3) return 'High';
+            return '';
           },
         },
         splitLine: {
-          show: true,
-          lineStyle: {
-            color: '#e5e7eb',
-            width: 1,
-            type: [3, 3],
-          },
+          show: false,
         },
       },
       yAxis: {
         type: 'value',
-        name: 'Incident Rate\n(per 1000 vehicles)',
+        name: 'Number of Incidents',
         nameLocation: 'middle',
         nameGap: 35,
         nameTextStyle: {
           color: '#6b7280',
           fontSize: 12,
           fontWeight: 500,
-          lineHeight: 16,
         },
-        min: Math.max(0, minIncident - incidentPadding),
-        max: maxIncident + incidentPadding,
         axisLine: {
           show: true,
           lineStyle: {
@@ -144,7 +217,6 @@ export default function IncidentsVsTrafficRatios() {
         axisLabel: {
           color: '#6b7280',
           fontSize: 11,
-          formatter: (value: number) => value.toFixed(2),
         },
         splitLine: {
           show: true,
@@ -157,8 +229,8 @@ export default function IncidentsVsTrafficRatios() {
       },
       series: [
         {
-          name: 'Intersections',
-          data: scatterData,
+          name: 'Locations',
+          data: scatterData.map(point => [point.x, point.incidentCount, point.location]),
           type: 'scatter',
           symbolSize: 8,
           itemStyle: {
@@ -180,12 +252,16 @@ export default function IncidentsVsTrafficRatios() {
           },
         },
       ],
-      tooltip: {
-        show: false,
-      },
+              tooltip: {
+          show: false,
+        },
     }),
-    [minTraffic, maxTraffic, minIncident, maxIncident, trafficPadding, incidentPadding],
+    [scatterData],
   );
+
+  const hasData = scatterData.length > 0;
+  const isLoading = spatialLoading || isProcessing;
+  const hasError = spatialError || error;
 
   return (
     <div id="safety-incidents-vs-traffic-ratios" className="bg-white border border-gray-200 rounded-md p-4">
@@ -197,8 +273,8 @@ export default function IncidentsVsTrafficRatios() {
       {!isCollapsed && (
         <>
           <hr className="border-gray-200 mb-2" />
-          <p id="safety-incidents-vs-traffic-description" className="w-full text-sm text-gray-600 mb-1">
-            Relationship between traffic volume and incident rates at major intersections
+          <p id="safety-incidents-vs-traffic-description" className="w-full text-sm text-gray-600 mb-6">
+            Relationship between traffic volume levels and incident counts by location
             <span id="safety-incidents-vs-traffic-info-icon-container" className="ml-1 inline-flex align-middle">
               <MoreInformationIcon />
             </span>
@@ -208,11 +284,11 @@ export default function IncidentsVsTrafficRatios() {
             {hoveredPoint ? (
               <div
                 id="safety-incidents-vs-traffic-tooltip"
-                className="absolute -top-1 left-1/2 transform -translate-x-1/2 z-10 text-sm font-medium whitespace-nowrap text-center"
-                style={{ color: '#3b82f6' }}
+                className="absolute -top-6 left-1/2 transform -translate-x-1/2 z-10 text-sm font-medium text-center"
+                style={{ color: '#3b82f6', minWidth: '200px' }}
               >
-                <div>{hoveredPoint.value[2]}</div>
-                <div>{hoveredPoint.value[1].toFixed(2)} incidents/1000</div>
+                <div>{hoveredPoint.location}</div>
+                <div>{hoveredPoint.incidentCount} incidents</div>
               </div>
             ) : (
               <div
@@ -223,18 +299,64 @@ export default function IncidentsVsTrafficRatios() {
               </div>
             )}
 
-            {useMemo(
-              () => (
-                <div id="safety-incidents-vs-traffic-chart">
-                  <ReactECharts
-                    option={option}
-                    style={{ height: '320px', width: '100%' }}
-                    opts={{ renderer: 'canvas' }}
-                    onEvents={onEvents}
-                  />
+            {/* No selection state */}
+            {!selectedGeometry && (
+              <div id="safety-incidents-vs-traffic-no-selection" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[320px]">
+                <div id="safety-incidents-vs-traffic-instruction-icon" className="mb-2 text-gray-400">
+                  <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
                 </div>
-              ),
-              [option, onEvents],
+                <p id="safety-incidents-vs-traffic-instruction-text" className="text-sm text-gray-600 mb-1">
+                  Select a region on the map
+                </p>
+                <p id="safety-incidents-vs-traffic-instruction-subtext" className="text-xs text-gray-500">
+                  Use the polygon tool or click on a boundary to see traffic ratio data for that area
+                </p>
+              </div>
+            )}
+
+            {/* Loading state */}
+            {isLoading && selectedGeometry && (
+              <div id="safety-incidents-vs-traffic-loading" className="bg-blue-50 flex justify-center items-center px-1 py-2 rounded-md text-xs min-h-[320px]">
+                <span id="safety-incidents-vs-traffic-loading-text" className="text-blue-700">Loading traffic ratio data...</span>
+              </div>
+            )}
+            
+            {/* Error state */}
+            {hasError && selectedGeometry && (
+              <div id="safety-incidents-vs-traffic-error" className="bg-red-50 flex justify-center items-center px-1 py-2 rounded-md text-xs min-h-[320px]">
+                <span id="safety-incidents-vs-traffic-error-text" className="text-red-700">Error loading data</span>
+              </div>
+            )}
+            
+            {/* No data state */}
+            {!isLoading && !hasError && selectedGeometry && !hasData && (
+              <div id="safety-incidents-vs-traffic-no-data" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[320px]">
+                <div id="safety-incidents-vs-traffic-no-data-icon" className="mb-2 text-gray-400">
+                  <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <p id="safety-incidents-vs-traffic-no-data-text" className="text-sm text-gray-600">
+                  No incident data available
+                </p>
+                <p id="safety-incidents-vs-traffic-no-data-subtext" className="text-xs text-gray-500">
+                  Try adjusting your filters or selecting a different area
+                </p>
+              </div>
+            )}
+
+            {/* Chart display */}
+            {!isLoading && !hasError && selectedGeometry && hasData && (
+              <div id="safety-incidents-vs-traffic-chart">
+                <ReactECharts
+                  option={option}
+                  style={{ height: '320px', width: '100%' }}
+                  opts={{ renderer: 'canvas' }}
+                  onEvents={onEvents}
+                />
+              </div>
             )}
           </div>
         </>

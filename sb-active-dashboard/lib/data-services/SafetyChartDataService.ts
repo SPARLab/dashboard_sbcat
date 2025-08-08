@@ -432,67 +432,80 @@ export class SafetyChartDataService {
   }
 
   /**
-   * Calculate incident-to-volume risk ratios by geographic area
+   * Calculate incident-to-volume risk ratios by location description
    */
   private async calculateRiskByArea(
     weightedIncidents: EnrichedSafetyIncident[]
   ): Promise<IncidentsVsTrafficRatiosData['areas']> {
-    // Group incidents by approximate location for area analysis
-    const areaMap = new Map<string, {
+    // Group incidents by location description
+    const locationMap = new Map<string, {
       incidents: number;
-      totalExposure: number;
+      bikeTrafficLevels: string[];
+      pedTrafficLevels: string[];
       geometries: __esri.Geometry[];
     }>();
-
-    const areaSize = 1000; // 1km grid
     
     weightedIncidents.forEach(incident => {
-      const point = incident.geometry;
-      const areaKey = `${Math.floor(point.x / areaSize)}_${Math.floor(point.y / areaSize)}`;
+      const locationKey = incident.loc_desc || 'Unknown Location';
       
-      if (!areaMap.has(areaKey)) {
-        areaMap.set(areaKey, {
+      if (!locationMap.has(locationKey)) {
+        locationMap.set(locationKey, {
           incidents: 0,
-          totalExposure: 0,
+          bikeTrafficLevels: [],
+          pedTrafficLevels: [],
           geometries: []
         });
       }
       
-      const area = areaMap.get(areaKey)!;
-      area.incidents += 1;
-      // Use traffic level as exposure (High=3, Medium=2, Low=1) - case insensitive
-      const getTrafficExposure = (level: string | undefined) => {
-        if (!level) return 1;
-        const normalizedLevel = level.toLowerCase();
-        if (normalizedLevel === 'high') return 3;
-        if (normalizedLevel === 'medium') return 2;
-        return 1; // low or unknown
-      };
-      const trafficExposure = getTrafficExposure(incident.bikeTrafficLevel);
-      area.totalExposure += trafficExposure;
-      area.geometries.push(incident.geometry);
+      const location = locationMap.get(locationKey)!;
+      location.incidents += 1;
+      
+      // Collect traffic levels for this location
+      if (incident.bike_traffic) {
+        location.bikeTrafficLevels.push(incident.bike_traffic.toLowerCase());
+      }
+      if (incident.ped_traffic) {
+        location.pedTrafficLevels.push(incident.ped_traffic.toLowerCase());
+      }
+      
+      location.geometries.push(incident.geometry);
     });
 
-    // Convert to areas array with risk calculations
-    return Array.from(areaMap.entries())
-      .map(([key, data]) => {
-        const ratio = data.totalExposure > 0 ? (data.incidents / data.totalExposure) * 1000 : 0;
+    // Convert to areas array with traffic level classification
+    return Array.from(locationMap.entries())
+      .map(([locationName, data]) => {
+        // Determine the highest traffic level for this location
+        const getHighestTrafficLevel = (levels: string[]): 'low' | 'medium' | 'high' => {
+          if (levels.length === 0) return 'low';
+          
+          const hasHigh = levels.some(level => level === 'high');
+          const hasMedium = levels.some(level => level === 'medium');
+          
+          if (hasHigh) return 'high';
+          if (hasMedium) return 'medium';
+          return 'low';
+        };
+
+        // Get the highest traffic level between bike and pedestrian traffic
+        const bikeLevel = getHighestTrafficLevel(data.bikeTrafficLevels);
+        const pedLevel = getHighestTrafficLevel(data.pedTrafficLevels);
         
-        let riskLevel: 'low' | 'medium' | 'high' = 'low';
-        if (ratio > 10) riskLevel = 'high';
-        else if (ratio > 5) riskLevel = 'medium';
+        // Use the highest level between the two
+        const trafficLevels = [bikeLevel, pedLevel];
+        const highestLevel = trafficLevels.includes('high') ? 'high' : 
+                           trafficLevels.includes('medium') ? 'medium' : 'low';
 
         return {
-          name: `Area ${key.replace('_', '-')}`,
+          name: locationName,
           incidents: data.incidents,
-          volume: Math.round(data.totalExposure),
-          ratio: Math.round(ratio * 100) / 100,
-          riskLevel,
+          volume: highestLevel === 'high' ? 3 : highestLevel === 'medium' ? 2 : 1,
+          ratio: data.incidents, // Just use incident count as the ratio
+          riskLevel: highestLevel as 'low' | 'medium' | 'high',
           geometry: data.geometries[0] // Representative geometry
         };
       })
-      .filter(area => area.incidents >= 3) // Only include areas with meaningful incident counts
-      .sort((a, b) => b.ratio - a.ratio) // Sort by risk ratio
+      .filter(area => area.incidents >= 1) // Include all locations with at least 1 incident
+      .sort((a, b) => b.incidents - a.incidents) // Sort by incident count
       .slice(0, 20); // Limit to top 20 areas
   }
 }
