@@ -38,30 +38,22 @@ export default function SeverityBreakdown({
   // Fetch data when selection or filters change
   useEffect(() => {
     const fetchData = async () => {
-      console.log('🔍 [SeverityBreakdown Component] useEffect triggered');
-      console.log('🔍 [SeverityBreakdown Component] selectedGeometry:', !!selectedGeometry);
-      console.log('🔍 [SeverityBreakdown Component] mapView:', !!mapView);
-      console.log('🔍 [SeverityBreakdown Component] filters:', filters);
-      
       // Don't load data if there's no selection
       if (!selectedGeometry || !mapView) {
-        console.log('🔍 [SeverityBreakdown Component] No selection or mapView, clearing data');
         setChartData(null);
         setError(null);
         return;
       }
 
       // Show loading and fetch new data
-      console.log('🔍 [SeverityBreakdown Component] Starting data fetch...');
       setIsLoading(true);
       setError(null);
 
       try {
         const result = await dataService.getSeverityBreakdownData(mapView, filters, selectedGeometry);
-        console.log('🔍 [SeverityBreakdown Component] Data received:', result);
         setChartData(result);
       } catch (err) {
-        console.error('🔍 [SeverityBreakdown Component] Error fetching severity breakdown data:', err);
+        console.error('Error fetching severity breakdown data:', err);
         setError('Failed to load severity breakdown data');
         setChartData(null);
       } finally {
@@ -86,11 +78,7 @@ export default function SeverityBreakdown({
 
   // Transform data for chart display
   const { chartData: transformedData, colors } = useMemo(() => {
-    console.log('🔍 [SeverityBreakdown Component] Transforming chart data...');
-    console.log('🔍 [SeverityBreakdown Component] chartData:', chartData);
-    
     if (!chartData || !chartData.categories || !chartData.totalByCategory) {
-      console.log('🔍 [SeverityBreakdown Component] No chart data available');
       return { chartData: [], colors: [] };
     }
 
@@ -103,30 +91,20 @@ export default function SeverityBreakdown({
       '#84cc16'  // Light green - Unknown
     ];
 
-    const transformedData = chartData.categories.map((category, index) => {
-      const dataPoint = {
-        name: category,
-        value: chartData.totalByCategory[index],
-        itemStyle: {
-          color: severityColors[index % severityColors.length],
-          borderRadius: [3, 3, 0, 0],
-        },
-      };
-      console.log(`🔍 [SeverityBreakdown Component] Data point ${index}:`, dataPoint);
-      return dataPoint;
-    });
+    const transformedData = chartData.categories.map((category, index) => ({
+      name: category,
+      value: chartData.totalByCategory[index],
+      itemStyle: {
+        color: severityColors[index % severityColors.length],
+        borderRadius: [3, 3, 0, 0],
+      },
+    }));
 
-    console.log('🔍 [SeverityBreakdown Component] Final transformed data:', transformedData);
     return { chartData: transformedData, colors: severityColors };
   }, [chartData]);
 
   const option = useMemo(
-    () => {
-      console.log('🔍 [SeverityBreakdown Component] Generating chart option...');
-      console.log('🔍 [SeverityBreakdown Component] transformedData:', transformedData);
-      console.log('🔍 [SeverityBreakdown Component] xAxis data:', transformedData.map(item => item.name));
-      
-      return {
+    () => ({
         grid: {
           left: '30px',
           right: '15px',
@@ -200,8 +178,7 @@ export default function SeverityBreakdown({
       tooltip: {
         show: false,
       },
-    };
-    },
+    }),
     [transformedData],
   );
 
@@ -233,7 +210,7 @@ export default function SeverityBreakdown({
 
           {/* Loading state */}
           {isLoading && selectedGeometry && (
-            <div id="safety-severity-breakdown-loading" className="bg-blue-50 flex justify-center items-center px-1 py-2 rounded-md text-xs min-h-[120px]">
+            <div id="safety-severity-breakdown-loading" className="bg-blue-50 flex justify-center items-center px-1 py-2 rounded-md text-xs" style={{ width: '349px', height: '250px' }}>
               <span id="safety-severity-breakdown-loading-text" className="text-blue-700">Loading severity breakdown data...</span>
             </div>
           )}

@@ -74,10 +74,6 @@ export class SafetyChartDataService {
     filters?: Partial<SafetyFilters>,
     geometry?: __esri.Polygon
   ): Promise<SeverityBreakdownData> {
-    console.log('🔍 [SeverityBreakdown] Starting data fetch...');
-    console.log('🔍 [SeverityBreakdown] Filters:', filters);
-    console.log('🔍 [SeverityBreakdown] Has geometry:', !!geometry);
-    
     const result = await SafetyIncidentsDataService.getEnrichedSafetyData(
       mapView.extent,
       filters,
@@ -85,20 +81,12 @@ export class SafetyChartDataService {
     );
 
     const incidents = result.data;
-    console.log('🔍 [SeverityBreakdown] Total incidents found:', incidents.length);
-    
-    // Debug: Show unique severity values in the data
-    const uniqueSeverities = Array.from(new Set(incidents.map(inc => inc.maxSeverity)));
-    console.log('🔍 [SeverityBreakdown] Unique severity values in data:', uniqueSeverities);
     
     // Updated categories to match UI expectations
     const categories = ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'];
     
     const bikeIncidents = incidents.filter(inc => inc.bicyclist_involved === 1);
     const pedIncidents = incidents.filter(inc => inc.pedestrian_involved === 1);
-    
-    console.log('🔍 [SeverityBreakdown] Bike incidents:', bikeIncidents.length);
-    console.log('🔍 [SeverityBreakdown] Pedestrian incidents:', pedIncidents.length);
 
     const countBySeverity = (incidentList: EnrichedSafetyIncident[], severity: string) => {
       let count = 0;
@@ -120,20 +108,14 @@ export class SafetyChartDataService {
         ).length;
       }
       
-      console.log(`🔍 [SeverityBreakdown] ${severity}: ${count} incidents`);
       return count;
     };
 
     const bikeData = categories.map(cat => countBySeverity(bikeIncidents, cat));
     const pedData = categories.map(cat => countBySeverity(pedIncidents, cat));
     const totalByCategory = categories.map((_, index) => bikeData[index] + pedData[index]);
-    
-    console.log('🔍 [SeverityBreakdown] Categories:', categories);
-    console.log('🔍 [SeverityBreakdown] Bike data:', bikeData);
-    console.log('🔍 [SeverityBreakdown] Ped data:', pedData);
-    console.log('🔍 [SeverityBreakdown] Total by category:', totalByCategory);
 
-    const resultData = {
+    return {
       categories,
       bikeData,
       pedData,
@@ -143,9 +125,6 @@ export class SafetyChartDataService {
         ped: pedData.map(count => pedIncidents.length > 0 ? (count / pedIncidents.length) * 100 : 0)
       }
     };
-    
-    console.log('🔍 [SeverityBreakdown] Final result:', resultData);
-    return resultData;
   }
 
   /**
