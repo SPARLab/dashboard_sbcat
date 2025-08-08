@@ -204,6 +204,11 @@ export default function IncidentsVsTrafficRatios({
           fontSize: 12,
           fontWeight: 500,
         },
+        min: 0,
+        max: (value: any) => {
+          const maxIncidents = Math.max(...scatterData.map(point => point.incidentCount));
+          return Math.ceil(maxIncidents * 1.2); // Add 20% padding above the highest point
+        },
         axisLine: {
           show: true,
           lineStyle: {
@@ -285,7 +290,7 @@ export default function IncidentsVsTrafficRatios({
               <div
                 id="safety-incidents-vs-traffic-tooltip"
                 className="absolute -top-6 left-1/2 transform -translate-x-1/2 z-10 text-sm font-medium text-center"
-                style={{ color: '#3b82f6', minWidth: '200px' }}
+                style={{ color: '#3b82f6', minWidth: '340px' }}
               >
                 <div>{hoveredPoint.location}</div>
                 <div>{hoveredPoint.incidentCount} incidents</div>
