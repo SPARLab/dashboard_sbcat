@@ -199,11 +199,12 @@ export class SafetyIncidentsDataService {
    * Get enriched safety incidents with joined parties and weights data
    */
   static async getEnrichedSafetyData(
-    extent?: Extent | Polygon,
-    filters?: Partial<SafetyFilters>
+    extent?: Extent,
+    filters?: Partial<SafetyFilters>,
+    geometry?: Polygon,
   ): Promise<SafetyAnalysisResult> {
     try {
-      const rawData = await this.querySafetyData(extent, filters);
+      const rawData = await this.querySafetyData(geometry || extent, filters);
       
       if (rawData.error) {
         return {

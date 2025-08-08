@@ -35,11 +35,13 @@ export class SafetyChartDataService {
    */
   async getSummaryStatistics(
     mapView: MapView,
-    filters?: Partial<SafetyFilters>
+    filters?: Partial<SafetyFilters>,
+    geometry?: __esri.Polygon,
   ): Promise<SafetySummaryData> {
     const result = await SafetyIncidentsDataService.getEnrichedSafetyData(
       mapView.extent,
-      filters
+      filters,
+      geometry
     );
     
     return result.summary;
@@ -165,11 +167,12 @@ export class SafetyChartDataService {
     mapView: MapView,
     filters?: Partial<SafetyFilters>,
     timeScale: 'Day' | 'Month' | 'Year' = 'Year',
-    years?: number[]
+    years?: number[],
+    geometry?: __esri.Polygon,
   ): Promise<AnnualIncidentsComparisonData> {
     // Get available years from data if not specified
     if (!years) {
-      const result = await SafetyIncidentsDataService.getEnrichedSafetyData(mapView.extent, filters);
+      const result = await SafetyIncidentsDataService.getEnrichedSafetyData(mapView.extent, filters, geometry);
       const allYears = result.data.map(inc => new Date(inc.timestamp).getFullYear());
       const uniqueYears = Array.from(new Set(allYears)).sort();
       // Use all available years
@@ -190,7 +193,8 @@ export class SafetyChartDataService {
           
           const result = await SafetyIncidentsDataService.getEnrichedSafetyData(
             mapView.extent,
-            yearFilters
+            yearFilters,
+            geometry
           );
           
           return {

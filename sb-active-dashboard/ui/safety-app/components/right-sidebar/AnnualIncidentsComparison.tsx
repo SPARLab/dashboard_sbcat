@@ -67,7 +67,7 @@ export default function AnnualIncidentsComparison({
       const loadPromises = timeScales.map(async (scale) => {
         try {
           if (geometry) {
-            const result = await dataService.getAnnualIncidentsComparisonData(mapViewRef, safetyFilters, scale);
+            const result = await dataService.getAnnualIncidentsComparisonData(mapViewRef, safetyFilters, scale, undefined, geometry);
             return { scale, data: result };
           } else {
             return { scale, data: { categories: [], series: [] } };
@@ -122,7 +122,7 @@ export default function AnnualIncidentsComparison({
           setChartData(newCache.get(timeScale) || null);
         } else {
           // Just time scale changed - load single scale
-          const result = await dataService.getAnnualIncidentsComparisonData(mapView, filters, timeScale);
+          const result = await dataService.getAnnualIncidentsComparisonData(mapView, filters, timeScale, undefined, selectedGeometry);
           setChartData(result);
           
           // Update cache
