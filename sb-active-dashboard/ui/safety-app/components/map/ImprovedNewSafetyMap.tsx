@@ -76,7 +76,7 @@ export default function ImprovedNewSafetyMap({
   const handleArcgisViewReadyChange = (event: CustomEvent) => {
     const mapView = event.target.view as __esri.MapView;
     mapViewRef.current = mapView;
-    console.log('[DEBUG] ImprovedNewSafetyMap - MapView ready');
+
 
     if (mapView) {
       mapView.goTo({
@@ -89,9 +89,9 @@ export default function ImprovedNewSafetyMap({
           onMapViewReady(mapView);
         }
         
-        console.log('[DEBUG] ImprovedNewSafetyMap - Map view initialization completed');
+
       }).catch((error: Error) => {
-        console.error('[DEBUG] ImprovedNewSafetyMap - Map view initialization failed:', error);
+
         setViewReady(true);
         if (onMapViewReady) {
           onMapViewReady(mapView);
@@ -106,7 +106,7 @@ export default function ImprovedNewSafetyMap({
 
     const initializeLayerService = async () => {
       try {
-        console.log('[DEBUG] ImprovedNewSafetyMap - Initializing FeatureFilter service for existing layers');
+
 
         // Initialize the safety layer service for efficient DATA SOURCE filtering
         // This provides instant filtering for Police Reports vs BikeMaps.org toggles
@@ -124,10 +124,10 @@ export default function ImprovedNewSafetyMap({
         // Initialize geographic boundaries
         boundaryService.current.switchGeographicLevel(geographicLevel as any, mapViewRef.current!);
 
-        console.log('[DEBUG] ImprovedNewSafetyMap - FeatureFilter service ready for instant data source filtering');
+
 
       } catch (error) {
-        console.error('[DEBUG] ImprovedNewSafetyMap - Service initialization failed:', error);
+
         setDataError(error instanceof Error ? error.message : 'Failed to initialize filtering service');
       }
     };
@@ -145,7 +145,7 @@ export default function ImprovedNewSafetyMap({
     if (!safetyLayerService) return;
 
     const applyFilters = () => {
-      console.log('[DEBUG] Applying FeatureFilter for filter changes:', filters);
+
       
       // Apply filter to the main incidents layer (for heatmaps)
       safetyLayerService.applyAdditionalFilters({
@@ -256,7 +256,7 @@ export default function ImprovedNewSafetyMap({
         
         const whereClause = whereClauses.length > 0 ? whereClauses.join(' AND ') : "1=1";
         rawIncidentsLayer.definitionExpression = whereClause;
-        console.log(`[DEBUG] Applied filter to raw incidents layer: ${whereClause}`);
+
       }
     };
 
@@ -268,7 +268,7 @@ export default function ImprovedNewSafetyMap({
     if (!incidentsLayer || !viewReady || !mapViewRef.current) return;
 
     const updateVisualization = async () => {
-      console.log(`[DEBUG] Updating visualization to: ${activeVisualization}`);
+
       try {
         setDataLoading(true);
 
@@ -316,7 +316,7 @@ export default function ImprovedNewSafetyMap({
             break;
         }
       } catch (error) {
-        console.error(`[DEBUG] Failed to update visualization to ${activeVisualization}:`, error);
+
         setDataError(error instanceof Error ? error.message : `Failed to update to ${activeVisualization}`);
       } finally {
         setDataLoading(false);
@@ -330,10 +330,10 @@ export default function ImprovedNewSafetyMap({
   // Handle geographic level changes and custom draw tool (combined like volume page)
   useEffect(() => {
     if (viewReady && boundaryService.current && geographicLevel && mapViewRef.current) {
-      console.log('[DEBUG] ImprovedNewSafetyMap - Switching geographic level to:', geographicLevel);
+
       
       if (geographicLevel === 'custom' && sketchLayer) {
-        console.log('[DEBUG] Entering custom draw mode with sketchLayer:', sketchLayer);
+
         // Disable boundary service interactivity and hide its layers
         boundaryService.current.cleanupInteractivity();
         // Also hide the layers associated with the service
@@ -369,9 +369,9 @@ export default function ImprovedNewSafetyMap({
         });
 
         sketchVM.create('polygon');
-        console.log('[DEBUG] Custom polygon drawing started');
+
       } else {
-        console.log('[DEBUG] Exiting custom mode or switching to regular geographic level:', geographicLevel);
+
         if (sketchViewModel) {
           sketchViewModel.destroy();
           setSketchViewModel(null);

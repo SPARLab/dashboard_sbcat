@@ -85,8 +85,6 @@ export class SafetyIncidentsDataService {
 
       // Build where clause for incidents
       const whereClause = this.buildWhereClause(filters);
-      console.log('[DEBUG] SafetyIncidentsDataService.querySafetyData - WHERE clause:', whereClause);
-      console.log('[DEBUG] SafetyIncidentsDataService.querySafetyData - filters:', filters);
 
       // Query with pagination to get ALL incidents
       const incidents: SafetyIncident[] = [];
@@ -126,10 +124,8 @@ export class SafetyIncidentsDataService {
           }
         }
         
-        console.log(`[DEBUG] Loaded ${incidents.length} incidents so far...`);
       }
       
-      console.log(`[DEBUG] Total incidents loaded: ${incidents.length}`);
       
       // Also get the total count to verify pagination worked
       const countQuery = incidentsLayer.createQuery();
@@ -140,7 +136,6 @@ export class SafetyIncidentsDataService {
         countQuery.spatialRelationship = "intersects";
       }
       const totalCount = await incidentsLayer.queryFeatureCount(countQuery);
-      console.log(`[DEBUG] Total incidents in database matching query: ${totalCount}`);
       
       if (totalCount > incidents.length) {
         console.warn(`[WARNING] Pagination may have missed some records! Got ${incidents.length} but total is ${totalCount}`);
@@ -148,12 +143,10 @@ export class SafetyIncidentsDataService {
       
       // Debug: Check if there's any BikeMaps.org data at all
       if (filters?.dataSource?.includes('BikeMaps.org') && incidents.length === 0) {
-        console.log('[DEBUG] No BikeMaps.org incidents found. Checking if ANY BikeMaps.org data exists...');
         const testQuery = incidentsLayer.createQuery();
         testQuery.where = "data_source = 'BikeMaps.org'";
         testQuery.returnCountOnly = true;
         const countResult = await incidentsLayer.queryFeatureCount(testQuery);
-        console.log('[DEBUG] Total BikeMaps.org records in database:', countResult);
       }
       
       if (incidents.length === 0) {
@@ -339,13 +332,7 @@ export class SafetyIncidentsDataService {
     const incidentIdSet = new Set(incidentIds);
     const filteredWeights = this.weightsCache?.filter(weight => incidentIdSet.has(weight.incident_id)) || [];
     
-    console.log('[DEBUG] Weights filtering:', {
-      totalCachedWeights: this.weightsCache?.length || 0,
-      requestedIncidentIds: incidentIds.length,
-      matchingWeights: filteredWeights.length,
-      sampleRequestedIds: incidentIds.slice(0, 5),
-      sampleMatchingWeights: filteredWeights.slice(0, 5)
-    });
+
     
     return filteredWeights;
   }
@@ -354,7 +341,6 @@ export class SafetyIncidentsDataService {
    * Refresh the weights cache with paginated queries
    */
   private static async refreshWeightsCache(weightsLayer: FeatureLayer): Promise<void> {
-    console.log('Refreshing weights cache...');
     
     let weightResultLength = 10000;
     const weightArr: IncidentHeatmapWeight[] = [];
@@ -381,7 +367,6 @@ export class SafetyIncidentsDataService {
 
     this.weightsCache = weightArr;
     this.weightsCacheTimestamp = Date.now();
-    console.log(`Weights cache refreshed with ${weightArr.length} records`);
   }
 
   /**
@@ -425,16 +410,7 @@ export class SafetyIncidentsDataService {
       // Calculate weighted exposure (sum of all weights for this incident)
       const weightedExposure = incidentWeights.reduce((sum, weight) => sum + weight.exposure, 0);
 
-      // Debug logging for first few incidents
-      if (incident.id <= 10) {
-        console.log(`[DEBUG] Join for incident ${incident.id}:`, {
-          incidentId: incident.id,
-          partiesCount: incidentParties.length,
-          weightsCount: incidentWeights.length,
-          weightedExposure,
-          sampleWeights: incidentWeights.slice(0, 2)
-        });
-      }
+
 
       return {
         ...incident,

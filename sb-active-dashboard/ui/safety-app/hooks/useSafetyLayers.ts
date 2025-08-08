@@ -25,7 +25,7 @@ export function useSafetyLayers(
         setDataError(null);
 
         // Create the enriched incidents layer with maxSeverity field
-        console.log('[DEBUG] Creating enriched safety incidents layer...');
+    
         const enrichedIncidentsLayer = await createEnrichedSafetyIncidentsLayer();
         
         // Also initialize the standard layers for data access (parties and weights)
@@ -42,11 +42,11 @@ export function useSafetyLayers(
         // Add enriched layer to map
         mapView.map.add(enrichedIncidentsLayer);
 
-        console.log('[DEBUG] Enriched safety layers initialized successfully with maxSeverity field');
+  
         setDataLoading(false);
 
       } catch (error) {
-        console.error('[DEBUG] Failed to initialize safety layers:', error);
+  
         setDataError(error instanceof Error ? error.message : 'Failed to load safety data');
         setDataLoading(false);
       }

@@ -34,10 +34,10 @@ export default function SafetyApp() {
   });
 
   const handleFiltersChange = useCallback((newFilters: Partial<SafetyFilters>) => {
-    console.log('[DEBUG] SafetyApp.handleFiltersChange - newFilters:', newFilters);
+
     setFilters(prevFilters => {
       const updated = { ...prevFilters, ...newFilters };
-      console.log('[DEBUG] SafetyApp.handleFiltersChange - updated filters:', updated);
+  
       return updated;
     });
   }, []);

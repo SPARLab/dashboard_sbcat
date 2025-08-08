@@ -71,31 +71,69 @@ export class SafetyChartDataService {
    */
   async getSeverityBreakdownData(
     mapView: MapView,
-    filters?: Partial<SafetyFilters>
+    filters?: Partial<SafetyFilters>,
+    geometry?: __esri.Polygon
   ): Promise<SeverityBreakdownData> {
+    console.log('🔍 [SeverityBreakdown] Starting data fetch...');
+    console.log('🔍 [SeverityBreakdown] Filters:', filters);
+    console.log('🔍 [SeverityBreakdown] Has geometry:', !!geometry);
+    
     const result = await SafetyIncidentsDataService.getEnrichedSafetyData(
       mapView.extent,
-      filters
+      filters,
+      geometry
     );
 
     const incidents = result.data;
-    const categories = ['Fatal', 'Severe Injury', 'Injury', 'Property Damage Only', 'Near Miss'];
+    console.log('🔍 [SeverityBreakdown] Total incidents found:', incidents.length);
+    
+    // Debug: Show unique severity values in the data
+    const uniqueSeverities = Array.from(new Set(incidents.map(inc => inc.maxSeverity)));
+    console.log('🔍 [SeverityBreakdown] Unique severity values in data:', uniqueSeverities);
+    
+    // Updated categories to match UI expectations
+    const categories = ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'];
     
     const bikeIncidents = incidents.filter(inc => inc.bicyclist_involved === 1);
     const pedIncidents = incidents.filter(inc => inc.pedestrian_involved === 1);
+    
+    console.log('🔍 [SeverityBreakdown] Bike incidents:', bikeIncidents.length);
+    console.log('🔍 [SeverityBreakdown] Pedestrian incidents:', pedIncidents.length);
 
     const countBySeverity = (incidentList: EnrichedSafetyIncident[], severity: string) => {
-      if (severity === 'Near Miss') {
-        return incidentList.filter(inc => !inc.maxSeverity && inc.data_source === 'BikeMaps').length;
+      let count = 0;
+      
+      if (severity === 'Fatality') {
+        count = incidentList.filter(inc => inc.maxSeverity === 'Fatality').length;
+      } else if (severity === 'Severe Injury') {
+        count = incidentList.filter(inc => inc.maxSeverity === 'Severe Injury').length;
+      } else if (severity === 'Injury') {
+        count = incidentList.filter(inc => inc.maxSeverity === 'Injury').length;
+      } else if (severity === 'No Injury') {
+        count = incidentList.filter(inc => inc.maxSeverity === 'No Injury').length;
+      } else if (severity === 'Unknown') {
+        // Count incidents with no severity or from BikeMaps without severity
+        count = incidentList.filter(inc => 
+          !inc.maxSeverity || 
+          inc.maxSeverity === 'Unknown' ||
+          (inc.data_source === 'BikeMaps.org' && !inc.maxSeverity)
+        ).length;
       }
-      return incidentList.filter(inc => inc.maxSeverity === severity.toLowerCase().replace(' ', '_')).length;
+      
+      console.log(`🔍 [SeverityBreakdown] ${severity}: ${count} incidents`);
+      return count;
     };
 
     const bikeData = categories.map(cat => countBySeverity(bikeIncidents, cat));
     const pedData = categories.map(cat => countBySeverity(pedIncidents, cat));
     const totalByCategory = categories.map((_, index) => bikeData[index] + pedData[index]);
+    
+    console.log('🔍 [SeverityBreakdown] Categories:', categories);
+    console.log('🔍 [SeverityBreakdown] Bike data:', bikeData);
+    console.log('🔍 [SeverityBreakdown] Ped data:', pedData);
+    console.log('🔍 [SeverityBreakdown] Total by category:', totalByCategory);
 
-    return {
+    const resultData = {
       categories,
       bikeData,
       pedData,
@@ -105,6 +143,9 @@ export class SafetyChartDataService {
         ped: pedData.map(count => pedIncidents.length > 0 ? (count / pedIncidents.length) * 100 : 0)
       }
     };
+    
+    console.log('🔍 [SeverityBreakdown] Final result:', resultData);
+    return resultData;
   }
 
   /**

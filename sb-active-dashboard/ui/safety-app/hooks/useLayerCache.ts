@@ -24,7 +24,7 @@ export function useLayerCache() {
   };
 
   const clearRawIncidentsCache = (mapView?: __esri.MapView) => {
-    console.log('[DEBUG] Clearing raw incidents cache');
+
     setCachedRawIncidentsData(null);
     setCachedRawIncidentsLayer(null);
     setRawDataFiltersKey(null);
@@ -36,7 +36,7 @@ export function useLayerCache() {
   };
 
   const clearWeightedCache = (mapView?: __esri.MapView) => {
-    console.log('[DEBUG] Clearing weighted layer cache');
+
     if (cachedWeightedLayer) {
       cachedWeightedLayer.visible = false;
       if (mapView && mapView.map.layers.includes(cachedWeightedLayer)) {

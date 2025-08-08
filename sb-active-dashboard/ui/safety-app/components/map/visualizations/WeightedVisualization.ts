@@ -23,7 +23,7 @@ export class WeightedVisualization {
       const currentCacheKey = generateCacheKey(mapView.extent, filters);
       
       if (cachedWeightedLayer && cachedExtentKey === currentCacheKey) {
-        console.log('[DEBUG] Using cached weighted layer - no reload needed');
+  
         
         // Hide the regular incidents layer and show the cached weighted layer
         incidentsLayer.visible = false;
@@ -37,7 +37,7 @@ export class WeightedVisualization {
         return;
       }
 
-      console.log('[DEBUG] Cache miss - creating new weighted layer');
+  
 
       // Query incidents and weights for current map extent
       const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
@@ -46,26 +46,12 @@ export class WeightedVisualization {
       );
 
       // Debug the raw safety data
-      console.log('[DEBUG] Raw safety data:', {
-        totalIncidents: safetyData.data.length,
-        sampleIncident: safetyData.data[0],
-        incidentsWithWeights: safetyData.data.filter(inc => inc.hasWeight).length,
-        incidentsWithExposure: safetyData.data.filter(inc => inc.weightedExposure).length,
-        sampleWeightedIncident: safetyData.data.find(inc => inc.weightedExposure)
-      });
+      
 
       // Filter incidents that have weight data
       const weightedIncidents = safetyData.data.filter(inc => inc.hasWeight && inc.weightedExposure);
 
-      console.log('[DEBUG] Filtered weighted incidents:', {
-        totalWeightedIncidents: weightedIncidents.length,
-        sampleWeightedIncidents: weightedIncidents.slice(0, 3).map(inc => ({
-          id: inc.id,
-          hasWeight: inc.hasWeight,
-          weightedExposure: inc.weightedExposure,
-          weightsCount: inc.weights?.length || 0
-        }))
-      });
+      
 
       if (weightedIncidents.length === 0) {
         console.warn('No weighted incident data available for current extent');
@@ -82,18 +68,7 @@ export class WeightedVisualization {
       const maxExposure = Math.max(...exposureValues);
       const exposureRange = maxExposure - minExposure;
       
-      console.log('[DEBUG] Normalizing exposure values:', {
-        originalRange: [minExposure, maxExposure],
-        rangeSize: exposureRange,
-        valueDistribution: {
-          count: exposureValues.length,
-          min: Math.min(...exposureValues),
-          max: Math.max(...exposureValues),
-          avg: exposureValues.reduce((a, b) => a + b, 0) / exposureValues.length,
-          median: exposureValues.sort((a, b) => a - b)[Math.floor(exposureValues.length / 2)],
-          top10percent: exposureValues.slice(-Math.floor(exposureValues.length * 0.1))
-        }
-      });
+      
 
       // Create features array for client-side feature layer with normalized exposure
       const weightedFeatures = weightedIncidents.map((incident, index) => {
@@ -115,14 +90,7 @@ export class WeightedVisualization {
           }
         };
         
-        // Debug first few features
-        if (index < 3) {
-          console.log(`[DEBUG] Feature ${index}:`, {
-            original: originalExposure,
-            normalized: normalizedExposure,
-            attributes: feature.attributes
-          });
-        }
+
         
         return feature;
       });
@@ -156,16 +124,10 @@ export class WeightedVisualization {
       mapView.map.add(weightedLayer);
       
       // Debug the created layer
-      console.log('[DEBUG] Created weighted layer:', {
-        title: weightedLayer.title,
-        featureCount: weightedFeatures.length,
-        fields: weightedLayer.fields?.map(f => ({ name: f.name, type: f.type })),
-        geometryType: weightedLayer.geometryType,
-        source: 'client-side features'
-      });
+      
 
       // Use the normalized renderer for consistent visualization
-      console.log('[DEBUG] Using normalized renderer for consistent color distribution');
+  
       
       const normalizedRenderer = IncidentVolumeRatioRenderer.createNormalizedRenderer();
       weightedLayer.renderer = normalizedRenderer;
@@ -173,14 +135,14 @@ export class WeightedVisualization {
       // Cache the weighted layer and extent key for future use
       setCachedWeightedLayer(weightedLayer);
       setCachedExtentKey(currentCacheKey);
-      console.log('[DEBUG] Cached weighted layer for future use');
+  
 
       // Hide the regular incidents layer and show the weighted layer
       incidentsLayer.visible = false;
       weightedLayer.visible = true;
 
     } catch (error) {
-      console.error('[DEBUG] Failed to create weighted visualization:', error);
+  
       // Fallback to regular heatmap
       if (incidentsLayer) {
         incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);

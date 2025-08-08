@@ -167,7 +167,7 @@ export class GeographicBoundariesService {
       if (mapView.map.layers.includes(this.highlightLayer)) {
         // Highlight layer recreated and added to map successfully
       } else {
-        console.error('[DEBUG] Failed to add recreated highlight layer to map');
+
       }
     }
   }
@@ -236,17 +236,17 @@ export class GeographicBoundariesService {
     // Verify layers are visible and properly configured
     layers.forEach(layer => {
       if (!layer.visible) {
-        console.warn(`[DEBUG] Warning: Layer ${layer.title} is not visible!`);
+
       }
       if (!layer.loaded) {
-        console.warn(`[DEBUG] Warning: Layer ${layer.title} is not loaded!`);
+
       }
     });
 
     // Additional check: ensure all layers are ready for interaction
     const allLayersReady = layers.every(layer => layer.visible && layer.loaded);
     if (!allLayersReady) {
-      console.warn('[DEBUG] Not all layers are ready for interaction, waiting...');
+
       // Wait a bit more for layers to be ready
       setTimeout(() => {
         this.setupInteractivity(mapView, layers);
@@ -389,7 +389,6 @@ export class GeographicBoundariesService {
         });
 
         if (hasIncidentHit) {
-          console.log('[GeographicBoundaries] Click hit an incident - preserving current selection');
           return; // Don't process boundary selection
         }
 
@@ -415,7 +414,6 @@ export class GeographicBoundariesService {
                 if (!hasIncidentAtLocation) {
                   this.handleSelection(graphic);
                 } else {
-                  console.log('[GeographicBoundaries] Boundary click ignored - incident takes precedence');
                 }
               });
             } else {
@@ -457,7 +455,7 @@ export class GeographicBoundariesService {
         layers[0].queryFeatures(testQuery as any).then(() => {
           // Test query completed
         }).catch(err => {
-          console.error(`[DEBUG] Test query failed on ${layers[0].title}:`, err);
+    
         });
       }
       
@@ -642,7 +640,6 @@ export class GeographicBoundariesService {
     
     // If clicking the same boundary, keep it selected (don't toggle)
     if (clickedGraphic.attributes.OBJECTID === this.selectedFeature?.objectId) {
-        console.log('[GeographicBoundaries] Same boundary clicked - maintaining selection');
         return;
     }
 

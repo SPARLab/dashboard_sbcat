@@ -264,16 +264,7 @@ export class IncidentVolumeRatioRenderer {
       blurRadius = 35; // Wider spread for few features
     }
     
-    console.log('[DEBUG] Renderer adjustment:', {
-      originalMaxDensity: renderer.maxDensity,
-      newMaxDensity: maxDensity,
-      originalBlurRadius: renderer.blurRadius,
-      newBlurRadius: blurRadius,
-      exposureRange,
-      minExposure,
-      maxExposure,
-      featureCount
-    });
+
     
     newRenderer.maxDensity = maxDensity;
     newRenderer.blurRadius = blurRadius;
@@ -307,7 +298,7 @@ export class IncidentVolumeRatioRenderer {
     const p90 = getPercentile(0.9);
     const max = sortedValues[sortedValues.length - 1];
 
-    console.log('[DEBUG] Exposure percentiles:', { p10, p25, p50, p75, p90, max });
+
 
     return [
       { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
@@ -339,12 +330,7 @@ export class IncidentVolumeRatioRenderer {
       maxDensity = 0.0005;
     }
     
-    console.log('[DEBUG] Data-driven renderer settings:', {
-      range,
-      avgValue,
-      selectedMaxDensity: maxDensity,
-      reasoning: range < 5 && avgValue > 2 ? 'ultra-low for narrow high-value range' : 'default'
-    });
+
     
     return new HeatmapRenderer({
       field: "weightedExposure",
@@ -359,7 +345,7 @@ export class IncidentVolumeRatioRenderer {
    * Create a normalized renderer that uses 0-1 normalized exposure values
    */
   static createNormalizedRenderer(): HeatmapRenderer {
-    console.log('[DEBUG] Creating normalized renderer with enhanced hotspot visibility');
+
     
     return new HeatmapRenderer({
       field: "normalizedExposure", // Use the normalized 0-1 values

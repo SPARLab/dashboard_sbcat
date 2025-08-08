@@ -164,19 +164,14 @@ export const useSafetySpatialQuery = (
       setError(null);
 
       try {
-        console.log('[DEBUG] useSafetySpatialQuery - Starting spatial query with filters:', filters);
-        console.log('[DEBUG] useSafetySpatialQuery - Geometry:', selectedGeometry);
+
         
         const queryResult = await SafetyIncidentsDataService.getEnrichedSafetyData(
           selectedGeometry,
           filters
         );
 
-        console.log('[DEBUG] useSafetySpatialQuery - Query result:', {
-          dataCount: queryResult.data.length,
-          summary: queryResult.summary,
-          error: queryResult.error
-        });
+
 
         setResult(queryResult);
       } catch (err) {

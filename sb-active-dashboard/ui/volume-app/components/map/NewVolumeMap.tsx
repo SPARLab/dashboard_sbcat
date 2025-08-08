@@ -82,9 +82,9 @@ export default function NewVolumeMap({
           onMapViewReady(mapView);
         }
         
-        console.log('[DEBUG] Map view initialization completed successfully');
+
       }).catch((error: Error) => {
-        console.error('[DEBUG] Map view initialization failed:', error);
+        
         // Still mark as ready even if navigation fails
         setViewReady(true);
         if (onMapViewReady) {

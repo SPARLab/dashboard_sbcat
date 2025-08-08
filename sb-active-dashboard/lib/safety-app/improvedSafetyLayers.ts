@@ -31,7 +31,7 @@ const colors = [
  * This enables efficient client-side filtering on severity levels
  */
 export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer> {
-  console.log("[DEBUG] Creating enriched safety incidents layer with maxSeverity field...");
+
   
   // Initialize the source layers
   const incidentsLayer = new FeatureLayer({
@@ -46,7 +46,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
 
   try {
     // Query all incidents with pagination
-    console.log("[DEBUG] Querying incidents...");
+
     const allIncidents: any[] = [];
     let hasMore = true;
     let offset = 0;
@@ -67,13 +67,13 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
         hasMore = false;
       }
       offset += pageSize;
-      console.log(`[DEBUG] Loaded ${allIncidents.length} incidents so far...`);
+
     }
     
-    console.log(`[DEBUG] Total incidents loaded: ${allIncidents.length}`);
+
 
     // Query all parties with pagination
-    console.log("[DEBUG] Querying parties...");
+
     const allParties: any[] = [];
     hasMore = true;
     offset = 0;
@@ -95,7 +95,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       offset += pageSize;
     }
     
-    console.log(`[DEBUG] Total parties loaded: ${allParties.length}`);
+
 
     // Helper function to get severity priority (lower is more severe)
     const getSeverityPriority = (severity: string): number => {
@@ -127,7 +127,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       
       // Only handle empty/null values
       if (!normalizedSeverity) {
-        console.log(`[DEBUG] Empty severity value for incident ${incidentId} -> defaulting to Unknown`);
+
         normalizedSeverity = 'Unknown';
       }
       
@@ -138,7 +138,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       }
     });
     
-    console.log("[DEBUG] Unique severity values found:", Array.from(uniqueSeverities));
+
 
     // Create enriched graphics with maxSeverity field
     const enrichedGraphics: Graphic[] = [];
@@ -163,7 +163,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       enrichedGraphics.push(graphic);
     });
 
-    console.log(`[DEBUG] Created ${enrichedGraphics.length} enriched incident graphics`);
+
     
     // Log sample of severity mappings
     const sampleMappings = enrichedGraphics.slice(0, 5).map(g => ({
@@ -171,7 +171,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       maxSeverity: g.attributes.maxSeverity,
       dataSource: g.attributes.data_source
     }));
-    console.log("[DEBUG] Sample severity mappings:", sampleMappings);
+
     
     // Log distribution of severity types
     const severityDistribution = enrichedGraphics.reduce((acc, g) => {
@@ -179,7 +179,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       acc[severity] = (acc[severity] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    console.log("[DEBUG] Severity distribution:", severityDistribution);
+
 
   // Define fields for the enriched layer (including the new maxSeverity field)
   const layerFields = [
@@ -206,7 +206,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     opacity: 0.8,
   });
 
-    console.log("[DEBUG] Enriched safety incidents layer created successfully with maxSeverity field");
+
     return enrichedLayer;
     
   } catch (error) {
@@ -356,33 +356,32 @@ export class SafetyLayerService {
 
     const whereClauses: string[] = [];
 
-    console.log('[DEBUG] Data sources:', filters.dataSources, 'Length:', filters.dataSources.length);
-    console.log('[DEBUG] Severity types:', filters.severityTypes, 'Length:', filters.severityTypes?.length);
+
 
     // Data source filter (same as above)
     if (filters.dataSources.length === 0) {
-      console.log('[DEBUG] No data sources selected, hiding all');
+
       whereClauses.push("1=0");
     } else if (filters.dataSources.length === 1) {
       const source = filters.dataSources[0];
-      console.log('[DEBUG] Single data source selected:', source);
+
       if (source === 'SWITRS') {
         whereClauses.push("(data_source = 'SWITRS' OR data_source = 'Police')");
       } else {
         whereClauses.push("(data_source = 'BikeMaps.org' OR data_source = 'BikeMaps')");
       }
     } else {
-      console.log('[DEBUG] Multiple data sources selected, no data source filter needed');
+
     }
     // If both sources selected, no need to add data source filter
 
     // Severity filter
     if (filters.severityTypes !== undefined) {
-      console.log('[DEBUG] Severity filtering - selected types:', filters.severityTypes);
+
       
       if (filters.severityTypes.length === 0) {
         // If no severity types selected, show nothing
-        console.log('[DEBUG] No severity types selected, hiding all incidents');
+
         whereClauses.push('1=0');
       } else if (filters.severityTypes.length < 5) {
         // Use severity values directly - no special handling needed
@@ -390,21 +389,21 @@ export class SafetyLayerService {
         
         if (severityConditions.length > 0) {
           const severityClause = `(${severityConditions.join(' OR ')})`;
-          console.log('[DEBUG] Generated severity clause:', severityClause);
+
           whereClauses.push(severityClause);
         }
       } else {
-        console.log('[DEBUG] All 5 severity types selected, no severity filter needed');
+
       }
     }
 
     // Conflict type filter
     if (filters.conflictTypes !== undefined) {
-      console.log('[DEBUG] Conflict type filtering - selected types:', filters.conflictTypes);
+
       
       if (filters.conflictTypes.length === 0) {
         // If no conflict types selected, show nothing
-        console.log('[DEBUG] No conflict types selected, hiding all incidents');
+
         whereClauses.push('1=0');
       } else if (filters.conflictTypes.length < 7) {
         // Only add filter if not all conflict types are selected
@@ -412,11 +411,11 @@ export class SafetyLayerService {
         
         if (conflictConditions.length > 0) {
           const conflictClause = `(${conflictConditions.join(' OR ')})`;
-          console.log('[DEBUG] Generated conflict type clause:', conflictClause);
+
           whereClauses.push(conflictClause);
         }
       } else {
-        console.log('[DEBUG] All 7 conflict types selected, no conflict type filter needed');
+
       }
     }
 
@@ -427,12 +426,12 @@ export class SafetyLayerService {
       const startStr = start.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
       const endStr = end.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
       whereClauses.push(`timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}'`);
-      console.log(`[DEBUG] Generated date range clause: timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}'`);
+
     }
 
     // Time of day filter
     if (filters.timeOfDay?.enabled && filters.timeOfDay.periods.length > 0) {
-      console.log('[DEBUG] Time of day filtering - selected periods:', filters.timeOfDay.periods);
+
       
       if (filters.timeOfDay.periods.length < 3) {
         // Only add filter if not all time periods are selected
@@ -457,17 +456,17 @@ export class SafetyLayerService {
         
         if (timeConditions.length > 0) {
           const timeClause = `(${timeConditions.join(' OR ')})`;
-          console.log('[DEBUG] Generated time of day clause:', timeClause);
+
           whereClauses.push(timeClause);
         }
       } else {
-        console.log('[DEBUG] All 3 time periods selected, no time filter needed');
+
       }
     }
 
     // Weekday filter
     if (filters.weekdayFilter?.enabled) {
-      console.log('[DEBUG] Weekday filtering - selected type:', filters.weekdayFilter.type);
+
       
       // Calculate day of week using mathematical approach
       // We'll use a reference date approach: January 1, 2000 was a Saturday (day 7)
@@ -483,7 +482,7 @@ export class SafetyLayerService {
         weekdayClause = "MOD(CAST((timestamp - DATE '2000-01-01') AS INT) + 6, 7) + 1 IN (1, 7)";
       }
       
-      console.log('[DEBUG] Generated weekday clause:', weekdayClause);
+
       whereClauses.push(`(${weekdayClause})`);
     }
 

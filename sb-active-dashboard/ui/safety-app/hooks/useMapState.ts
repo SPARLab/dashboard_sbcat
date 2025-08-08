@@ -41,9 +41,9 @@ export function useMapState({ onMapViewReady, onSelectionChange }: MapStateOptio
           onMapViewReady(mapView);
         }
         
-        console.log('[DEBUG] Safety map view initialization completed successfully');
+
       }).catch((error: Error) => {
-        console.error('[DEBUG] Safety map view initialization failed:', error);
+
         // Still mark as ready even if navigation fails
         setViewReady(true);
         if (onMapViewReady) {

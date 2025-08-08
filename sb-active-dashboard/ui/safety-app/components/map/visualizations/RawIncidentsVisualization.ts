@@ -21,7 +21,7 @@ export class RawIncidentsVisualization {
     setDataLoading: (loading: boolean) => void
   ): Promise<FeatureLayer | null> {
     if (this.cachedLayer) {
-      console.log('[DEBUG] Returning cached raw incidents layer');
+
       return this.cachedLayer;
     }
 
@@ -31,13 +31,13 @@ export class RawIncidentsVisualization {
     }
 
     try {
-      console.log('[DEBUG] First-time load: creating raw incidents layer...');
+
       setDataLoading(true);
 
       // 1. Fetch all necessary data from the service
       const rawData = await SafetyIncidentsDataService.querySafetyData(undefined, filters);
       if (rawData.error || rawData.incidents.length === 0) {
-        console.warn('[DEBUG] No raw incidents found or an error occurred.');
+
         this.isLoaded = true; // Mark as loaded to prevent retries
         return null;
       }
@@ -107,12 +107,12 @@ export class RawIncidentsVisualization {
       this.cachedLayer = clientSideLayer;
       this.isLoaded = true;
       mapView.map.add(this.cachedLayer);
-      console.log('[DEBUG] Raw incidents layer created and cached successfully!');
+
       
       return this.cachedLayer;
 
     } catch (error) {
-      console.error('[DEBUG] Error creating raw incidents visualization:', error);
+
       this.isLoaded = true; // Mark as loaded to prevent retries
       return null;
     } finally {

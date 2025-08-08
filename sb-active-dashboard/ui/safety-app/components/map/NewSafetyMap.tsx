@@ -90,9 +90,7 @@ export default function NewSafetyMap({
   useEffect(() => {
     const currentFiltersKey = JSON.stringify(filters);
     if (rawDataFiltersKey && rawDataFiltersKey !== currentFiltersKey) {
-      console.log('[DEBUG] NewSafetyMap - Filter key changed, clearing cache');
-      console.log('[DEBUG] Old key:', rawDataFiltersKey);
-      console.log('[DEBUG] New key:', currentFiltersKey);
+
       clearRawIncidentsCache(mapViewRef.current || undefined);
     }
   }, [filters]); // Remove rawDataFiltersKey from dependencies to prevent loop
@@ -102,11 +100,7 @@ export default function NewSafetyMap({
     if (!incidentsLayer || !viewReady || !mapViewRef.current) return;
 
     const updateVisualization = async () => {
-      console.log('[DEBUG] NewSafetyMap.updateVisualization - Starting update', {
-        activeVisualization,
-        filters: JSON.stringify(filters),
-        hasIncidentsLayer: !!incidentsLayer
-      });
+
       try {
         setDataLoading(true);
 
@@ -115,7 +109,7 @@ export default function NewSafetyMap({
           // Hide cached layer but don't destroy it
           if (cachedWeightedLayer) {
             cachedWeightedLayer.visible = false;
-            console.log('[DEBUG] Hiding cached weighted layer, but keeping it for later use');
+
           }
           
           // Also clean up any other weighted layers
@@ -183,7 +177,7 @@ export default function NewSafetyMap({
 
         setDataLoading(false);
       } catch (error) {
-        console.error('[DEBUG] Failed to update visualization:', error);
+
         setDataError(error instanceof Error ? error.message : 'Failed to update visualization');
         setDataLoading(false);
       }
@@ -226,7 +220,7 @@ export default function NewSafetyMap({
         }
         
       } catch (error) {
-        console.error('[DEBUG] Failed to update boundaries:', error);
+
       }
     };
 
@@ -244,7 +238,7 @@ export default function NewSafetyMap({
           // Raw incidents no longer need extent-based refresh - they load all data once
           // Only other visualizations need extent-based updates
           if (activeVisualization !== 'raw-incidents' && activeVisualization !== 'incident-to-volume-ratio') {
-            console.log('[DEBUG] Map extent changed, refreshing safety data');
+      
             // Other visualizations might need to refresh
           }
         }
