@@ -319,6 +319,18 @@ export default function ImprovedNewSafetyMap({
     // Re-run this effect when the visualization type changes. Filter changes are handled separately.
   }, [activeVisualization, incidentsLayer, viewReady]);
 
+  // Cleanup effect to clear cache when component unmounts or map view changes
+  useEffect(() => {
+    return () => {
+      // Clear the raw incidents cache for this map view when component unmounts
+      if (mapViewRef.current) {
+        RawIncidentsVisualization.clearCacheForMap(mapViewRef.current);
+        // Also clear the layer cache from the hook
+        clearRawIncidentsCache(mapViewRef.current);
+      }
+    };
+  }, [clearRawIncidentsCache]);
+
   // Handle geographic level changes and custom draw tool (combined like volume page)
   useEffect(() => {
     if (viewReady && boundaryService.current && geographicLevel && mapViewRef.current) {

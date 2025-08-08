@@ -6,39 +6,47 @@ import { SafetyFilters } from "../../../../../lib/safety-app/types";
 import { generateRawIncidentPopupContent } from "../../../utils/popupContentGenerator";
 
 export class RawIncidentsVisualization {
-  private static cachedLayer: FeatureLayer | null = null;
-  private static isLoaded = false;
+  // Change from static cache to map-specific cache
+  private static layerCache = new Map<string, FeatureLayer>();
+  private static loadingCache = new Map<string, boolean>();
 
   /**
    * Gets a client-side FeatureLayer for raw incidents.
-   * This function fetches and processes data once, caches the resulting layer,
-   * and returns the cached layer on subsequent calls. This ensures that the
-   * expensive data processing is not re-run unnecessarily.
+   * This function fetches and processes data once per map view, caches the resulting layer,
+   * and returns the cached layer on subsequent calls for the same map view.
    */
   static async getLayer(
     mapView: __esri.MapView,
     filters: Partial<SafetyFilters>,
     setDataLoading: (loading: boolean) => void
   ): Promise<FeatureLayer | null> {
-    if (this.cachedLayer) {
-
-      return this.cachedLayer;
+    // Create a unique key for this map view
+    const mapKey = mapView.id || `map-${Date.now()}`;
+    
+    // Check if we have a cached layer for this specific map
+    if (this.layerCache.has(mapKey)) {
+      const cachedLayer = this.layerCache.get(mapKey);
+      if (cachedLayer && mapView.map.layers.includes(cachedLayer)) {
+        return cachedLayer;
+      } else {
+        // Layer exists in cache but not on map, remove from cache
+        this.layerCache.delete(mapKey);
+      }
     }
 
-    if (this.isLoaded) {
-      // If loading was attempted and failed, don't try again.
+    // Check if we're already loading for this map
+    if (this.loadingCache.get(mapKey)) {
       return null;
     }
 
     try {
-
+      this.loadingCache.set(mapKey, true);
       setDataLoading(true);
 
       // 1. Fetch all necessary data from the service
       const rawData = await SafetyIncidentsDataService.querySafetyData(undefined, filters);
       if (rawData.error || rawData.incidents.length === 0) {
-
-        this.isLoaded = true; // Mark as loaded to prevent retries
+        this.loadingCache.set(mapKey, false);
         return null;
       }
 
@@ -103,20 +111,41 @@ export class RawIncidentsVisualization {
         },
       });
 
-      // 7. Cache the layer and mark as loaded
-      this.cachedLayer = clientSideLayer;
-      this.isLoaded = true;
-      mapView.map.add(this.cachedLayer);
+      // 7. Cache the layer for this specific map and add to map
+      this.layerCache.set(mapKey, clientSideLayer);
+      this.loadingCache.set(mapKey, false);
+      mapView.map.add(clientSideLayer);
 
-      
-      return this.cachedLayer;
+      return clientSideLayer;
 
     } catch (error) {
-
-      this.isLoaded = true; // Mark as loaded to prevent retries
+      this.loadingCache.set(mapKey, false);
       return null;
     } finally {
       setDataLoading(false);
     }
+  }
+
+  /**
+   * Clear the cache for a specific map view when it's destroyed
+   */
+  static clearCacheForMap(mapView: __esri.MapView): void {
+    const mapKey = mapView.id || `map-${Date.now()}`;
+    const cachedLayer = this.layerCache.get(mapKey);
+    
+    if (cachedLayer && mapView.map.layers.includes(cachedLayer)) {
+      mapView.map.remove(cachedLayer);
+    }
+    
+    this.layerCache.delete(mapKey);
+    this.loadingCache.delete(mapKey);
+  }
+
+  /**
+   * Clear all caches (useful for cleanup)
+   */
+  static clearAllCaches(): void {
+    this.layerCache.clear();
+    this.loadingCache.clear();
   }
 }
