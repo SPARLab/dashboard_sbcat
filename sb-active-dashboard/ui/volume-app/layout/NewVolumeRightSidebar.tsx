@@ -238,6 +238,7 @@ export default function NewVolumeRightSidebar({
                 selectedGeometry={selectedGeometry}
                 showBicyclist={showBicyclist}
                 showPedestrian={showPedestrian}
+                dateRange={dateRange}
               />
               <YearToYearVolumeComparison 
                 selectedGeometry={selectedGeometry}

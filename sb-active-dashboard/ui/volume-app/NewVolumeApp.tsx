@@ -23,8 +23,8 @@ export default function NewVolumeApp() {
   
   // Date range state for timeline and filtering
   const [dateRange, setDateRange] = useState({
-    startDate: new Date(2023, 0, 1),
-    endDate: new Date(2023, 11, 31)
+    startDate: new Date(2018, 7, 15), // 8/15/2018
+    endDate: new Date(2025, 6, 16),   // 7/16/2025
   });
 
   // Note: Removed auto-switch to City/Service Area restriction

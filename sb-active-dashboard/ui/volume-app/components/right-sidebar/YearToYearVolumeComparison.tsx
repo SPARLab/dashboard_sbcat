@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TimeScale, YearToYearComparisonData, YearToYearComparisonDataService } from '../../../../lib/data-services/YearToYearComparisonDataService';
 import Tooltip from '../../../components/Tooltip';
 import CollapseExpandIcon from './CollapseExpandIcon';
+import SelectRegionPlaceholder from '../../../components/SelectRegionPlaceholder';
 
 const timeScales: TimeScale[] = ['Hour', 'Day', 'Weekday vs Weekend', 'Month', 'Year'];
 
@@ -96,6 +97,14 @@ export default function YearToYearVolumeComparison({
   // Fetch data when dependencies change
   useEffect(() => {
     const fetchData = async () => {
+      // If no geometry, clear and skip fetching
+      if (!selectedGeometry) {
+        setCurrentData([]);
+        setError(null);
+        setIsLoading(false);
+        return;
+      }
+
       const newCacheKey = generateCacheKey(selectedGeometry, showBicyclist, showPedestrian);
       
       // Check if we have cached data for this selection
@@ -117,22 +126,18 @@ export default function YearToYearVolumeComparison({
           setCurrentData(newCache.get(timeScale) || []);
         } else {
           // Just time scale changed - load single scale
-          if (selectedGeometry) {
-            const result = await YearToYearComparisonDataService.queryYearToYearComparison(
-              selectedGeometry, timeScale, showBicyclist, showPedestrian
-            );
-            const data = result.error ? YearToYearComparisonDataService.getDefaultData(timeScale) : result.data;
-            setCurrentData(data);
-            
-            // Update cache
-            const updatedCache = new Map(dataCache);
-            updatedCache.set(timeScale, data);
-            setDataCache(updatedCache);
-            
-            if (result.error) setError(result.error);
-          } else {
-            setCurrentData(YearToYearComparisonDataService.getDefaultData(timeScale));
-          }
+          const result = await YearToYearComparisonDataService.queryYearToYearComparison(
+            selectedGeometry, timeScale, showBicyclist, showPedestrian
+          );
+          const data = result.error ? YearToYearComparisonDataService.getDefaultData(timeScale) : result.data;
+          setCurrentData(data);
+          
+          // Update cache
+          const updatedCache = new Map(dataCache);
+          updatedCache.set(timeScale, data);
+          setDataCache(updatedCache);
+          
+          if (result.error) setError(result.error);
         }
       } catch (err) {
         console.error('Error fetching year-to-year comparison data:', err);
@@ -466,6 +471,11 @@ export default function YearToYearVolumeComparison({
         <CollapseExpandIcon id="year-to-year-volume-comparison-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
       </div>
       <div id="year-to-year-volume-comparison-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'max-h-0' : 'max-h-[500px]'}`}>
+        {!selectedGeometry && (
+          <SelectRegionPlaceholder id="year-to-year-volume-comparison-no-selection" subtext="Use the polygon tool or click on a boundary to see the year-to-year comparison for that area" />
+        )}
+        {selectedGeometry && (
+        <>
         <div id="year-to-year-volume-comparison-buttons-container" className="flex space-x-1 mt-2">
           {timeScales.map(scale => (
             <button
@@ -559,6 +569,8 @@ export default function YearToYearVolumeComparison({
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

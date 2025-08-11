@@ -25,6 +25,12 @@ export class VolumeBreakdownDataService {
   private static readonly COUNTS_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/1";
   private static readonly SITES_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/0";
 
+  private static currentDateRange: { startDate: Date; endDate: Date } | undefined;
+
+  static setDateRange(dateRange?: { startDate: Date; endDate: Date }) {
+    this.currentDateRange = dateRange;
+  }
+
   /**
    * Query volume breakdown data for selected area and time scale
    */
@@ -47,7 +53,12 @@ export class VolumeBreakdownDataService {
       }
 
       // Query counts data for these sites
-      const countsData = await this.queryCountsForSites(siteIds, showBicyclist, showPedestrian);
+      const countsData = await this.queryCountsForSites(
+        siteIds,
+        showBicyclist,
+        showPedestrian,
+        this.currentDateRange
+      );
       
       // Aggregate data based on time scale
       const aggregatedData = this.aggregateByTimeScale(countsData, timeScale);
@@ -92,7 +103,8 @@ export class VolumeBreakdownDataService {
   private static async queryCountsForSites(
     siteIds: number[],
     showBicyclist: boolean,
-    showPedestrian: boolean
+    showPedestrian: boolean,
+    dateRange?: { startDate: Date; endDate: Date }
   ): Promise<any[]> {
     const countsLayer = new FeatureLayer({ url: this.COUNTS_URL });
 
@@ -105,12 +117,22 @@ export class VolumeBreakdownDataService {
       return [];
     }
 
-    const whereClause = `site_id IN (${siteIds.join(',')}) AND (${countTypeConditions.join(' OR ')})`;
+    const whereParts = [`site_id IN (${siteIds.join(',')})`, `(${countTypeConditions.join(' OR ')})`];
+    if (dateRange?.startDate && dateRange?.endDate) {
+      const startDate = dateRange.startDate.toISOString().split('T')[0];
+      const endDate = dateRange.endDate.toISOString().split('T')[0];
+      // Use DATE 'YYYY-MM-DD' syntax, inclusive bounds
+      whereParts.push(`timestamp >= DATE '${startDate}' AND timestamp <= DATE '${endDate}'`);
+    }
+    const whereClause = whereParts.join(' AND ');
 
     const query = countsLayer.createQuery();
     query.where = whereClause;
     query.outFields = ["site_id", "timestamp", "count_type", "counts"];
     query.returnGeometry = false;
+    // Debug the where clause to verify date filtering
+    // eslint-disable-next-line no-console
+    console.debug('[VolumeBreakdownDataService] counts where:', query.where);
 
     const results = await countsLayer.queryFeatures(query);
     return results.features.map(feature => feature.attributes);

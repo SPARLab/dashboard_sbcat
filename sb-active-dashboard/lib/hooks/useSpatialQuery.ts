@@ -142,7 +142,8 @@ export const useVolumeSpatialQuery = (
  */
 export const useSafetySpatialQuery = (
   selectedGeometry: Polygon | null,
-  filters?: Partial<SafetyFilters>
+  filters?: Partial<SafetyFilters>,
+  debounceMs: number = 350
 ): {
   result: SafetyAnalysisResult | null;
   isLoading: boolean;
@@ -151,40 +152,63 @@ export const useSafetySpatialQuery = (
   const [result, setResult] = useState<SafetyAnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = { current: 0 } as { current: number }; // simple ref without importing useRef
 
   useEffect(() => {
-    const performQuery = async () => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleQuery = () => {
       if (!selectedGeometry) {
+        console.debug('[useSafetySpatialQuery] No geometry; clearing state.');
         setResult(null);
         setError(null);
+        setIsLoading(false);
         return;
       }
 
-      setIsLoading(true);
       setError(null);
+      console.debug('[useSafetySpatialQuery] Scheduling query in', debounceMs, 'ms', {
+        filters: filters ? JSON.parse(JSON.stringify(filters)) : undefined,
+      });
 
-      try {
+      timer = setTimeout(async () => {
+        if (cancelled) return;
+        const myRequestId = ++requestIdRef.current;
+        setIsLoading(true);
+        console.debug('[useSafetySpatialQuery] Executing query id', myRequestId);
+        try {
+          const queryResult = await SafetyIncidentsDataService.getEnrichedSafetyData(
+            selectedGeometry,
+            filters
+          );
 
-        
-        const queryResult = await SafetyIncidentsDataService.getEnrichedSafetyData(
-          selectedGeometry,
-          filters
-        );
-
-
-
-        setResult(queryResult);
-      } catch (err) {
-        console.error('Safety spatial query failed:', err);
-        setError('Failed to query safety incidents within selected area');
-        setResult(null);
-      } finally {
-        setIsLoading(false);
-      }
+          if (!cancelled && myRequestId === requestIdRef.current) {
+            setResult(queryResult);
+            console.debug('[useSafetySpatialQuery] Query id', myRequestId, 'completed');
+          }
+        } catch (err) {
+          console.error('Safety spatial query failed:', err);
+          if (!cancelled && myRequestId === requestIdRef.current) {
+            setError('Failed to query safety incidents within selected area');
+            setResult(null);
+          }
+        } finally {
+          if (!cancelled && myRequestId === requestIdRef.current) {
+            setIsLoading(false);
+          }
+        }
+      }, Math.max(0, debounceMs));
     };
 
-    performQuery();
-  }, [selectedGeometry, JSON.stringify(filters)]); // Stringify filters to ensure proper dependency tracking
+    scheduleQuery();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      console.debug('[useSafetySpatialQuery] Cancelled pending timer');
+    };
+  }, [selectedGeometry, JSON.stringify(filters), debounceMs]); // Stringify filters to ensure proper dependency tracking
 
   return {
     result,

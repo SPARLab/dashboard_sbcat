@@ -1,10 +1,11 @@
 'use client';
 import Polygon from "@arcgis/core/geometry/Polygon";
 import ReactECharts from 'echarts-for-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TimeScale, VolumeBreakdownData, VolumeBreakdownDataService } from '../../../../lib/data-services/VolumeBreakdownDataService';
 import Tooltip from '../../../components/Tooltip';
 import CollapseExpandIcon from './CollapseExpandIcon';
+import SelectRegionPlaceholder from '../../../components/SelectRegionPlaceholder';
 const timeScales: TimeScale[] = ['Hour', 'Day', 'Weekday vs Weekend', 'Month', 'Year'];
 
 interface HoveredBarData {
@@ -12,16 +13,23 @@ interface HoveredBarData {
   name: string;
 }
 
+interface DateRangeValue {
+  startDate: Date;
+  endDate: Date;
+}
+
 interface AggregatedVolumeBreakdownProps {
   selectedGeometry?: Polygon | null;
   showBicyclist?: boolean;
   showPedestrian?: boolean;
+  dateRange?: DateRangeValue;
 }
 
 export default function AggregatedVolumeBreakdown({ 
   selectedGeometry = null, 
   showBicyclist = true, 
-  showPedestrian = true 
+  showPedestrian = true,
+  dateRange,
 }: AggregatedVolumeBreakdownProps) {
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
   const [timeScale, setTimeScale] = useState<TimeScale>('Month');
@@ -34,31 +42,77 @@ export default function AggregatedVolumeBreakdown({
   const [dataCache, setDataCache] = useState<Map<TimeScale, VolumeBreakdownData[]>>(new Map());
   const [cacheKey, setCacheKey] = useState<string>('');
   const [isPreloading, setIsPreloading] = useState(false);
+  const requestIdRef = useRef(0);
+  const preloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounce the date range to prevent rapid refetches while sliding
+  const [debouncedDateRange, setDebouncedDateRange] = useState<DateRangeValue | undefined>(dateRange);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    if (dateRange) {
+      console.debug('[AggregatedVolumeBreakdown] Debounce schedule for dateRange', {
+        start: dateRange.startDate?.toISOString(),
+        end: dateRange.endDate?.toISOString(),
+      });
+      timer = setTimeout(() => {
+        setDebouncedDateRange(dateRange);
+        console.debug('[AggregatedVolumeBreakdown] Debounce commit for dateRange', {
+          start: dateRange.startDate?.toISOString(),
+          end: dateRange.endDate?.toISOString(),
+        });
+      }, 350);
+    } else {
+      setDebouncedDateRange(undefined);
+    }
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+        console.debug('[AggregatedVolumeBreakdown] Debounce cancelled for dateRange');
+      }
+    };
+  }, [dateRange?.startDate?.getTime?.(), dateRange?.endDate?.getTime?.()]);
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
 
   // Generate cache key based on selection and filters
-  const generateCacheKey = (geometry: Polygon | null, bike: boolean, ped: boolean): string => {
+  const generateCacheKey = (
+    geometry: Polygon | null,
+    bike: boolean,
+    ped: boolean,
+    range?: DateRangeValue
+  ): string => {
     if (!geometry) return 'default';
     const bounds = geometry.extent;
     if (!bounds) return 'default';
-    return `${bounds.xmin}_${bounds.ymin}_${bounds.xmax}_${bounds.ymax}_${bike}_${ped}`;
+    const rangeKey = range?.startDate && range?.endDate
+      ? `${range.startDate.getTime()}_${range.endDate.getTime()}`
+      : 'no-range';
+    return `${bounds.xmin}_${bounds.ymin}_${bounds.xmax}_${bounds.ymax}_${bike}_${ped}_${rangeKey}`;
   };
 
   // Preload all time scales for current selection
-  const preloadAllTimeScales = useCallback(async (geometry: Polygon | null, bike: boolean, ped: boolean) => {
-    const newCacheKey = generateCacheKey(geometry, bike, ped);
+  const preloadAllTimeScales = useCallback(async (geometry: Polygon | null, bike: boolean, ped: boolean, range?: DateRangeValue) => {
+    const newCacheKey = generateCacheKey(geometry, bike, ped, range);
     const newCache = new Map<TimeScale, VolumeBreakdownData[]>();
 
     setIsPreloading(true);
     
     try {
+      // Ensure date range is honored for all preload requests
+      VolumeBreakdownDataService.setDateRange(range);
       // Load all time scales in parallel
       const loadPromises = timeScales.map(async (scale) => {
         try {
           if (geometry) {
+            const preId = ++requestIdRef.current;
+            console.debug('[AggregatedVolumeBreakdown] Preload query id', preId, 'for scale', scale, {
+              bike,
+              ped,
+              start: range?.startDate?.toISOString(),
+              end: range?.endDate?.toISOString(),
+            });
             const result = await VolumeBreakdownDataService.queryVolumeBreakdown(
               geometry, scale, bike, ped
             );
@@ -85,10 +139,52 @@ export default function AggregatedVolumeBreakdown({
     }
   }, []);
 
+  // Preload all time scales EXCEPT the active one, after a short idle period
+  const schedulePreloadOtherScales = useCallback((geometry: Polygon, bike: boolean, ped: boolean, range: DateRangeValue | undefined, active: TimeScale) => {
+    if (preloadTimerRef.current) {
+      clearTimeout(preloadTimerRef.current);
+      preloadTimerRef.current = null;
+      console.debug('[AggregatedVolumeBreakdown] Cancelled pending background preload');
+    }
+    preloadTimerRef.current = setTimeout(async () => {
+      try {
+        setIsPreloading(true);
+        VolumeBreakdownDataService.setDateRange(range);
+        const otherScales = timeScales.filter(s => s !== active);
+        console.debug('[AggregatedVolumeBreakdown] Background preloading other scales:', otherScales);
+        const loadPromises = otherScales.map(async (scale) => {
+          try {
+            const res = await VolumeBreakdownDataService.queryVolumeBreakdown(geometry, scale, bike, ped);
+            return { scale, data: res.error ? VolumeBreakdownDataService.getDefaultData(scale) : res.data };
+          } catch (e) {
+            console.error('Preload error for scale', scale, e);
+            return { scale, data: VolumeBreakdownDataService.getDefaultData(scale) };
+          }
+        });
+        const results = await Promise.all(loadPromises);
+        setDataCache(prev => {
+          const updated = new Map(prev);
+          results.forEach(({ scale, data }) => updated.set(scale, data));
+          return updated;
+        });
+      } finally {
+        setIsPreloading(false);
+      }
+    }, 600);
+  }, [timeScales]);
+
   // Fetch data when dependencies change
   useEffect(() => {
     const fetchData = async () => {
-      const newCacheKey = generateCacheKey(selectedGeometry, showBicyclist, showPedestrian);
+      // If no geometry, clear data and skip any fetching
+      if (!selectedGeometry) {
+        setCurrentData([]);
+        setError(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const newCacheKey = generateCacheKey(selectedGeometry, showBicyclist, showPedestrian, debouncedDateRange);
       
       // Check if we have cached data for this selection
       if (newCacheKey === cacheKey && dataCache.has(timeScale)) {
@@ -104,27 +200,59 @@ export default function AggregatedVolumeBreakdown({
 
       try {
         if (newCacheKey !== cacheKey) {
-          // Selection changed - preload all time scales
-          const newCache = await preloadAllTimeScales(selectedGeometry, showBicyclist, showPedestrian);
-          setCurrentData(newCache.get(timeScale) || []);
+          // Selection or filters changed - fetch only the active time scale first
+          VolumeBreakdownDataService.setDateRange(debouncedDateRange);
+          const myRequestId = ++requestIdRef.current;
+          console.debug('[AggregatedVolumeBreakdown] Executing fetch id', myRequestId, 'for scale', timeScale, {
+            bike: showBicyclist,
+            ped: showPedestrian,
+            start: debouncedDateRange?.startDate?.toISOString(),
+            end: debouncedDateRange?.endDate?.toISOString(),
+          });
+          const result = await VolumeBreakdownDataService.queryVolumeBreakdown(
+            selectedGeometry,
+            timeScale,
+            showBicyclist,
+            showPedestrian
+          );
+          const data = result.error ? VolumeBreakdownDataService.getDefaultData(timeScale) : result.data;
+          setCurrentData(data);
+          setDataCache(prev => {
+            const updated = new Map(prev);
+            updated.set(timeScale, data);
+            return updated;
+          });
+          setCacheKey(newCacheKey);
+          console.debug('[AggregatedVolumeBreakdown] Fetch id', myRequestId, 'data committed. Points:', data.length);
+          // Schedule background preload of other time scales
+          schedulePreloadOtherScales(selectedGeometry, showBicyclist, showPedestrian, debouncedDateRange, timeScale);
         } else {
           // Just time scale changed - load single scale
-          if (selectedGeometry) {
-            const result = await VolumeBreakdownDataService.queryVolumeBreakdown(
-              selectedGeometry, timeScale, showBicyclist, showPedestrian
-            );
-            const data = result.error ? VolumeBreakdownDataService.getDefaultData(timeScale) : result.data;
-            setCurrentData(data);
-            
-            // Update cache
-            const updatedCache = new Map(dataCache);
-            updatedCache.set(timeScale, data);
-            setDataCache(updatedCache);
-            
-            if (result.error) setError(result.error);
-          } else {
-            setCurrentData(VolumeBreakdownDataService.getDefaultData(timeScale));
-          }
+          // Update global date range on the service so queries are filtered
+          VolumeBreakdownDataService.setDateRange(debouncedDateRange);
+          const myRequestId = ++requestIdRef.current;
+          console.debug('[AggregatedVolumeBreakdown] Executing fetch id', myRequestId, 'for scale', timeScale, {
+            bike: showBicyclist,
+            ped: showPedestrian,
+            start: debouncedDateRange?.startDate?.toISOString(),
+            end: debouncedDateRange?.endDate?.toISOString(),
+          });
+          const result = await VolumeBreakdownDataService.queryVolumeBreakdown(
+            selectedGeometry,
+            timeScale,
+            showBicyclist,
+            showPedestrian
+          );
+          const data = result.error ? VolumeBreakdownDataService.getDefaultData(timeScale) : result.data;
+          setCurrentData(data);
+          console.debug('[AggregatedVolumeBreakdown] Fetch id', myRequestId, 'data committed. Points:', data.length);
+          
+          // Update cache
+          const updatedCache = new Map(dataCache);
+          updatedCache.set(timeScale, data);
+          setDataCache(updatedCache);
+          
+          if (result.error) setError(result.error);
         }
       } catch (err) {
         console.error('Error fetching volume breakdown data:', err);
@@ -136,7 +264,7 @@ export default function AggregatedVolumeBreakdown({
     };
 
     fetchData();
-  }, [selectedGeometry, timeScale, showBicyclist, showPedestrian, cacheKey, dataCache, preloadAllTimeScales]);
+  }, [selectedGeometry, timeScale, showBicyclist, showPedestrian, cacheKey, dataCache, preloadAllTimeScales, debouncedDateRange?.startDate?.getTime?.(), debouncedDateRange?.endDate?.getTime?.(), schedulePreloadOtherScales]);
 
   const onEvents = useMemo(
     () => ({
@@ -318,6 +446,11 @@ export default function AggregatedVolumeBreakdown({
         <CollapseExpandIcon id="aggregated-volume-breakdown-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
       </div>
       <div id="aggregated-volume-breakdown-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'max-h-0' : 'max-h-[500px]'}`}>
+        {!selectedGeometry && (
+          <SelectRegionPlaceholder id="aggregated-volume-breakdown-no-selection" subtext="Use the polygon tool or click on a boundary to see volume breakdowns for that area" />
+        )}
+        {selectedGeometry && (
+        <>
         <div id="aggregated-volume-breakdown-buttons-container" className="flex space-x-1 mt-2">
           {timeScales.map(scale => (
             <button
@@ -391,7 +524,7 @@ export default function AggregatedVolumeBreakdown({
               className="absolute top-2 right-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full flex items-center z-10"
             >
               <div className="animate-spin rounded-full h-3 w-3 border border-blue-400 border-t-transparent mr-1"></div>
-              Preloading...
+              Loading...
             </div>
           )}
 
@@ -412,6 +545,8 @@ export default function AggregatedVolumeBreakdown({
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );
