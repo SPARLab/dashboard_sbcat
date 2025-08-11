@@ -64,7 +64,7 @@ export default function SharedTimelineChart({
         className={`w-full ${className}`}
       >
       {/* Year Labels */}
-      <div id={`${idPrefix}-year-labels-container`} className="flex items-center mb-2">
+      <div id={`${idPrefix}-year-labels-container`} className="flex items-center mb-2 ml-2 mr-1">
         <div className={`${styles.siteLabelWidth} shrink-0`}>
           {/* Spacer to align with site labels below */}
         </div>

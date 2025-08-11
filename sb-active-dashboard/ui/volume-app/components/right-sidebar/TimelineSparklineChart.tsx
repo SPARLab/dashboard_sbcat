@@ -115,8 +115,12 @@ export default function TimelineSparklineChart({
   const years = [];
   const startYear = startDate.getFullYear();
   const endYear = endDate.getFullYear();
+  const yearCount = endYear - startYear + 1;
+  
   for (let year = startYear; year <= endYear; year++) {
-    years.push(year);
+    // Use abbreviated format ('21) when there are 8+ years, otherwise full year (2021)
+    const yearLabel = yearCount >= 8 ? `'${year.toString().slice(-2)}` : year.toString();
+    years.push(yearLabel);
   }
 
   // Use real data from props only - no test data fallback

@@ -262,7 +262,7 @@ export default function ModeBreakdown({
       <div id="mode-breakdown-chart" className="bg-white">
         <ReactECharts
           option={option}
-          style={{ width: '100%', height: '200px' }}
+          style={{ width: '100%', height: '250px' }}
           opts={{ renderer: 'canvas' }}
           onEvents={onEvents}
         />
