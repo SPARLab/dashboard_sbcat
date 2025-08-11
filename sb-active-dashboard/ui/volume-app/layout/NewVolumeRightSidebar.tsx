@@ -257,6 +257,10 @@ export default function NewVolumeRightSidebar({
                 onSiteSelect={onCountSiteSelect}
                 onConfidenceUpdate={handleConfidenceUpdate}
                 selectedGeometry={selectedGeometry}
+                isLoading={timelineLoading}
+                showBicyclist={showBicyclist}
+                showPedestrian={showPedestrian}
+                modelCountsBy={modelCountsBy}
               />
               <HighestVolume 
                 mapView={mapView}
