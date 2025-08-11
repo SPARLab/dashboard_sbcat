@@ -232,7 +232,8 @@ export default function NewVolumeRightSidebar({
               />
               <SummaryStatistics 
                 spatialResult={volumeResult || null} 
-                isLoading={volumeLoading} 
+                isLoading={volumeLoading}
+                selectedGeometry={selectedGeometry}
               />
               <AggregatedVolumeBreakdown 
                 selectedGeometry={selectedGeometry}
@@ -253,6 +254,7 @@ export default function NewVolumeRightSidebar({
                 selectedSiteId={selectedCountSite}
                 onSiteSelect={onCountSiteSelect}
                 onConfidenceUpdate={handleConfidenceUpdate}
+                selectedGeometry={selectedGeometry}
               />
               <HighestVolume 
                 mapView={mapView}

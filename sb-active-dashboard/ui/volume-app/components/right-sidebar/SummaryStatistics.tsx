@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import MoreInformationIconCostBenefitTool from "./MoreInformationIcon";
 import CollapseExpandIcon from "./CollapseExpandIcon";
+import Polygon from "@arcgis/core/geometry/Polygon";
+import SelectRegionPlaceholder from "../../../components/SelectRegionPlaceholder";
 
 interface SpatialQueryResult {
   totalCount: number;
@@ -13,6 +15,7 @@ interface SpatialQueryResult {
 interface SummaryStatisticsProps {
   spatialResult?: SpatialQueryResult | null;
   isLoading?: boolean;
+  selectedGeometry?: Polygon | null;
 }
 
 const StatsRow = ({ label, value, tooltip, idPrefix }: { label: string, value: string | number, tooltip?: boolean, idPrefix: string }) => (
@@ -27,7 +30,8 @@ const StatsRow = ({ label, value, tooltip, idPrefix }: { label: string, value: s
 
 export default function SummaryStatistics({ 
   spatialResult = null, 
-  isLoading = false 
+  isLoading = false,
+  selectedGeometry = null,
 }: SummaryStatisticsProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -64,6 +68,10 @@ export default function SummaryStatistics({
           <CollapseExpandIcon id="summary-statistics-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
         </div>
       <div id="summary-statistics-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-y-hidden ${isCollapsed ? 'max-h-0' : 'max-h-96'}`}>
+          {!selectedGeometry && (
+            <SelectRegionPlaceholder id="summary-statistics-no-selection" subtext="Use the polygon tool or click on a boundary to see statistics for that area" />
+          )}
+          {selectedGeometry && (
           <div id="summary-statistics-content" className="space-y-2 text-sm">
               <StatsRow 
                 idPrefix="sites-selected" 
@@ -107,6 +115,7 @@ export default function SummaryStatistics({
                 </div>
               </div>
           </div>
+          )}
       </div>
     </div>
   );

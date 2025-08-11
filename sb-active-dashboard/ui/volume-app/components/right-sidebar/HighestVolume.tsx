@@ -4,6 +4,7 @@ import CollapseExpandIcon from "./CollapseExpandIcon";
 import { VolumeChartDataService } from "../../../../lib/data-services/VolumeChartDataService";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import Polygon from "@arcgis/core/geometry/Polygon";
+import SelectRegionPlaceholder from "../../../components/SelectRegionPlaceholder";
 
 interface HighestVolumeProps {
   mapView?: __esri.MapView | null;
@@ -43,7 +44,7 @@ export default function HighestVolume({
 
     // Fetch highest volume data
     useEffect(() => {
-        if (!mapView || !sitesLayer || !aadtTable) {
+        if (!mapView || !sitesLayer || !aadtTable || !selectedGeometry) {
             setSites([]);
             return;
         }
@@ -94,22 +95,25 @@ export default function HighestVolume({
         <CollapseExpandIcon id="highest-volume-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
       </div>
       <div id="highest-volume-collapsible-content" className={`transition-all duration-400 ease-in-out overflow-y-hidden ${isCollapsed ? 'max-h-0' : 'max-h-96'}`}>
-          {isLoading && (
+          {!selectedGeometry && (
+            <SelectRegionPlaceholder id="highest-volume-no-selection" subtext="Use the polygon tool or click on a boundary to see highest volume areas for that region" />
+          )}
+          {selectedGeometry && isLoading && (
               <div id="highest-volume-loading" className="text-sm text-gray-500 text-center py-4">
                   Loading highest volume data...
               </div>
           )}
-          {error && (
+          {selectedGeometry && error && (
               <div id="highest-volume-error" className="text-sm text-red-600 text-center py-4">
                   {error}
               </div>
           )}
-          {!isLoading && !error && sites.length === 0 && (
+          {selectedGeometry && !isLoading && !error && sites.length === 0 && (
               <div id="highest-volume-no-data" className="text-sm text-gray-500 text-center py-4">
                   No volume data available for current view
               </div>
           )}
-          {!isLoading && !error && sites.length > 0 && (
+          {selectedGeometry && !isLoading && !error && sites.length > 0 && (
               <ul id="highest-volume-list" className="space-y-2 text-sm">
                   {sites.map((site, index) => (
                       <li key={site.siteId} id={`highest-volume-item-${index + 1}`} className="flex justify-between items-center">

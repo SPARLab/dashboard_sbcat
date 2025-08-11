@@ -4,6 +4,7 @@ import ReactECharts from 'echarts-for-react';
 import { useEffect, useMemo, useState } from 'react';
 import { VolumeChartDataService } from '../../../../lib/data-services/VolumeChartDataService';
 import CollapseExpandIcon from './CollapseExpandIcon';
+import SelectRegionPlaceholder from '../../../components/SelectRegionPlaceholder';
 
 interface ModeBreakdownData {
   bicycle: { count: number; percentage: number };
@@ -23,7 +24,7 @@ interface ModeBreakdownProps {
   showPedestrian?: boolean;
   volumeChartDataService?: VolumeChartDataService;
   mapView?: __esri.MapView;
-  filters?: Record<string, unknown>;
+  filters?: { showBicyclist: boolean; showPedestrian: boolean };
 }
 
 export default function ModeBreakdown({ 
@@ -32,7 +33,7 @@ export default function ModeBreakdown({
   showPedestrian = true,
   volumeChartDataService,
   mapView,
-  filters = {}
+  filters = { showBicyclist, showPedestrian }
 }: ModeBreakdownProps) {
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -68,7 +69,7 @@ export default function ModeBreakdown({
 
     // Load new data
     const loadData = async () => {
-      if (!volumeChartDataService || !mapView) {
+      if (!volumeChartDataService || !mapView || !selectedGeometry) {
         setError('Required services not available');
         return;
       }
@@ -278,28 +279,25 @@ export default function ModeBreakdown({
       </div>
       <div id="mode-breakdown-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'max-h-0' : 'max-h-[400px]'}`}>
         <div id="mode-breakdown-chart-container" className="relative mt-4">
+          {!selectedGeometry && (
+            <SelectRegionPlaceholder id="mode-breakdown-no-selection" subtext="Use the polygon tool or click on a boundary to see the mode breakdown for that area" />
+          )}
           {/* Loading State */}
-          {isLoading && (
+          {selectedGeometry && isLoading && (
             <div id="mode-breakdown-loading" className="flex justify-center items-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           )}
 
           {/* Error State */}
-          {error && !isLoading && (
+          {selectedGeometry && error && !isLoading && (
             <div id="mode-breakdown-error" className="flex flex-col items-center justify-center h-32 text-gray-500">
               <p className="text-sm">{error}</p>
               <p className="text-xs mt-1">Please try selecting an area on the map</p>
             </div>
           )}
 
-          {/* No Selection State */}
-          {!selectedGeometry && !isLoading && !error && (
-            <div id="mode-breakdown-no-selection" className="flex flex-col items-center justify-center h-32 text-gray-500">
-              <p className="text-sm">No area selected</p>
-              <p className="text-xs mt-1">Select an area on the map to view mode breakdown</p>
-            </div>
-          )}
+          {/* No Selection handled above via shared placeholder */}
 
           {/* No Data Available State */}
           {selectedGeometry && !isLoading && !error && currentData && (currentData.total === 0 || modeData.length === 0) && (
@@ -310,7 +308,7 @@ export default function ModeBreakdown({
           )}
 
           {/* Chart with Data */}
-          {!isLoading && !error && currentData && selectedGeometry && modeData.length > 0 && currentData.total > 0 && (
+          {selectedGeometry && !isLoading && !error && currentData && modeData.length > 0 && currentData.total > 0 && (
             <>
               {hoveredBar && (
                 <div
