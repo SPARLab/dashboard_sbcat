@@ -19,6 +19,15 @@ export interface YearToYearComparisonResult {
   error: string | null;
 }
 
+/**
+ * Interface for multi-year comparison data
+ */
+export interface MultiYearComparisonResult {
+  categories: string[];
+  series: Array<{ name: string; data: number[] }>;
+  totalsByYear: Record<number, number>;
+}
+
 export type TimeScale = 'Hour' | 'Day' | 'Weekday vs Weekend' | 'Month' | 'Year';
 
 /**
@@ -250,7 +259,7 @@ export class YearToYearComparisonDataService {
     const map2024 = new Map(data2024.map(item => [item.name, item.value]));
 
     // Get all unique time periods from both years
-    const allPeriods = new Set([...map2023.keys(), ...map2024.keys()]);
+    const allPeriods = new Set([...Array.from(map2023.keys()), ...Array.from(map2024.keys())]);
 
     const result = Array.from(allPeriods).map(name => ({
       name,
@@ -319,6 +328,170 @@ export class YearToYearComparisonDataService {
       isLoading: false,
       error: null
     };
+  }
+
+  /**
+   * Helper method to query all features from a layer in parallel, bypassing record limits
+   */
+  private static async queryAllFeaturesInParallel(layer: FeatureLayer, query: __esri.Query): Promise<__esri.Graphic[]> {
+    const maxRecordCount = 1000; // Safe value for ArcGIS Server feature queries
+
+    // 1. Get all object IDs that match the original query
+    const allObjectIds = await layer.queryObjectIds(query as __esri.QueryProperties);
+    
+    if (!allObjectIds || allObjectIds.length === 0) {
+        return [];
+    }
+
+    // 2. Split IDs into chunks
+    const idChunks: number[][] = [];
+    for (let i = 0; i < allObjectIds.length; i += maxRecordCount) {
+        idChunks.push(allObjectIds.slice(i, i + maxRecordCount).filter((id): id is number => typeof id === 'number'));
+    }
+
+    // 3. Create feature query promises for each chunk
+    const featureQueryPromises = idChunks.map(chunk => {
+        const featureQuery = query.clone();
+        featureQuery.objectIds = chunk;
+        return layer.queryFeatures(featureQuery as __esri.QueryProperties);
+    });
+
+    // 4. Run in parallel and combine results
+    const featureSets = await Promise.all(featureQueryPromises);
+    const allFeatures = featureSets.flatMap(featureSet => featureSet.features);
+    
+    return allFeatures;
+  }
+
+  /**
+   * Query multi-year comparison data for selected area and time scale
+   */
+  static async queryMultiYearComparison(
+    selectedGeometry: Polygon | null,
+    timeScale: TimeScale,
+    years: number[],
+    showBicyclist: boolean = true,
+    showPedestrian: boolean = true,
+    dateRange: { start: Date; end: Date }
+  ): Promise<MultiYearComparisonResult> {
+    try {
+      if (!selectedGeometry || years.length === 0) {
+        return { categories: [], series: [], totalsByYear: {} };
+      }
+
+      // Get site IDs within the selected geometry
+      const siteIds = await this.getSiteIdsInPolygon(selectedGeometry);
+      
+      if (siteIds.length === 0) {
+        return { categories: [], series: [], totalsByYear: {} };
+      }
+
+      // Build count type filter
+      const countTypeConditions: string[] = [];
+      if (showBicyclist) countTypeConditions.push("count_type = 'bike'");
+      if (showPedestrian) countTypeConditions.push("count_type = 'ped'");
+      
+      if (countTypeConditions.length === 0) {
+        return { categories: [], series: [], totalsByYear: {} };
+      }
+
+      // Query data for each year in parallel
+      const yearDataPromises = years.map(async (year) => {
+        // Calculate effective time window (intersection of year bounds and date range)
+        const yearStart = new Date(year, 0, 1);
+        const yearEnd = new Date(year + 1, 0, 1);
+        const effectiveStart = new Date(Math.max(yearStart.getTime(), dateRange.start.getTime()));
+        const effectiveEnd = new Date(Math.min(yearEnd.getTime(), dateRange.end.getTime()));
+        
+        // Skip if no overlap
+        if (effectiveStart >= effectiveEnd) {
+          return { year, data: [] };
+        }
+
+        // Query counts for this year's effective window
+        const countsLayer = new FeatureLayer({ url: this.COUNTS_URL });
+        const startDateStr = effectiveStart.toISOString().split('T')[0];
+        const endDateStr = effectiveEnd.toISOString().split('T')[0];
+        
+        const whereClause = `site_id IN (${siteIds.join(',')}) AND (${countTypeConditions.join(' OR ')}) AND timestamp >= DATE '${startDateStr}' AND timestamp < DATE '${endDateStr}'`;
+
+        const query = countsLayer.createQuery();
+        query.where = whereClause;
+        query.outFields = ["site_id", "timestamp", "count_type", "counts"];
+        query.returnGeometry = false;
+
+        const features = await this.queryAllFeaturesInParallel(countsLayer, query);
+        const data = features.map(feature => feature.attributes);
+        
+        return { year, data };
+      });
+
+      const yearResults = await Promise.all(yearDataPromises);
+      
+      // Aggregate data by time scale for each year
+      const aggregatedByYear = new Map<number, { name: string; value: number }[]>();
+      const totalsByYear: Record<number, number> = {};
+
+      yearResults.forEach(({ year, data }) => {
+        const aggregated = this.aggregateByTimeScale(data, timeScale);
+        aggregatedByYear.set(year, aggregated);
+        totalsByYear[year] = aggregated.reduce((sum, item) => sum + item.value, 0);
+      });
+
+      // Build categories and series
+      const allCategoryNames = new Set<string>();
+      Array.from(aggregatedByYear.values()).forEach(yearData => {
+        yearData.forEach(item => allCategoryNames.add(item.name));
+      });
+
+      const categories = this.sortCategoriesByTimeScale(Array.from(allCategoryNames), timeScale);
+      
+      // Build series for each year
+      const series = years.map(year => {
+        const yearData = aggregatedByYear.get(year) || [];
+        const dataMap = new Map(yearData.map(item => [item.name, item.value]));
+        
+        const seriesData = categories.map(category => dataMap.get(category) || 0);
+        
+        return {
+          name: year.toString(),
+          data: seriesData
+        };
+      });
+
+      return {
+        categories,
+        series,
+        totalsByYear
+      };
+
+    } catch (error) {
+      console.error('Error querying multi-year comparison data:', error);
+      return { categories: [], series: [], totalsByYear: {} };
+    }
+  }
+
+  /**
+   * Sort categories by time scale
+   */
+  private static sortCategoriesByTimeScale(categories: string[], timeScale: TimeScale): string[] {
+    switch (timeScale) {
+      case 'Hour':
+        return categories.sort((a, b) => parseInt(a) - parseInt(b));
+      case 'Day':
+        const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        return categories.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+      case 'Month':
+        const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return categories.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
+      case 'Year':
+        return categories.sort((a, b) => parseInt(a) - parseInt(b));
+      case 'Weekday vs Weekend':
+        return categories.sort((a, b) => a === 'Weekday' ? -1 : 1);
+      default:
+        return categories;
+    }
   }
 
   /**

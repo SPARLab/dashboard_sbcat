@@ -358,7 +358,14 @@ export default function AggregatedVolumeBreakdown({
           color: '#6b7280',
           fontSize: 14,
           interval: timeScale === 'Hour' ? 3 : 'auto',
-          rotate: 0
+          rotate: 0,
+          formatter: (value: string | number) => {
+            const s = String(value);
+            if (timeScale === 'Year' && /^\d{4}$/.test(s)) {
+              return `'${s.slice(2)}`;
+            }
+            return s;
+          }
         },
       },
       yAxis: {

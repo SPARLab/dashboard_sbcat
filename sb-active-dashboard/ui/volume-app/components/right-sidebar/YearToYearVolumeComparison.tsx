@@ -2,7 +2,7 @@
 import Polygon from "@arcgis/core/geometry/Polygon";
 import ReactECharts from 'echarts-for-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { TimeScale, YearToYearComparisonData, YearToYearComparisonDataService } from '../../../../lib/data-services/YearToYearComparisonDataService';
+import { TimeScale, YearToYearComparisonDataService, MultiYearComparisonResult } from '../../../../lib/data-services/YearToYearComparisonDataService';
 import Tooltip from '../../../components/Tooltip';
 import CollapseExpandIcon from './CollapseExpandIcon';
 import SelectRegionPlaceholder from '../../../components/SelectRegionPlaceholder';
@@ -25,59 +25,76 @@ interface YearToYearVolumeComparisonProps {
   selectedGeometry?: Polygon | null;
   showBicyclist?: boolean;
   showPedestrian?: boolean;
+  dateRange: { startDate: Date; endDate: Date };
 }
 
 export default function YearToYearVolumeComparison({
   selectedGeometry = null,
   showBicyclist = true,
-  showPedestrian = true
+  showPedestrian = true,
+  dateRange
 }: YearToYearVolumeComparisonProps) {
   const [hoveredPoint, setHoveredPoint] = useState<HoveredPointData | null>(null);
   const [timeScale, setTimeScale] = useState<TimeScale>('Month');
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [currentData, setCurrentData] = useState<YearToYearComparisonData[]>([]);
+  const [chartData, setChartData] = useState<MultiYearComparisonResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Cache for preloaded data by time scale
-  const [dataCache, setDataCache] = useState<Map<TimeScale, YearToYearComparisonData[]>>(new Map());
+  // Cache for background loaded data by time scale
+  const [dataCache, setDataCache] = useState<Map<TimeScale, MultiYearComparisonResult>>(new Map());
   const [cacheKey, setCacheKey] = useState<string>('');
-  const [isPreloading, setIsPreloading] = useState(false);
+  const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
 
+  // Derive years from dateRange
+  const includedYears = useMemo(() => {
+    if (!dateRange.startDate || !dateRange.endDate) return [];
+    
+    const startYear = dateRange.startDate.getFullYear();
+    const endYear = dateRange.endDate.getFullYear();
+    const allYears = [];
+    
+    for (let year = startYear; year <= endYear; year++) {
+      allYears.push(year);
+    }
+    
+    return allYears;
+  }, [dateRange]);
+
   // Generate cache key based on selection and filters
-  const generateCacheKey = (geometry: Polygon | null, bike: boolean, ped: boolean): string => {
+  const generateCacheKey = (geometry: Polygon | null, bike: boolean, ped: boolean, range: { startDate: Date; endDate: Date }, years: number[]): string => {
     if (!geometry) return 'default';
     const bounds = geometry.extent;
     if (!bounds) return 'default';
-    return `${bounds.xmin}_${bounds.ymin}_${bounds.xmax}_${bounds.ymax}_${bike}_${ped}`;
+    return `${bounds.xmin}_${bounds.ymin}_${bounds.xmax}_${bounds.ymax}_${bike}_${ped}_${range.startDate.toISOString()}_${range.endDate.toISOString()}_${years.join(',')}`;
   };
 
-  // Preload all time scales for current selection
-  const preloadAllTimeScales = useCallback(async (geometry: Polygon | null, bike: boolean, ped: boolean) => {
-    const newCacheKey = generateCacheKey(geometry, bike, ped);
-    const newCache = new Map<TimeScale, YearToYearComparisonData[]>();
+  // Background load all time scales for current selection
+  const backgroundLoadAllTimeScales = useCallback(async (geometry: Polygon | null, bike: boolean, ped: boolean, range: { startDate: Date; endDate: Date }, years: number[]) => {
+    const newCacheKey = generateCacheKey(geometry, bike, ped, range, years);
+    const newCache = new Map<TimeScale, MultiYearComparisonResult>();
 
-    setIsPreloading(true);
+    setIsBackgroundLoading(true);
     
     try {
       // Load all time scales in parallel
       const loadPromises = timeScales.map(async (scale) => {
         try {
-          if (geometry) {
-            const result = await YearToYearComparisonDataService.queryYearToYearComparison(
-              geometry, scale, bike, ped
+          if (geometry && years.length > 0) {
+            const result = await YearToYearComparisonDataService.queryMultiYearComparison(
+              geometry, scale, years, bike, ped, { start: range.startDate, end: range.endDate }
             );
-            return { scale, data: result.error ? YearToYearComparisonDataService.getDefaultData(scale) : result.data };
+            return { scale, data: result };
           } else {
-            return { scale, data: YearToYearComparisonDataService.getDefaultData(scale) };
+            return { scale, data: { categories: [], series: [], totalsByYear: {} } };
           }
         } catch (err) {
-          console.error(`Error preloading ${scale} data:`, err);
-          return { scale, data: YearToYearComparisonDataService.getDefaultData(scale) };
+          console.error(`Error loading ${scale} data:`, err);
+          return { scale, data: { categories: [], series: [], totalsByYear: {} } };
         }
       });
 
@@ -90,7 +107,7 @@ export default function YearToYearVolumeComparison({
       setCacheKey(newCacheKey);
       return newCache;
     } finally {
-      setIsPreloading(false);
+      setIsBackgroundLoading(false);
     }
   }, []);
 
@@ -98,19 +115,19 @@ export default function YearToYearVolumeComparison({
   useEffect(() => {
     const fetchData = async () => {
       // If no geometry, clear and skip fetching
-      if (!selectedGeometry) {
-        setCurrentData([]);
+      if (!selectedGeometry || includedYears.length === 0) {
+        setChartData(null);
         setError(null);
         setIsLoading(false);
         return;
       }
 
-      const newCacheKey = generateCacheKey(selectedGeometry, showBicyclist, showPedestrian);
+      const newCacheKey = generateCacheKey(selectedGeometry, showBicyclist, showPedestrian, dateRange, includedYears);
       
       // Check if we have cached data for this selection
       if (newCacheKey === cacheKey && dataCache.has(timeScale)) {
         // Use cached data immediately
-        setCurrentData(dataCache.get(timeScale) || []);
+        setChartData(dataCache.get(timeScale) || null);
         setError(null);
         return;
       }
@@ -121,35 +138,32 @@ export default function YearToYearVolumeComparison({
 
       try {
         if (newCacheKey !== cacheKey) {
-          // Selection changed - preload all time scales
-          const newCache = await preloadAllTimeScales(selectedGeometry, showBicyclist, showPedestrian);
-          setCurrentData(newCache.get(timeScale) || []);
+          // Selection changed - background load all time scales
+          const newCache = await backgroundLoadAllTimeScales(selectedGeometry, showBicyclist, showPedestrian, dateRange, includedYears);
+          setChartData(newCache.get(timeScale) || null);
         } else {
           // Just time scale changed - load single scale
-          const result = await YearToYearComparisonDataService.queryYearToYearComparison(
-            selectedGeometry, timeScale, showBicyclist, showPedestrian
+          const result = await YearToYearComparisonDataService.queryMultiYearComparison(
+            selectedGeometry, timeScale, includedYears, showBicyclist, showPedestrian, { start: dateRange.startDate, end: dateRange.endDate }
           );
-          const data = result.error ? YearToYearComparisonDataService.getDefaultData(timeScale) : result.data;
-          setCurrentData(data);
+          setChartData(result);
           
           // Update cache
           const updatedCache = new Map(dataCache);
-          updatedCache.set(timeScale, data);
+          updatedCache.set(timeScale, result);
           setDataCache(updatedCache);
-          
-          if (result.error) setError(result.error);
         }
       } catch (err) {
         console.error('Error fetching year-to-year comparison data:', err);
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
-        setCurrentData(YearToYearComparisonDataService.getDefaultData(timeScale));
+        setChartData(null);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [selectedGeometry, timeScale, showBicyclist, showPedestrian, cacheKey, dataCache, preloadAllTimeScales]);
+  }, [selectedGeometry, timeScale, showBicyclist, showPedestrian, dateRange, includedYears, cacheKey, dataCache, backgroundLoadAllTimeScales]);
 
   const onEvents = useMemo(
     () => ({
@@ -178,46 +192,92 @@ export default function YearToYearVolumeComparison({
     return `${hour - 12} PM`;
   };
 
-  // Filter out data points where both years have zero values (missing data)
-  const filteredData = currentData.filter(item => item.year2023 > 0 || item.year2024 > 0);
-  
-  // Determine if we should use bar chart or line chart
-  const useBarChart = timeScale === 'Weekday vs Weekend' || timeScale === 'Year';
-  const isYearView = timeScale === 'Year';
-  
-  // Extract data for both years - for line charts, use null for missing data to maintain alignment
-  const currentData2023 = useBarChart ? 
-    filteredData
-      .filter(item => item.year2023 > 0)
-      .map(item => ({ name: item.name, value: item.year2023 })) :
-    filteredData.map(item => ({ name: item.name, value: item.year2023 > 0 ? item.year2023 : null }));
+  // Convert year to two-digit format
+  const formatYearToTwoDigit = (year: string | number): string => {
+    const yearStr = year.toString();
+    if (/^\d{4}$/.test(yearStr)) {
+      return `'${yearStr.slice(2)}`;
+    }
+    return yearStr;
+  };
+
+  // Calculate dynamic y-axis range and prepare chart data
+  const { categories, chartSeries, yAxisMin, yAxisMax, isYearView } = useMemo(() => {
+    if (!chartData || !chartData.categories || !chartData.series) {
+      return { categories: [], chartSeries: [], yAxisMin: 0, yAxisMax: 100, isYearView: false };
+    }
+
+    const isYearView = timeScale === 'Year';
+    let categories = chartData.categories;
+    let chartSeries = chartData.series;
+
+    // For Year view, format categories to two-digit and create single bar series
+    if (isYearView) {
+      // For Year scale, categories are the years and each series contains data for that year
+      // We want one bar per year, so we extract the value for each year from its corresponding series
+      const yearColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#f97316', '#ec4899', '#06b6d4'];
+      
+      // Build data by taking each series' value for its own year category
+      const yearData = chartData.series.map((series, index) => {
+        const year = series.name;
+        const yearIndex = chartData.categories.indexOf(year);
+        const value = yearIndex >= 0 ? series.data[yearIndex] || 0 : 0;
+        
+        return {
+          value: value,
+          itemStyle: { color: yearColors[index % yearColors.length], borderRadius: [4, 4, 0, 0] }
+        };
+      });
+      
+      categories = chartData.series.map(series => formatYearToTwoDigit(series.name));
+      chartSeries = [{
+        name: 'Years',
+        data: yearData,
+        type: 'bar'
+      }];
+    } else {
+      // Format hour categories for display
+      if (timeScale === 'Hour') {
+        categories = chartData.categories.map(formatHourName);
+      }
+      
+      // Format series names to two-digit years and assign colors
+      const yearColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#f97316', '#ec4899', '#06b6d4'];
+      chartSeries = chartData.series.map((series, index) => ({
+        ...series,
+        name: formatYearToTwoDigit(series.name),
+        itemStyle: {
+          color: yearColors[index % yearColors.length]
+        },
+        lineStyle: {
+          color: yearColors[index % yearColors.length]
+        }
+      }));
+    }
     
-  const currentData2024 = useBarChart ?
-    filteredData
-      .filter(item => item.year2024 > 0)
-      .map(item => ({ name: item.name, value: item.year2024 })) :
-    filteredData.map(item => ({ name: item.name, value: item.year2024 > 0 ? item.year2024 : null }));
-  
-  // Calculate dynamic y-axis range (filter out null values)
-  const allValues = [...currentData2023.map(item => item.value), ...currentData2024.map(item => item.value)]
-    .filter(value => value !== null && value !== undefined);
-  const minValue = allValues.length > 0 ? Math.min(...allValues) : 0;
-  const maxValue = allValues.length > 0 ? Math.max(...allValues) : 100;
-  const padding = (maxValue - minValue) * 0.1; // 10% padding
-  const yAxisMin = Math.max(0, minValue - padding);
-  const yAxisMax = maxValue + padding;
+    // Calculate dynamic y-axis range
+    const allValues = chartSeries.flatMap(series => 
+      Array.isArray(series.data) ? series.data.map(item => typeof item === 'object' ? item.value : item) : []
+    ).filter(value => value !== null && value !== undefined && typeof value === 'number');
+    
+    const minValue = allValues.length > 0 ? Math.min(...allValues) : 0;
+    const maxValue = allValues.length > 0 ? Math.max(...allValues) : 100;
+    const padding = (maxValue - minValue) * 0.1; // 10% padding
+    const yAxisMin = Math.max(0, minValue - padding);
+    const yAxisMax = maxValue + padding;
+
+    return { categories, chartSeries, yAxisMin, yAxisMax, isYearView };
+  }, [chartData, timeScale]);
 
   const option = useMemo(
     () => {
-      const categories = isYearView ? ['2023', '2024'] : filteredData.map(item => timeScale === 'Hour' ? formatHourName(item.name) : item.name);
-      
       return ({
       animation: true,
       animationDuration: 1000,
       animationEasing: 'cubicOut',
-      animationDelay: useBarChart ? 0 : (idx: number) => idx * 50,
+      animationDelay: (timeScale === 'Weekday vs Weekend' || isYearView) ? 0 : (idx: number) => idx * 50,
       grid: {
-        left: '5px',
+        left: '15px',
         right: '0px',
         top: '40px',
         bottom: '0px',
@@ -260,7 +320,12 @@ export default function YearToYearVolumeComparison({
         axisLabel: {
           color: '#6b7280',
           fontSize: 14,
-          formatter: (value: number) => value.toLocaleString(),
+          formatter: (value: number) => {
+            if (value >= 1000) {
+              return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+            }
+            return value.toString();
+          },
         },
         name: 'Adjusted Average Daily Volume',
         nameLocation: 'middle',
@@ -280,157 +345,95 @@ export default function YearToYearVolumeComparison({
         },
       },
       legend: {
-        show: !isYearView,
+        show: !isYearView && chartSeries.length > 0,
         top: 0,
         right: 0,
+        orient: 'horizontal',
+        itemGap: 8,
         textStyle: {
           color: '#6b7280',
           fontSize: 12,
         },
         itemWidth: 12,
         itemHeight: 12,
-        data: [
-          {
-            name: '2023',
-            itemStyle: { color: '#ef4444' }
-          },
-          {
-            name: '2024', 
-            itemStyle: { color: '#3b82f6' }
-          }
-        ]
+        icon: 'rect',
       },
-      series: useBarChart ? (isYearView ? [
-        {
-          name: 'Years',
-          data: [
-            {
-              value: currentData2023[0]?.value || 0,
-              itemStyle: { color: '#ef4444', borderRadius: [4, 4, 0, 0] }
+      series: chartSeries.map((series, index) => {
+        if (isYearView) {
+          return {
+            ...series,
+            type: 'bar',
+            barWidth: '40%',
+            emphasis: {
+              itemStyle: {
+                borderWidth: 2,
+                shadowBlur: 0,
+                shadowColor: 'transparent',
+              },
             },
-            {
-              value: currentData2024[0]?.value || 0,
-              itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] }
-            }
-          ],
-          type: 'bar',
-          barWidth: '40%',
-          emphasis: {
-            itemStyle: {
-              borderWidth: 2,
-              shadowBlur: 0,
-              shadowColor: 'transparent',
+          };
+        } else if (timeScale === 'Weekday vs Weekend') {
+          // Dynamic bar width based on number of years - thinner bars for more years
+          const dynamicBarWidth = includedYears.length <= 2 ? '50%' : 
+                                  includedYears.length <= 4 ? '30%' : 
+                                  includedYears.length <= 6 ? '15%' : '8%';
+          return {
+            ...series,
+            type: 'bar',
+            barWidth: dynamicBarWidth,
+            emphasis: {
+              itemStyle: {
+                borderColor: series.itemStyle?.color || '#3b82f6',
+                borderWidth: 2,
+                shadowBlur: 0,
+                shadowColor: 'transparent',
+              },
             },
-          },
-        },
-      ] : [
-        {
-          name: '2023',
-          data: currentData2023.map(item => item.value),
-          type: 'bar',
-          itemStyle: {
-            color: '#ef4444',
-            borderRadius: [4, 4, 0, 0],
-          },
-          barWidth: '30%',
-          emphasis: {
-            itemStyle: {
-              borderColor: '#ef4444',
-              borderWidth: 2,
-              shadowBlur: 0,
-              shadowColor: 'transparent',
-            },
-          },
-        },
-        {
-          name: '2024',
-          data: currentData2024.map(item => item.value),
-          type: 'bar',
-          itemStyle: {
-            color: '#3b82f6',
-            borderRadius: [4, 4, 0, 0],
-          },
-          barWidth: '30%',
-          emphasis: {
-            itemStyle: {
-              borderColor: '#3b82f6',
-              borderWidth: 2,
-              shadowBlur: 0,
-              shadowColor: 'transparent',
-            },
-          },
-        },
-      ]) : [
-        {
-          name: '2023',
-          data: currentData2023.map(item => item.value),
-          type: 'line',
-          lineStyle: {
-            color: '#ef4444',
-            width: 2,
-          },
-          itemStyle: {
-            color: '#ef4444',
-            borderWidth: 2,
-          },
-          symbol: 'circle',
-          symbolSize: 10,
-          showSymbol: true,
-          showAllSymbol: true,
-          emphasis: {
-            itemStyle: {
-              borderColor: '#ef4444',
-              borderWidth: 3,
-              shadowBlur: 0,
-              shadowColor: 'transparent',
-            },
+          };
+        } else {
+          // Line chart for Hour/Day/Month
+          return {
+            ...series,
+            type: 'line',
             lineStyle: {
-              width: 3,
+              color: series.lineStyle?.color || '#3b82f6',
+              width: 2,
             },
-          },
-        },
-        {
-          name: '2024',
-          data: currentData2024.map(item => item.value),
-          type: 'line',
-          lineStyle: {
-            color: '#3b82f6',
-            width: 2,
-          },
-          itemStyle: {
-            color: '#3b82f6',
-            borderWidth: 2,
-          },
-          symbol: 'circle',
-          symbolSize: 10,
-          showSymbol: true,
-          showAllSymbol: true,
-          emphasis: {
             itemStyle: {
-              borderColor: '#3b82f6',
-              borderWidth: 3,
-              shadowBlur: 0,
-              shadowColor: 'transparent',
+              color: series.itemStyle?.color || '#3b82f6',
+              borderWidth: 2,
             },
-            lineStyle: {
-              width: 3,
+            symbol: 'circle',
+            symbolSize: 10,
+            showSymbol: true,
+            showAllSymbol: true,
+            emphasis: {
+              itemStyle: {
+                borderColor: series.itemStyle?.color || '#3b82f6',
+                borderWidth: 3,
+                shadowBlur: 0,
+                shadowColor: 'transparent',
+              },
+              lineStyle: {
+                width: 3,
+              },
             },
-          },
-        },
-      ],
+          };
+        }
+      }),
       tooltip: {
         show: false,
       },
     })},
-    [timeScale, useBarChart, isYearView, yAxisMin, yAxisMax, currentData2023, currentData2024, filteredData],
+    [timeScale, isYearView, yAxisMin, yAxisMax, chartSeries, categories],
   );
 
-  // Memoize the chart component - always call hooks at the top level
+  // Memoize the chart component
   const chartComponent = useMemo(
     () => (
       <div id="year-to-year-volume-comparison-chart">
         <ReactECharts
-          key={`chart-${timeScale}`} // Force re-initialization when timeScale changes
+          key={`chart-${timeScale}-${includedYears.join('-')}`}
           option={option}
           style={{ height: '300px', width: '100%' }}
           opts={{ renderer: 'canvas' }}
@@ -438,29 +441,31 @@ export default function YearToYearVolumeComparison({
         />
       </div>
     ),
-    [option, onEvents, timeScale],
+    [option, onEvents, timeScale, includedYears],
   );
 
   // Get detailed calculation explanation for tooltips
   const getCalculationExplanation = (scale: TimeScale): string => {
+    const yearRange = includedYears.length > 1 ? `${includedYears[0]}-${includedYears[includedYears.length - 1]}` : includedYears[0]?.toString() || '';
+    
     switch (scale) {
       case 'Hour':
-        return 'Compares average hourly traffic patterns between 2023 and 2024.';
+        return `Compares average hourly traffic patterns across ${yearRange}.`;
       
       case 'Day':
-        return 'Compares average daily traffic by day of week between 2023 and 2024.';
+        return `Compares average daily traffic by day of week across ${yearRange}.`;
       
       case 'Weekday vs Weekend':
-        return 'Compares weekday vs weekend traffic patterns between 2023 and 2024.';
+        return `Compares weekday vs weekend traffic patterns across ${yearRange}.`;
       
       case 'Month':
-        return 'Compares average monthly traffic patterns between 2023 and 2024.';
+        return `Compares average monthly traffic patterns across ${yearRange}.`;
       
       case 'Year':
-        return 'Compares total annual traffic volumes between 2023 and 2024.';
+        return `Compares total annual traffic volumes for ${yearRange}.`;
       
       default:
-        return 'Compares traffic patterns between 2023 and 2024.';
+        return `Compares traffic patterns across ${yearRange}.`;
     }
   };
 
@@ -509,8 +514,8 @@ export default function YearToYearVolumeComparison({
         <div id="year-to-year-volume-comparison-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
         <div id="year-to-year-volume-comparison-description" className="w-full text-sm text-gray-600">
           {timeScale === 'Hour' 
-            ? `Average hourly traffic comparison between 2023 and 2024` 
-            : `Average daily traffic comparison by ${timeScale.toLowerCase()} between 2023 and 2024`}
+            ? `Average hourly traffic comparison across ${includedYears.length > 1 ? `${includedYears[0]}-${includedYears[includedYears.length - 1]}` : includedYears[0] || 'selected years'}` 
+            : `Average daily traffic comparison by ${timeScale.toLowerCase()} across ${includedYears.length > 1 ? `${includedYears[0]}-${includedYears[includedYears.length - 1]}` : includedYears[0] || 'selected years'}`}
           <span id="year-to-year-volume-comparison-info-icon-container" className="ml-1 inline-flex align-middle">
             <Tooltip text={getCalculationExplanation(timeScale)} align="right" />
           </span>
@@ -521,7 +526,7 @@ export default function YearToYearVolumeComparison({
             <div
               id="year-volume-chart-tooltip"
               className="absolute top-5 left-1/2 transform -translate-x-1/2 z-10 text-sm font-medium whitespace-nowrap"
-              style={{ color: hoveredPoint.seriesName === '2023' ? '#ef4444' : '#3b82f6' }}
+              style={{ color: hoveredPoint.seriesName === formatYearToTwoDigit('2023') ? '#ef4444' : '#3b82f6' }}
             >
               {`${hoveredPoint.value.toLocaleString()} Pedestrians & Bicyclists${hoveredPoint.name ? ` (${timeScale === 'Hour' ? formatHourName(hoveredPoint.name) : hoveredPoint.name})` : ''}`}
             </div>
@@ -541,18 +546,18 @@ export default function YearToYearVolumeComparison({
             </div>
           )}
 
-          {/* Background preloading indicator */}
-          {isPreloading && !isLoading && (
+          {/* Background loading indicator */}
+          {isBackgroundLoading && !isLoading && (
             <div 
-              id="year-to-year-volume-comparison-preload-indicator" 
+              id="year-to-year-volume-comparison-background-load-indicator" 
               className="absolute top-2 right-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full flex items-center z-10"
             >
               <div className="animate-spin rounded-full h-3 w-3 border border-blue-400 border-t-transparent mr-1"></div>
-              Preloading...
+              Loading...
             </div>
           )}
 
-          {currentData.length > 0 ? (
+          {chartData && chartData.categories.length > 0 ? (
             <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'}`}>
               {chartComponent}
             </div>
@@ -574,4 +579,4 @@ export default function YearToYearVolumeComparison({
       </div>
     </div>
   );
-} 
+}
