@@ -33,7 +33,11 @@ export default function SafetyRightSidebar({
             selectedGeometry={selectedGeometry}
             filters={filters}
           />
-          <MostDangerousAreas />
+          <MostDangerousAreas 
+            selectedGeometry={selectedGeometry}
+            filters={filters}
+            mapView={mapView}
+          />
           <AnnualIncidentsComparison 
             selectedGeometry={selectedGeometry}
             filters={filters}
