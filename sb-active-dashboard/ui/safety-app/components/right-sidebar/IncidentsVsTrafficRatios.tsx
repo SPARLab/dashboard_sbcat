@@ -1,15 +1,22 @@
 'use client';
 import ReactECharts from 'echarts-for-react';
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import Graphic from "@arcgis/core/Graphic";
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
+import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
+
 import CollapseExpandIcon from "../../../components/CollapseExpandIcon";
 import MoreInformationIcon from './MoreInformationIcon';
 import { SafetyChartDataService } from "../../../../lib/data-services/SafetyChartDataService";
 import { SafetyFilters } from "../../../../lib/safety-app/types";
 import { useSafetySpatialQuery } from "../../../../lib/hooks/useSpatialQuery";
+import { StravaSegmentService } from "../../../../lib/data-services/StravaSegmentService";
 
 interface IncidentsVsTrafficRatiosProps {
   selectedGeometry?: __esri.Polygon | null;
   filters?: Partial<SafetyFilters>;
+  mapView?: __esri.MapView | null;
 }
 
 interface ScatterDataPoint {
@@ -17,20 +24,52 @@ interface ScatterDataPoint {
   incidentCount: number;
   trafficLevel: 'low' | 'medium' | 'high';
   x: number; // 1 for low, 2 for medium, 3 for high
+  stravaId?: number; // Representative strava_id for this location
 }
 
 export default function IncidentsVsTrafficRatios({ 
   selectedGeometry = null, 
-  filters = {} 
+  filters = {},
+  mapView = null
 }: IncidentsVsTrafficRatiosProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [scatterData, setScatterData] = useState<ScatterDataPoint[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hoveredPoint, setHoveredPoint] = useState<ScatterDataPoint | null>(null);
+  
+  // Service and highlight layer refs
+  const stravaServiceRef = useRef<StravaSegmentService | null>(null);
+  const highlightLayerRef = useRef<GraphicsLayer | null>(null);
 
   // Use spatial query to get filtered data
   const { result, isLoading: spatialLoading, error: spatialError } = useSafetySpatialQuery(selectedGeometry, filters);
+
+  // Initialize Strava service and highlight layer
+  useEffect(() => {
+    if (!stravaServiceRef.current) {
+      stravaServiceRef.current = new StravaSegmentService();
+    }
+
+    if (mapView && mapView.map && !highlightLayerRef.current) {
+      const highlightLayer = new GraphicsLayer({
+        id: "safety-strava-highlight",
+        title: "Strava Segment Highlight",
+        listMode: "hide"
+      });
+      
+      mapView.map.add(highlightLayer);
+      highlightLayerRef.current = highlightLayer;
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (highlightLayerRef.current && mapView && mapView.map) {
+        mapView.map.remove(highlightLayerRef.current);
+        highlightLayerRef.current = null;
+      }
+    };
+  }, [mapView]);
 
   // Process data when spatial query result changes
   useEffect(() => {
@@ -51,6 +90,7 @@ export default function IncidentsVsTrafficRatios({
           incidents: number;
           bikeTrafficLevels: string[];
           pedTrafficLevels: string[];
+          stravaId?: number; // Capture first non-null strava_id for this location
         }>();
 
         // Process each incident
@@ -61,12 +101,18 @@ export default function IncidentsVsTrafficRatios({
             locationMap.set(locationKey, {
               incidents: 0,
               bikeTrafficLevels: [],
-              pedTrafficLevels: []
+              pedTrafficLevels: [],
+              stravaId: incident.strava_id || undefined
             });
           }
           
           const location = locationMap.get(locationKey)!;
           location.incidents += 1;
+          
+          // Capture strava_id if we don't have one yet for this location
+          if (!location.stravaId && incident.strava_id) {
+            location.stravaId = incident.strava_id;
+          }
           
           // Collect traffic levels for this location
           if (incident.bike_traffic) {
@@ -108,7 +154,8 @@ export default function IncidentsVsTrafficRatios({
               location: locationName,
               incidentCount: data.incidents,
               trafficLevel: highestLevel as 'low' | 'medium' | 'high',
-              x: x
+              x: x,
+              stravaId: data.stravaId
             };
           })
           .filter(point => point.incidentCount > 0) // Only include locations with incidents
@@ -127,6 +174,70 @@ export default function IncidentsVsTrafficRatios({
     processData();
   }, [result]);
 
+  // Function to highlight a Strava segment on the map
+  const highlightStravaSegment = async (stravaId: number) => {
+    if (!mapView || !stravaServiceRef.current || !highlightLayerRef.current) {
+      return;
+    }
+
+    try {
+      // Clear previous highlights
+      highlightLayerRef.current.removeAll();
+
+      // Get segment geometry
+      const segmentFeature = await stravaServiceRef.current.getSegmentByStravaId(stravaId);
+      
+      if (!segmentFeature || !segmentFeature.geometry) {
+        console.warn(`No geometry found for strava_id: ${stravaId}`);
+        return;
+      }
+
+      // Create highlight line symbol with yellow halo effect
+      const lineSymbol = new SimpleLineSymbol({
+        color: [59, 130, 246, 1], // Bright blue
+        width: 4,
+        style: "solid"
+      });
+
+      // Create yellow halo line (wider, behind the main line)
+      const haloSymbol = new SimpleLineSymbol({
+        color: [255, 255, 0, 0.8], // Yellow halo
+        width: 8,
+        style: "solid"
+      });
+
+      // Add halo first (so it appears behind)
+      const haloGraphic = new Graphic({
+        geometry: segmentFeature.geometry,
+        symbol: haloSymbol
+      });
+      highlightLayerRef.current.add(haloGraphic);
+
+      // Add main line on top
+      const lineGraphic = new Graphic({
+        geometry: segmentFeature.geometry,
+        symbol: lineSymbol
+      });
+      highlightLayerRef.current.add(lineGraphic);
+
+      // Zoom to the segment with some padding
+      const zoomExtent = segmentFeature.geometry.extent?.expand(2);
+      if (zoomExtent) {
+        await mapView.goTo(zoomExtent, { duration: 500 });
+      }
+
+    } catch (error) {
+      console.error('Error highlighting Strava segment:', error);
+    }
+  };
+
+  // Clear highlights when selection changes
+  useEffect(() => {
+    if (highlightLayerRef.current) {
+      highlightLayerRef.current.removeAll();
+    }
+  }, [selectedGeometry, filters]);
+
   const onEvents = useMemo(
     () => ({
       mouseover: (params: any) => {
@@ -142,8 +253,20 @@ export default function IncidentsVsTrafficRatios({
       mouseout: () => {
         setHoveredPoint(null);
       },
+      click: (params: any) => {
+        const [x, y, location] = params.value;
+        
+        // Find the data point for this location to get the stravaId
+        const dataPoint = scatterData.find(point => point.location === location);
+        
+        if (dataPoint?.stravaId) {
+          highlightStravaSegment(dataPoint.stravaId);
+        } else {
+          console.warn(`No strava_id found for location: ${location}`);
+        }
+      },
     }),
-    [],
+    [scatterData],
   );
 
   const option = useMemo(
@@ -304,7 +427,7 @@ export default function IncidentsVsTrafficRatios({
                 id="safety-incidents-vs-traffic-hover-hint"
                 className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 text-sm italic text-gray-400 whitespace-nowrap"
               >
-                Hover over point to see details
+                Hover for details • Click to highlight on map
               </div>
             ) : null}
 

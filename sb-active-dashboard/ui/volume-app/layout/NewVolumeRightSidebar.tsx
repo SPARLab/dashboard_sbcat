@@ -229,6 +229,7 @@ export default function NewVolumeRightSidebar({
                 contributingSites={confidenceData?.contributingSites}
                 totalSites={confidenceData?.totalSites}
                 hasData={timelineData.length > 0}
+                isLoading={timelineLoading}
               />
               <SummaryStatistics 
                 spatialResult={volumeResult || null} 
