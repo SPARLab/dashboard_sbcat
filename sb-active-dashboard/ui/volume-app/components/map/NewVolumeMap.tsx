@@ -371,26 +371,28 @@ export default function NewVolumeMap({
         />
       </MuiBox>
       
-      {/* Map Legend */}
-      <div id="volume-map-legend" className="absolute bottom-5 right-5 bg-white p-3 rounded border border-gray-300 shadow-sm min-w-[200px]">
-        <h4 id="legend-title" className="text-sm font-medium text-gray-700 mb-2">
-          {modelCountsBy === "cost-benefit" ? "Cost Benefit Tool Legend" : "Volume Legend"}
-        </h4>
-        <div className="flex items-center gap-4">
-          <div id="legend-low" className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-yellow-200 rounded"></div>
-            <span className="text-xs text-gray-600">Low</span>
-          </div>
-          <div id="legend-medium" className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-orange-400 rounded"></div>
-            <span className="text-xs text-gray-600">Medium</span>
-          </div>
-          <div id="legend-high" className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-red-600 rounded"></div>
-            <span className="text-xs text-gray-600">High</span>
+      {/* Map Legend - Hidden for Raw Data View */}
+      {activeTab !== 'raw-data' && (
+        <div id="volume-map-legend" className="absolute bottom-5 right-5 bg-white p-3 rounded border border-gray-300 shadow-sm min-w-[200px]">
+          <h4 id="legend-title" className="text-sm font-medium text-gray-700 mb-2">
+            {modelCountsBy === "cost-benefit" ? "Cost Benefit Tool Legend" : "Volume Legend"}
+          </h4>
+          <div className="flex items-center gap-4">
+            <div id="legend-low" className="flex items-center gap-1">
+              <div className="w-4 h-4 bg-yellow-200 rounded"></div>
+              <span className="text-xs text-gray-600">Low</span>
+            </div>
+            <div id="legend-medium" className="flex items-center gap-1">
+              <div className="w-4 h-4 bg-orange-400 rounded"></div>
+              <span className="text-xs text-gray-600">Medium</span>
+            </div>
+            <div id="legend-high" className="flex items-center gap-1">
+              <div className="w-4 h-4 bg-red-600 rounded"></div>
+              <span className="text-xs text-gray-600">High</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
