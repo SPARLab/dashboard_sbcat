@@ -185,7 +185,7 @@ export default function AnnualIncidentsComparison({
       animationDuration: 1000,
       animationEasing: 'cubicOut',
       grid: {
-        left: '15px',
+        left: '25px',
         right: '0px',
         top: '40px',
         bottom: '0px',
