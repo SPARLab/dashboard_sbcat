@@ -242,8 +242,8 @@ export class SafetyChartDataService {
       };
     }
 
-    // For Day and Month scales, compare patterns between years
-    return await this.getTemporalComparisonData(mapView, filters, timeScale, years);
+    // For Day and Month scales, compare patterns between years (respect geometry)
+    return await this.getTemporalComparisonData(mapView, filters, timeScale, years, geometry);
   }
 
   /**
@@ -253,7 +253,8 @@ export class SafetyChartDataService {
     mapView: MapView,
     filters: Partial<SafetyFilters> = {},
     timeScale: 'Day' | 'Month',
-    years: number[]
+    years: number[],
+    geometry?: __esri.Polygon
   ): Promise<AnnualIncidentsComparisonData> {
     const yearData = await Promise.all(
       years.map(async year => {
@@ -267,7 +268,8 @@ export class SafetyChartDataService {
         
         const result = await SafetyIncidentsDataService.getEnrichedSafetyData(
           mapView.extent,
-          yearFilters
+          yearFilters,
+          geometry
         );
         
         return { year, incidents: result.data };
