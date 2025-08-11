@@ -26,7 +26,7 @@ export default function AnnualIncidentsComparison({
   mapView = null
 }: AnnualIncidentsComparisonProps) {
   const [hoveredPoint, setHoveredPoint] = useState<HoveredPointData | null>(null);
-  const [timeScale, setTimeScale] = useState<TimeScale>('Month');
+  const [timeScale, setTimeScale] = useState<TimeScale>('Year');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [chartData, setChartData] = useState<AnnualIncidentsComparisonData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,39 +53,32 @@ export default function AnnualIncidentsComparison({
     return `${bounds.xmin}_${bounds.ymin}_${bounds.xmax}_${bounds.ymax}_${filterKey}`;
   };
 
-  // Preload all time scales for current selection
-  const preloadAllTimeScales = useCallback(async (geometry: __esri.Polygon | null, safetyFilters: Partial<SafetyFilters>, mapViewRef: __esri.MapView | null) => {
-    if (!mapViewRef) return new Map();
-    
-    const newCacheKey = generateCacheKey(geometry, safetyFilters);
-    const newCache = new Map<TimeScale, AnnualIncidentsComparisonData>();
-
+  // Preload specified time scales (exclude current scale)
+  const preloadTimeScales = useCallback(async (
+    geometry: __esri.Polygon | null,
+    safetyFilters: Partial<SafetyFilters>,
+    mapViewRef: __esri.MapView | null,
+    scalesToPreload: TimeScale[]
+  ) => {
+    if (!mapViewRef || !geometry || scalesToPreload.length === 0) return;
     setIsPreloading(true);
-    
     try {
-      // Load all time scales in parallel
-      const loadPromises = timeScales.map(async (scale) => {
-        try {
-          if (geometry) {
+      const results = await Promise.all(
+        scalesToPreload.map(async (scale) => {
+          try {
             const result = await dataService.getAnnualIncidentsComparisonData(mapViewRef, safetyFilters, scale, undefined, geometry);
             return { scale, data: result };
-          } else {
+          } catch (err) {
+            console.error(`Error preloading ${scale} data:`, err);
             return { scale, data: { categories: [], series: [] } };
           }
-        } catch (err) {
-          console.error(`Error preloading ${scale} data:`, err);
-          return { scale, data: { categories: [], series: [] } };
-        }
+        })
+      );
+      setDataCache(prev => {
+        const updated = new Map(prev);
+        results.forEach(({ scale, data }) => updated.set(scale, data));
+        return updated;
       });
-
-      const results = await Promise.all(loadPromises);
-      results.forEach(({ scale, data }) => {
-        newCache.set(scale, data);
-      });
-
-      setDataCache(newCache);
-      setCacheKey(newCacheKey);
-      return newCache;
     } finally {
       setIsPreloading(false);
     }
@@ -93,54 +86,62 @@ export default function AnnualIncidentsComparison({
 
   // Fetch data when selection, filters, or time scale change
   useEffect(() => {
-    const fetchData = async () => {
+    let isCurrent = true;
+    const run = async () => {
       const newCacheKey = generateCacheKey(selectedGeometry, filters);
-      
-      // Check if we have cached data for this selection
+
+      if (!selectedGeometry || !mapView) {
+        if (!isCurrent) return;
+        setChartData(null);
+        setError(null);
+        return;
+      }
+
+      // If we have cached data for current scale and same selection, use it
       if (newCacheKey === cacheKey && dataCache.has(timeScale)) {
-        // Use cached data immediately
+        if (!isCurrent) return;
         setChartData(dataCache.get(timeScale) || null);
         setError(null);
         return;
       }
 
-      // Don't load data if there's no selection
-      if (!selectedGeometry || !mapView) {
-        setChartData(null);
-        setError(null);
-        return;
-      }
-
-      // Show loading and fetch new data
       setIsLoading(true);
       setError(null);
 
       try {
-        if (newCacheKey !== cacheKey) {
-          // Selection changed - preload all time scales
-          const newCache = await preloadAllTimeScales(selectedGeometry, filters, mapView);
-          setChartData(newCache.get(timeScale) || null);
-        } else {
-          // Just time scale changed - load single scale
-          const result = await dataService.getAnnualIncidentsComparisonData(mapView, filters, timeScale, undefined, selectedGeometry);
-          setChartData(result);
-          
-          // Update cache
-          const updatedCache = new Map(dataCache);
-          updatedCache.set(timeScale, result);
-          setDataCache(updatedCache);
-        }
+        // Fetch current scale first
+        const result = await dataService.getAnnualIncidentsComparisonData(
+          mapView,
+          filters,
+          timeScale,
+          undefined,
+          selectedGeometry
+        );
+        if (!isCurrent) return;
+        setChartData(result);
+        setDataCache(prev => {
+          const updated = new Map(prev);
+          updated.set(timeScale, result);
+          return updated;
+        });
+        setCacheKey(newCacheKey);
+
+        // Preload the other scales in the background
+        const others = timeScales.filter(s => s !== timeScale);
+        preloadTimeScales(selectedGeometry, filters, mapView, others);
       } catch (err) {
+        if (!isCurrent) return;
         console.error('Error fetching annual incidents data:', err);
         setError('Failed to load annual incidents data');
         setChartData(null);
       } finally {
-        setIsLoading(false);
+        if (isCurrent) setIsLoading(false);
       }
     };
 
-    fetchData();
-  }, [selectedGeometry, mapView, filters, timeScale, cacheKey, dataCache, preloadAllTimeScales, dataService]);
+    run();
+    return () => { isCurrent = false; };
+  }, [selectedGeometry, mapView, filters, timeScale, cacheKey, dataCache, preloadTimeScales, dataService]);
 
   const onEvents = useMemo(
     () => ({
@@ -424,7 +425,7 @@ export default function AnnualIncidentsComparison({
                     className="absolute top-2 right-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full flex items-center z-10"
                   >
                     <div className="animate-spin rounded-full h-3 w-3 border border-blue-400 border-t-transparent mr-1"></div>
-                    Preloading...
+                    Loading...
                   </div>
                 )}
 
@@ -482,7 +483,7 @@ export default function AnnualIncidentsComparison({
                     className="absolute top-2 right-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full flex items-center z-10"
                   >
                     <div className="animate-spin rounded-full h-3 w-3 border border-blue-400 border-t-transparent mr-1"></div>
-                    Preloading...
+                    Loading...
                   </div>
                 )}
               </div>

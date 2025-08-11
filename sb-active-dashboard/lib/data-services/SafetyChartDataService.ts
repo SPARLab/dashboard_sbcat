@@ -192,17 +192,19 @@ export class SafetyChartDataService {
     years?: number[],
     geometry?: __esri.Polygon,
   ): Promise<AnnualIncidentsComparisonData> {
-    // Get available years from data if not specified
+    // Get available years from data if not specified (lightweight timestamps only)
     if (!years) {
-      const result = await SafetyIncidentsDataService.getEnrichedSafetyData(mapView.extent, filters, geometry);
-      const allYears = result.data.map(inc => new Date(inc.timestamp).getFullYear());
+      const timestamps = await SafetyIncidentsDataService.queryIncidentTimestamps(
+        geometry || mapView.extent,
+        filters
+      );
+      const allYears = timestamps.map(ts => ts.getFullYear());
       const uniqueYears = Array.from(new Set(allYears)).sort();
-      // Use all available years
       years = uniqueYears;
     }
 
     if (timeScale === 'Year') {
-      // Year histogram showing total incidents per year
+      // Year histogram showing total incidents per year (lightweight count queries)
       const yearlyData = await Promise.all(
         years.map(async year => {
           const yearFilters = {
@@ -212,16 +214,15 @@ export class SafetyChartDataService {
               end: new Date(year, 11, 31)
             }
           };
-          
-          const result = await SafetyIncidentsDataService.getEnrichedSafetyData(
-            mapView.extent,
-            yearFilters,
-            geometry
+
+          const totalForYear = await SafetyIncidentsDataService.queryIncidentCount(
+            geometry || mapView.extent,
+            yearFilters
           );
-          
+
           return {
             year,
-            totalIncidents: result.summary.totalIncidents
+            totalIncidents: totalForYear
           };
         })
       );
@@ -256,6 +257,7 @@ export class SafetyChartDataService {
     years: number[],
     geometry?: __esri.Polygon
   ): Promise<AnnualIncidentsComparisonData> {
+    // Fetch minimal timestamps per year and aggregate client-side
     const yearData = await Promise.all(
       years.map(async year => {
         const yearFilters = {
@@ -265,14 +267,13 @@ export class SafetyChartDataService {
             end: new Date(year, 11, 31)
           }
         };
-        
-        const result = await SafetyIncidentsDataService.getEnrichedSafetyData(
-          mapView.extent,
-          yearFilters,
-          geometry
+
+        const timestamps = await SafetyIncidentsDataService.queryIncidentTimestamps(
+          geometry || mapView.extent,
+          yearFilters
         );
-        
-        return { year, incidents: result.data };
+
+        return { year, timestamps };
       })
     );
 
@@ -280,14 +281,14 @@ export class SafetyChartDataService {
       // Group by day of week
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const dayData = years.map(year => {
-        const yearIncidents = yearData.find(yd => yd.year === year)?.incidents || [];
+        const yearTimestamps = yearData.find(yd => yd.year === year)?.timestamps || [];
         const dayCounts = new Array(7).fill(0);
-        
-        yearIncidents.forEach(incident => {
-          const dayOfWeek = new Date(incident.timestamp).getDay();
+
+        yearTimestamps.forEach(ts => {
+          const dayOfWeek = ts.getDay();
           dayCounts[dayOfWeek]++;
         });
-        
+
         return { year, data: dayCounts };
       });
 
@@ -307,14 +308,14 @@ export class SafetyChartDataService {
       // Group by month
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const monthData = years.map(year => {
-        const yearIncidents = yearData.find(yd => yd.year === year)?.incidents || [];
+        const yearTimestamps = yearData.find(yd => yd.year === year)?.timestamps || [];
         const monthCounts = new Array(12).fill(0);
-        
-        yearIncidents.forEach(incident => {
-          const month = new Date(incident.timestamp).getMonth();
+
+        yearTimestamps.forEach(ts => {
+          const month = ts.getMonth();
           monthCounts[month]++;
         });
-        
+
         return { year, data: monthCounts };
       });
 

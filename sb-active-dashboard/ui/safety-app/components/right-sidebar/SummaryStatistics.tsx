@@ -67,27 +67,27 @@ export default function SummaryStatistics({
               <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'} min-h-[120px]`}>
                 {summaryData ? (
                   <>
-                    <div id="safety-summary-total" className="bg-gray-100 flex justify-between items-center px-1 py-0.5 rounded-md text-xs">
+                    <div id="safety-summary-total" className="bg-gray-100 flex justify-between items-center px-1 py-0.5 rounded-md text-sm">
                       <span id="safety-summary-total-label" className="text-gray-900">Total Incidents</span>
                       <span id="safety-summary-total-value" className="text-gray-900">{summaryData.totalIncidents.toLocaleString()}</span>
                     </div>
-                    <div id="safety-summary-fatalities" className="bg-white flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-xs">
+                    <div id="safety-summary-fatalities" className="bg-white flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">
                       <span id="safety-summary-fatalities-label" className="text-gray-900">Fatalities</span>
                       <span id="safety-summary-fatalities-value" className="text-gray-900">{summaryData.fatalIncidents.toLocaleString()}</span>
                     </div>
-                    <div id="safety-summary-severe-injuries" className="bg-gray-100 flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-xs">
+                    <div id="safety-summary-severe-injuries" className="bg-gray-100 flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">
                       <span id="safety-summary-severe-injuries-label" className="text-gray-900">Severe Injuries (Hospitalizations)</span>
                       <span id="safety-summary-severe-injuries-value" className="text-gray-900">
                         {Math.floor(summaryData.injuryIncidents * 0.11).toLocaleString()}
                       </span>
                     </div>
-                    <div id="safety-summary-injuries" className="bg-white flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-xs">
+                    <div id="safety-summary-injuries" className="bg-white flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">
                       <span id="safety-summary-injuries-label" className="text-gray-900">Injuries</span>
                       <span id="safety-summary-injuries-value" className="text-gray-900">
                         {Math.floor(summaryData.injuryIncidents * 0.89).toLocaleString()}
                       </span>
                     </div>
-                    <div id="safety-summary-near-misses" className="bg-gray-100 flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-xs">
+                    <div id="safety-summary-near-misses" className="bg-gray-100 flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">
                       <span id="safety-summary-near-misses-label" className="text-gray-900">Near Misses</span>
                       <span id="safety-summary-near-misses-value" className="text-gray-900">{summaryData.nearMissIncidents.toLocaleString()}</span>
                     </div>

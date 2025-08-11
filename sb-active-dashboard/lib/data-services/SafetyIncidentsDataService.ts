@@ -116,7 +116,6 @@ export class SafetyIncidentsDataService {
       // Also get the total count to verify pagination worked
       const countQuery = incidentsLayer.createQuery();
       countQuery.where = whereClause;
-      countQuery.returnCountOnly = true;
       if (extent) {
         countQuery.geometry = extent;
         countQuery.spatialRelationship = "intersects";
@@ -131,7 +130,6 @@ export class SafetyIncidentsDataService {
       if (filters?.dataSource?.includes('BikeMaps.org') && incidents.length === 0) {
         const testQuery = incidentsLayer.createQuery();
         testQuery.where = "data_source = 'BikeMaps.org'";
-        testQuery.returnCountOnly = true;
         const countResult = await incidentsLayer.queryFeatureCount(testQuery);
       }
       
@@ -166,6 +164,74 @@ export class SafetyIncidentsDataService {
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
+  }
+
+  /**
+   * Lightweight count query for incidents matching filters (no parties join)
+   */
+  static async queryIncidentCount(
+    extent?: Extent | Polygon,
+    filters?: Partial<SafetyFilters>
+  ): Promise<number> {
+    const { incidentsLayer } = this.initializeLayers();
+    const whereClause = this.buildWhereClause(filters);
+    const countQuery = incidentsLayer.createQuery();
+    countQuery.where = whereClause;
+    if (extent) {
+      countQuery.geometry = extent;
+      countQuery.spatialRelationship = "intersects";
+    }
+    const totalCount = await incidentsLayer.queryFeatureCount(countQuery);
+    return totalCount;
+  }
+
+  /**
+   * Lightweight timestamp query for temporal aggregation (no parties join)
+   * Returns incident timestamps as Date objects
+   */
+  static async queryIncidentTimestamps(
+    extent?: Extent | Polygon,
+    filters?: Partial<SafetyFilters>
+  ): Promise<Date[]> {
+    const { incidentsLayer } = this.initializeLayers();
+    const whereClause = this.buildWhereClause(filters);
+
+    const timestamps: Date[] = [];
+    let hasMore = true;
+    let offsetId = 0;
+    const pageSize = 2000;
+
+    while (hasMore) {
+      const paginatedQuery = incidentsLayer.createQuery();
+      paginatedQuery.where = offsetId > 0
+        ? `(${whereClause}) AND objectid > ${offsetId}`
+        : whereClause;
+      paginatedQuery.outFields = ["objectid", "timestamp"]; // minimal
+      paginatedQuery.returnGeometry = false;
+      paginatedQuery.orderByFields = ["objectid"]; // stable pagination
+      paginatedQuery.num = pageSize;
+      if (extent) {
+        paginatedQuery.geometry = extent;
+        paginatedQuery.spatialRelationship = "intersects";
+      }
+
+      const pageResult = await incidentsLayer.queryFeatures(paginatedQuery);
+      const pageFeatures = pageResult.features;
+      if (pageFeatures.length === 0) {
+        hasMore = false;
+      } else {
+        pageFeatures.forEach(feature => {
+          const ts = feature.attributes.timestamp;
+          if (ts) timestamps.push(new Date(ts));
+          offsetId = Math.max(offsetId, feature.attributes.objectid || feature.attributes.OBJECTID || 0);
+        });
+        if (pageFeatures.length < pageSize) {
+          hasMore = false;
+        }
+      }
+    }
+
+    return timestamps;
   }
 
   /**
