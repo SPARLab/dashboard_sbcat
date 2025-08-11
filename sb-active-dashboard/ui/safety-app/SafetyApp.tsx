@@ -1,9 +1,20 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSelection } from "../../lib/hooks/useSelection";
 import { SafetyFilters } from "../../lib/safety-app/types";
 import SafetyMapArea from "./components/map/SafetyMapArea";
 import SafetyLeftSidebar from "./layout/SafetyLeftSidebar";
 import SafetyRightSidebar from "./layout/SafetyRightSidebar";
+
+function useDebouncedValue<T>(value: T, delayMs: number = 300): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timerId = setTimeout(() => setDebouncedValue(value), delayMs);
+    return () => clearTimeout(timerId);
+  }, [value, delayMs]);
+
+  return debouncedValue;
+}
 
 export default function SafetyApp() {
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
@@ -46,6 +57,7 @@ export default function SafetyApp() {
     setMapView(view);
   };
 
+  const debouncedFilters = useDebouncedValue(filters, 300);
 
 
   return (
@@ -58,7 +70,7 @@ export default function SafetyApp() {
           onGeographicLevelChange={setGeographicLevel}
         />
         <SafetyMapArea 
-          filters={filters}
+          filters={debouncedFilters}
           geographicLevel={geographicLevel}
           onMapViewReady={handleMapViewReady}
           onSelectionChange={onSelectionChange}
@@ -66,7 +78,7 @@ export default function SafetyApp() {
         />
         <SafetyRightSidebar 
           mapView={mapView}
-          filters={filters}
+          filters={debouncedFilters}
           selectedGeometry={selectedGeometry}
           selectedAreaName={selectedAreaName}
         />
