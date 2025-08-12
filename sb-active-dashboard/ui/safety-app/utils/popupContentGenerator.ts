@@ -70,7 +70,7 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   if (incidentData.weightedExposure) {
     popupContent += '<div class="section">';
     popupContent += `<p style="margin: 0 !important;"><strong>Risk Weight:</strong> ${incidentData.weightedExposure.toFixed(3)}</p>`;
-    popupContent += '<p style="margin: 0 !important; font-size: 0.85em; color: #6b7280;">Higher values indicate greater risk relative to traffic volume</p>';
+    popupContent += '<p style="margin: 0 !important; font-size: 0.85em; color: #6b7280;">Higher values indicate greater risk relative to selected volumes</p>';
     popupContent += '</div>';
   }
 

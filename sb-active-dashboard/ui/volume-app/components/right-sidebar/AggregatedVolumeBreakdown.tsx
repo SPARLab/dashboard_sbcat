@@ -486,8 +486,8 @@ export default function AggregatedVolumeBreakdown({
         <div id="aggregated-volume-breakdown-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
         <div id="aggregated-volume-breakdown-description" className="w-full text-sm text-gray-600">
           {timeScale === 'Hour' 
-            ? `Average hourly traffic patterns across selected sites` 
-            : `Average daily traffic aggregated by ${timeScale.toLowerCase()} across selected sites`}
+            ? `Average hourly volume patterns across selected sites` 
+            : `Average daily volume aggregated by ${timeScale.toLowerCase()} across selected sites`}
           <span id="aggregated-volume-breakdown-info-icon-container" className="ml-1 inline-flex align-middle">
             <Tooltip text={getCalculationExplanation(timeScale)} align="right" />
           </span>

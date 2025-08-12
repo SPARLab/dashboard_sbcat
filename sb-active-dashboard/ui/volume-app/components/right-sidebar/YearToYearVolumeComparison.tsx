@@ -514,8 +514,8 @@ export default function YearToYearVolumeComparison({
         <div id="year-to-year-volume-comparison-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
         <div id="year-to-year-volume-comparison-description" className="w-full text-sm text-gray-600">
           {timeScale === 'Hour' 
-            ? `Average hourly traffic comparison across ${includedYears.length > 1 ? `${includedYears[0]}-${includedYears[includedYears.length - 1]}` : includedYears[0] || 'selected years'}` 
-            : `Average daily traffic comparison by ${timeScale.toLowerCase()} across ${includedYears.length > 1 ? `${includedYears[0]}-${includedYears[includedYears.length - 1]}` : includedYears[0] || 'selected years'}`}
+            ? `Average hourly volumes comparison across ${includedYears.length > 1 ? `${includedYears[0]}-${includedYears[includedYears.length - 1]}` : includedYears[0] || 'selected years'}` 
+            : `Average daily volumes comparison by ${timeScale.toLowerCase()} across ${includedYears.length > 1 ? `${includedYears[0]}-${includedYears[includedYears.length - 1]}` : includedYears[0] || 'selected years'}`}
           <span id="year-to-year-volume-comparison-info-icon-container" className="ml-1 inline-flex align-middle">
             <Tooltip text={getCalculationExplanation(timeScale)} align="right" />
           </span>

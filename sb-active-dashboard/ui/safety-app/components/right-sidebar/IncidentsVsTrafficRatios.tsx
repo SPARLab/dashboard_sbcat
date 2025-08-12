@@ -283,7 +283,7 @@ export default function IncidentsVsTrafficRatios({
       },
       xAxis: {
         type: 'value',
-        name: 'Traffic Volume Level',
+        name: 'Volume Level',
         nameLocation: 'middle',
         nameGap: 40,
         nameTextStyle: {
