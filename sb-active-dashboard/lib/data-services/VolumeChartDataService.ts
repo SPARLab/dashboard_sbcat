@@ -201,11 +201,8 @@ export class VolumeChartDataService {
         
         const dataPeriods = [];
         if (countDates.length > 0) {
-          // TODO: Enhance this to find gaps and create multiple periods
-          dataPeriods.push({
-            start: countDates[0],
-            end: countDates[countDates.length - 1]
-          });
+          // Group consecutive dates into discrete periods with gaps
+          dataPeriods.push(...this.findDataPeriods(countDates, timeSpan));
         }
 
         const result = {
@@ -376,5 +373,164 @@ export class VolumeChartDataService {
     return {
       areas: []
     };
+  }
+
+  /**
+   * Find discrete data periods from a sorted array of count dates
+   * Uses smart granularity: daily for short spans, weekly for multi-year spans
+   */
+  private findDataPeriods(sortedDates: Date[], timeSpan: { start: Date; end: Date }): Array<{ start: Date; end: Date }> {
+    if (sortedDates.length === 0) return [];
+    
+    const totalDays = (timeSpan.end.getTime() - timeSpan.start.getTime()) / (1000 * 60 * 60 * 24);
+    const useWeeklyGranularity = totalDays > 730; // Use weekly granularity for spans > 2 years
+    
+    if (useWeeklyGranularity) {
+      return this.findWeeklyDataPeriods(sortedDates);
+    } else {
+      return this.findDailyDataPeriods(sortedDates);
+    }
+  }
+
+  /**
+   * Find data periods at daily granularity
+   * Considers gaps larger than 3 days as separate periods
+   */
+  private findDailyDataPeriods(sortedDates: Date[]): Array<{ start: Date; end: Date }> {
+    const periods: Array<{ start: Date; end: Date }> = [];
+    const maxGapDays = 3; // Consider gaps larger than 3 days as separate periods
+    
+    let periodStart = sortedDates[0];
+    let lastDate = sortedDates[0];
+    
+    for (let i = 1; i < sortedDates.length; i++) {
+      const currentDate = sortedDates[i];
+      const daysDiff = (currentDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24);
+      
+      if (daysDiff > maxGapDays) {
+        // End current period and start a new one
+        periods.push({
+          start: periodStart,
+          end: lastDate
+        });
+        periodStart = currentDate;
+      }
+      
+      lastDate = currentDate;
+    }
+    
+    // Add the final period
+    periods.push({
+      start: periodStart,
+      end: lastDate
+    });
+    
+    return periods;
+  }
+
+  /**
+   * Find data periods at weekly granularity
+   * Groups dates by week and considers gaps larger than 2 weeks as separate periods
+   */
+  private findWeeklyDataPeriods(sortedDates: Date[]): Array<{ start: Date; end: Date }> {
+    // Group dates by week (ISO week)
+    const weekGroups = new Map<string, Date[]>();
+    
+    sortedDates.forEach(date => {
+      const weekKey = this.getISOWeekKey(date);
+      if (!weekGroups.has(weekKey)) {
+        weekGroups.set(weekKey, []);
+      }
+      weekGroups.get(weekKey)!.push(date);
+    });
+    
+    // Sort weeks and find continuous periods
+    const sortedWeeks = Array.from(weekGroups.keys()).sort();
+    const periods: Array<{ start: Date; end: Date }> = [];
+    
+    if (sortedWeeks.length === 0) return periods;
+    
+    let periodStartWeek = sortedWeeks[0];
+    let lastWeek = sortedWeeks[0];
+    
+    for (let i = 1; i < sortedWeeks.length; i++) {
+      const currentWeek = sortedWeeks[i];
+      const weeksDiff = this.getWeekDifference(lastWeek, currentWeek);
+      
+      if (weeksDiff > 2) { // Gap larger than 2 weeks
+        // End current period
+        const periodStartDate = this.getWeekStartDate(periodStartWeek);
+        const periodEndDate = this.getWeekEndDate(lastWeek);
+        periods.push({
+          start: periodStartDate,
+          end: periodEndDate
+        });
+        periodStartWeek = currentWeek;
+      }
+      
+      lastWeek = currentWeek;
+    }
+    
+    // Add the final period
+    const periodStartDate = this.getWeekStartDate(periodStartWeek);
+    const periodEndDate = this.getWeekEndDate(lastWeek);
+    periods.push({
+      start: periodStartDate,
+      end: periodEndDate
+    });
+    
+    return periods;
+  }
+
+  /**
+   * Get ISO week key (YYYY-WW format)
+   */
+  private getISOWeekKey(date: Date): string {
+    const year = date.getFullYear();
+    const week = this.getISOWeek(date);
+    return `${year}-${week.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Get ISO week number (1-53)
+   */
+  private getISOWeek(date: Date): number {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  }
+
+  /**
+   * Calculate difference in weeks between two week keys
+   */
+  private getWeekDifference(week1: string, week2: string): number {
+    const [year1, weekNum1] = week1.split('-').map(Number);
+    const [year2, weekNum2] = week2.split('-').map(Number);
+    
+    // Simple approximation - could be more precise with actual dates
+    const totalWeeks1 = year1 * 52 + weekNum1;
+    const totalWeeks2 = year2 * 52 + weekNum2;
+    
+    return Math.abs(totalWeeks2 - totalWeeks1);
+  }
+
+  /**
+   * Get the start date (Monday) of a given ISO week
+   */
+  private getWeekStartDate(weekKey: string): Date {
+    const [year, week] = weekKey.split('-').map(Number);
+    const jan1 = new Date(year, 0, 1);
+    const daysToAdd = (week - 1) * 7 - jan1.getDay() + 1;
+    return new Date(year, 0, 1 + daysToAdd);
+  }
+
+  /**
+   * Get the end date (Sunday) of a given ISO week
+   */
+  private getWeekEndDate(weekKey: string): Date {
+    const startDate = this.getWeekStartDate(weekKey);
+    return new Date(startDate.getTime() + 6 * 24 * 60 * 60 * 1000);
   }
 }
