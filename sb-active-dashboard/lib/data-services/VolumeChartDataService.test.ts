@@ -415,4 +415,226 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       )
     })
   })
+
+  describe('Timeline Data Period Detection', () => {
+    // Test helper to create mock count dates
+    const createDate = (year: number, month: number, day: number) => new Date(year, month - 1, day)
+    
+    describe('findDataPeriods - Daily Granularity (< 2 years)', () => {
+      it('should create single period for continuous daily data', () => {
+        const timeSpan = { 
+          start: createDate(2024, 1, 1), 
+          end: createDate(2024, 12, 31) 
+        }
+        const countDates = [
+          createDate(2024, 6, 1),
+          createDate(2024, 6, 2),
+          createDate(2024, 6, 3),
+          createDate(2024, 6, 4)
+        ]
+
+        const periods = (service as any).findDataPeriods(countDates, timeSpan)
+        
+        expect(periods).toHaveLength(1)
+        expect(periods[0].start).toEqual(createDate(2024, 6, 1))
+        expect(periods[0].end).toEqual(createDate(2024, 6, 4))
+      })
+
+      it('should create two periods for data with gap > 3 days', () => {
+        const timeSpan = { 
+          start: createDate(2024, 1, 1), 
+          end: createDate(2024, 12, 31) 
+        }
+        const countDates = [
+          createDate(2024, 6, 1),
+          createDate(2024, 6, 2),
+          // 5-day gap here (> 3 days)
+          createDate(2024, 6, 8),
+          createDate(2024, 6, 9)
+        ]
+
+        const periods = (service as any).findDataPeriods(countDates, timeSpan)
+        
+        expect(periods).toHaveLength(2)
+        expect(periods[0].start).toEqual(createDate(2024, 6, 1))
+        expect(periods[0].end).toEqual(createDate(2024, 6, 2))
+        expect(periods[1].start).toEqual(createDate(2024, 6, 8))
+        expect(periods[1].end).toEqual(createDate(2024, 6, 9))
+      })
+
+      it('should create three periods for data with multiple gaps', () => {
+        const timeSpan = { 
+          start: createDate(2024, 1, 1), 
+          end: createDate(2024, 12, 31) 
+        }
+        const countDates = [
+          createDate(2024, 6, 1),
+          createDate(2024, 6, 2),
+          // 5-day gap
+          createDate(2024, 6, 8),
+          createDate(2024, 6, 9),
+          // 7-day gap
+          createDate(2024, 6, 17),
+          createDate(2024, 6, 18)
+        ]
+
+        const periods = (service as any).findDataPeriods(countDates, timeSpan)
+        
+        expect(periods).toHaveLength(3)
+        expect(periods[0].start).toEqual(createDate(2024, 6, 1))
+        expect(periods[0].end).toEqual(createDate(2024, 6, 2))
+        expect(periods[1].start).toEqual(createDate(2024, 6, 8))
+        expect(periods[1].end).toEqual(createDate(2024, 6, 9))
+        expect(periods[2].start).toEqual(createDate(2024, 6, 17))
+        expect(periods[2].end).toEqual(createDate(2024, 6, 18))
+      })
+    })
+
+    describe('findDataPeriods - Weekly Granularity (> 2 years)', () => {
+      it('should create single period for continuous weekly data', () => {
+        const timeSpan = { 
+          start: createDate(2022, 1, 1), 
+          end: createDate(2024, 12, 31) 
+        }
+        const countDates = [
+          createDate(2023, 6, 5),  // Week 23 of 2023
+          createDate(2023, 6, 12), // Week 24 of 2023
+          createDate(2023, 6, 19), // Week 25 of 2023
+        ]
+
+        const periods = (service as any).findDataPeriods(countDates, timeSpan)
+        
+        expect(periods).toHaveLength(1)
+        // Should span from start of first week to end of last week
+        expect(periods[0].start).toBeDefined()
+        expect(periods[0].end).toBeDefined()
+      })
+
+      it('should create two periods for data with gap > 2 weeks', () => {
+        const timeSpan = { 
+          start: createDate(2022, 1, 1), 
+          end: createDate(2024, 12, 31) 
+        }
+        const countDates = [
+          createDate(2023, 6, 5),   // Week 23 of 2023
+          createDate(2023, 6, 12),  // Week 24 of 2023
+          // 4-week gap (> 2 weeks)
+          createDate(2023, 7, 17),  // Week 29 of 2023
+          createDate(2023, 7, 24),  // Week 30 of 2023
+        ]
+
+        const periods = (service as any).findDataPeriods(countDates, timeSpan)
+        
+        expect(periods).toHaveLength(2)
+        expect(periods[0].start).toBeDefined()
+        expect(periods[0].end).toBeDefined()
+        expect(periods[1].start).toBeDefined()
+        expect(periods[1].end).toBeDefined()
+      })
+    })
+
+    describe('Comprehensive Timeline Scenarios', () => {
+      it('should handle 5 mock sites with specified data patterns', () => {
+        // Test the individual method directly with mock data
+        const timeSpan = { 
+          start: createDate(2024, 1, 1), 
+          end: createDate(2024, 12, 31) 
+        }
+
+        // Test Site 1: Single continuous period (5 consecutive days)
+        const site1Dates = [
+          createDate(2024, 6, 1),
+          createDate(2024, 6, 2),
+          createDate(2024, 6, 3),
+          createDate(2024, 6, 4),
+          createDate(2024, 6, 5)
+        ]
+        const site1Periods = (service as any).findDataPeriods(site1Dates, timeSpan)
+        expect(site1Periods).toHaveLength(1)
+
+        // Test Site 2: Single continuous period (different timeframe)
+        const site2Dates = [
+          createDate(2024, 8, 10),
+          createDate(2024, 8, 11),
+          createDate(2024, 8, 12)
+        ]
+        const site2Periods = (service as any).findDataPeriods(site2Dates, timeSpan)
+        expect(site2Periods).toHaveLength(1)
+
+        // Test Site 3: Two separate periods (gap > 3 days)
+        const site3Dates = [
+          createDate(2024, 5, 1),
+          createDate(2024, 5, 2),
+          createDate(2024, 5, 10), // 8-day gap
+          createDate(2024, 5, 11)
+        ]
+        const site3Periods = (service as any).findDataPeriods(site3Dates, timeSpan)
+        expect(site3Periods).toHaveLength(2)
+
+        // Test Site 4: Two separate periods (different months)
+        const site4Dates = [
+          createDate(2024, 3, 15),
+          createDate(2024, 3, 16),
+          createDate(2024, 9, 20), // Large gap
+          createDate(2024, 9, 21)
+        ]
+        const site4Periods = (service as any).findDataPeriods(site4Dates, timeSpan)
+        expect(site4Periods).toHaveLength(2)
+
+        // Test Site 5: Three separate periods
+        const site5Dates = [
+          createDate(2024, 2, 1),
+          createDate(2024, 2, 2),
+          createDate(2024, 4, 15), // First gap
+          createDate(2024, 4, 16),
+          createDate(2024, 7, 10), // Second gap
+          createDate(2024, 7, 11)
+        ]
+        const site5Periods = (service as any).findDataPeriods(site5Dates, timeSpan)
+        expect(site5Periods).toHaveLength(3)
+
+        // Verify the actual period boundaries for Site 5 (3 periods)
+        expect(site5Periods[0].start).toEqual(createDate(2024, 2, 1))
+        expect(site5Periods[0].end).toEqual(createDate(2024, 2, 2))
+        expect(site5Periods[1].start).toEqual(createDate(2024, 4, 15))
+        expect(site5Periods[1].end).toEqual(createDate(2024, 4, 16))
+        expect(site5Periods[2].start).toEqual(createDate(2024, 7, 10))
+        expect(site5Periods[2].end).toEqual(createDate(2024, 7, 11))
+      })
+
+      it('should use weekly granularity for multi-year spans', () => {
+        const longTimeSpan = { 
+          start: createDate(2020, 1, 1), 
+          end: createDate(2024, 12, 31) // > 2 years
+        }
+        const countDates = [
+          createDate(2022, 6, 1),
+          createDate(2022, 6, 8),  // Same week
+          createDate(2022, 7, 1),  // Different week, small gap
+        ]
+
+        const periods = (service as any).findDataPeriods(countDates, longTimeSpan)
+        
+        // Should use weekly granularity and create fewer periods
+        expect(periods.length).toBeGreaterThan(0)
+        expect(periods.length).toBeLessThanOrEqual(2) // Should group weekly
+      })
+
+      it('should use daily granularity for short spans', () => {
+        const shortTimeSpan = { 
+          start: createDate(2024, 1, 1), 
+          end: createDate(2024, 6, 30) // < 2 years
+        }
+        const countDates = [
+          createDate(2024, 3, 1),
+          createDate(2024, 3, 8),  // 7-day gap (> 3 days threshold)
+        ]
+
+        const periods = (service as any).findDataPeriods(countDates, shortTimeSpan)
+        
+        // Should use daily granularity and create separate periods for large gaps
+        expect(periods).toHaveLength(2)
+      })
+    })
+  })
 })
