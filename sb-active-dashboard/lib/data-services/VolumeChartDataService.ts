@@ -94,7 +94,7 @@ export class VolumeChartDataService {
     );
 
     // Add locality field to match interface
-    const sitesWithLocality = sites.map(site => ({
+    const sitesWithLocality = (sites || []).map(site => ({
       ...site,
       locality: 'Unknown' // Default value since locality is required in interface
     }));

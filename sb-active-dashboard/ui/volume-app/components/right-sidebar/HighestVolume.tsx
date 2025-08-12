@@ -94,7 +94,7 @@ export default function HighestVolume({
         </div>
         <CollapseExpandIcon id="highest-volume-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
       </div>
-      <div id="highest-volume-collapsible-content" className={`transition-all duration-400 ease-in-out overflow-y-hidden ${isCollapsed ? 'max-h-0' : 'max-h-96'}`}>
+      <div id="highest-volume-collapsible-content" data-testid="highest-volume-collapsible-content" className={`transition-all duration-400 ease-in-out overflow-y-hidden ${isCollapsed ? 'max-h-0' : 'max-h-96'}`}>
           {!selectedGeometry && (
             <SelectRegionPlaceholder id="highest-volume-no-selection" subtext="Use the polygon tool or click on a boundary to see highest volume areas for that region" />
           )}
@@ -114,7 +114,7 @@ export default function HighestVolume({
               </div>
           )}
           {selectedGeometry && !isLoading && !error && sites.length > 0 && (
-              <ul id="highest-volume-list" className="space-y-2 text-sm">
+              <ul id="highest-volume-list" data-testid="highest-volume-list" className="space-y-2 text-sm">
                   {sites.map((site, index) => (
                       <li key={site.siteId} id={`highest-volume-item-${index + 1}`} className="flex justify-between items-center">
                           <p id={`highest-volume-item-${index + 1}-name`} className="text-gray-800">
