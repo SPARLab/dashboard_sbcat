@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { VolumeChartDataService } from './VolumeChartDataService'
 import { CountSiteProcessingService } from '../utilities/volume-utils/count-site-processing'
 import { createMockFeatureLayer, createMockMapView } from '../../src/test-utils/factories'
+import { TimeSeriesPrepService } from '../utilities/chart-data-prep/time-series-prep'
 
 // Mock the dependencies
 vi.mock('../utilities/volume-utils/count-site-processing', () => ({
@@ -634,6 +635,132 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         
         // Should use daily granularity and create separate periods for large gaps
         expect(periods).toHaveLength(2)
+      })
+    })
+
+    describe('End-to-End Data Format Contract', () => {
+      it('should produce data that matches component interface expectations', () => {
+        // Test the complete data transformation pipeline
+        const timeSpan = { 
+          start: createDate(2024, 1, 1), 
+          end: createDate(2024, 12, 31) 
+        }
+        
+        // Mock data that would come from VolumeChartDataService
+        const mockTimelineData = [
+          {
+            siteId: 1,
+            siteName: 'North Alisos St',
+            siteLabel: 'Site 1',
+            dataPeriods: [
+              { start: createDate(2024, 6, 1), end: createDate(2024, 6, 5) },
+              { start: createDate(2024, 8, 10), end: createDate(2024, 8, 15) }
+            ]
+          },
+          {
+            siteId: 2,
+            siteName: 'East Anacapa St',
+            siteLabel: 'Site 2', 
+            dataPeriods: [
+              { start: createDate(2024, 3, 1), end: createDate(2024, 3, 3) }
+            ]
+          }
+        ]
+
+        // Use the actual TimeSeriesPrepService to transform the data
+        const transformedSites = TimeSeriesPrepService.prepareTimelineSparklineData(mockTimelineData, timeSpan)
+
+        // Verify the transformed data matches SiteData interface
+        expect(transformedSites).toHaveLength(2)
+        
+        // Verify site 1 structure
+        const site1 = transformedSites[0]
+        expect(site1).toMatchObject({
+          id: 'site1',
+          name: 'North Alisos St',
+          label: 'Site 1',
+          dataPeriods: expect.any(Array)
+        })
+        
+        // Verify site 1 has 2 periods (as we created gaps)
+        expect(site1.dataPeriods).toHaveLength(2)
+        
+        // Verify data periods are percentage values (0-100)
+        site1.dataPeriods.forEach(period => {
+          expect(typeof period.start).toBe('number')
+          expect(typeof period.end).toBe('number')
+          expect(period.start).toBeGreaterThanOrEqual(0)
+          expect(period.start).toBeLessThanOrEqual(100)
+          expect(period.end).toBeGreaterThanOrEqual(0)
+          expect(period.end).toBeLessThanOrEqual(100)
+          expect(period.end).toBeGreaterThan(period.start)
+        })
+
+        // Verify site 2 structure and single period
+        const site2 = transformedSites[1]
+        expect(site2).toMatchObject({
+          id: 'site2',
+          name: 'East Anacapa St', 
+          label: 'Site 2',
+          dataPeriods: expect.any(Array)
+        })
+        expect(site2.dataPeriods).toHaveLength(1)
+
+        // Verify the data can be consumed by the component
+        // This simulates what the component receives
+        const componentProps = {
+          sites: transformedSites,
+          years: ['2024'],
+          variant: 'compact' as const,
+          idPrefix: 'test-timeline'
+        }
+
+        // Verify component prop structure matches expected interface
+        expect(componentProps.sites).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: expect.any(String),
+              name: expect.any(String),
+              label: expect.any(String),
+              dataPeriods: expect.arrayContaining([
+                expect.objectContaining({
+                  start: expect.any(Number),
+                  end: expect.any(Number)
+                })
+              ])
+            })
+          ])
+        )
+      })
+
+      it('should handle empty data periods correctly through the pipeline', () => {
+        const timeSpan = { 
+          start: createDate(2024, 1, 1), 
+          end: createDate(2024, 12, 31) 
+        }
+        
+        // Site with no data periods
+        const mockTimelineData = [
+          {
+            siteId: 1,
+            siteName: 'Empty Site',
+            siteLabel: 'Site 1',
+            dataPeriods: []
+          }
+        ]
+
+        const transformedSites = TimeSeriesPrepService.prepareTimelineSparklineData(mockTimelineData, timeSpan)
+
+        expect(transformedSites).toHaveLength(1)
+        expect(transformedSites[0].dataPeriods).toHaveLength(0)
+        
+        // Verify empty data periods don't break the component interface
+        expect(transformedSites[0]).toMatchObject({
+          id: 'site1',
+          name: 'Empty Site',
+          label: 'Site 1',
+          dataPeriods: []
+        })
       })
     })
   })
