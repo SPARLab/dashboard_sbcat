@@ -5,6 +5,7 @@
 
 import { AggregationUtilService } from "../shared/aggregation";
 import { SpatialUtilService } from "../shared/spatial";
+import { processAndRankSites, type RawSiteRecord, type SiteMetadata } from "./site-ranking";
 
 export class CountSiteProcessingService {
   /**
@@ -130,29 +131,15 @@ export class CountSiteProcessingService {
 
       const aadtResult = await aadtLayer.queryFeatures(aadtQuery);
       
-      const aadtBySite = AggregationUtilService.groupByField(
-        aadtResult.features.map(f => f.attributes),
-        'site_id'
-      );
+      // Convert ArcGIS response to pure data structures
+      const aadtRecords: RawSiteRecord[] = aadtResult.features.map(f => ({
+        site_id: f.attributes.site_id,
+        count_type: f.attributes.count_type,
+        all_aadt: f.attributes.all_aadt
+      }));
 
-      // Process and rank sites
-      const rankedSites = Object.entries(aadtBySite).map(([siteId, records]: [string, any[]]) => {
-        const bikeAADT = records.find(r => r.count_type === 'bike')?.all_aadt || 0;
-        const pedAADT = records.find(r => r.count_type === 'ped')?.all_aadt || 0;
-        const metadata = siteMetadata[siteId];
-
-        const site = {
-          siteId: parseInt(siteId),
-          siteName: metadata?.name || `Site ${siteId}`,
-          bikeAADT,
-          pedAADT,
-          totalAADT: bikeAADT + pedAADT,
-        };
-        
-        return site;
-      }).sort((a, b) => b.totalAADT - a.totalAADT);
-
-      return rankedSites.slice(0, limit);
+      // Use pure function for processing and ranking
+      return processAndRankSites(aadtRecords, siteMetadata, limit);
       
     } catch (error) {
       console.error('❌ Error in getHighestVolumeSites:', error);
