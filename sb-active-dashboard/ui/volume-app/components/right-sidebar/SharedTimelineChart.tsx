@@ -89,10 +89,12 @@ export default function SharedTimelineChart({
           const isSelected = selectedSiteId === site.name;
           return (
             <div
-              id={`${idPrefix}-row-${site.id}`}
+              id={`${idPrefix}-row-${encodeURIComponent(site.name)}`}
               key={site.id}
               className={`group relative flex items-center transition-colors duration-200 rounded-sm px-1 py-0.5 cursor-pointer ${
-                isSelected ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-100'
+                isSelected 
+                  ? 'bg-blue-100 border border-blue-300 ring-2 ring-blue-300 border-l-4 border-l-blue-500' 
+                  : 'hover:bg-gray-100'
               }`}
               onClick={() => onSiteSelect?.(isSelected ? null : site.name)}
             >
@@ -115,7 +117,7 @@ export default function SharedTimelineChart({
               <div
                 id={`${idPrefix}-bar-container-${site.id}`}
                 className={`flex-1 relative ${styles.barHeight} rounded-sm ml-2 ${
-                  isSelected ? 'bg-blue-50' : 'bg-gray-100'
+                  isSelected ? 'bg-blue-100' : 'bg-gray-100'
                 }`}
               >
                 {/* Data Period Bars */}

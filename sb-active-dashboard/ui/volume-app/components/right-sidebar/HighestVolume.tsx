@@ -14,6 +14,8 @@ interface HighestVolumeProps {
   showBicyclist?: boolean;
   showPedestrian?: boolean;
   selectedGeometry?: Polygon | null;
+  selectedSiteId?: string | null;
+  onSiteSelect?: (siteId: string | null) => void;
 }
 
 interface HighestVolumeSite {
@@ -31,7 +33,9 @@ export default function HighestVolume({
   aadtTable,
   showBicyclist = true,
   showPedestrian = true,
-  selectedGeometry
+  selectedGeometry,
+  selectedSiteId,
+  onSiteSelect
 }: HighestVolumeProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [sites, setSites] = useState<HighestVolumeSite[]>([]);
@@ -115,16 +119,25 @@ export default function HighestVolume({
           )}
           {selectedGeometry && !isLoading && !error && sites.length > 0 && (
               <ul id="highest-volume-list" data-testid="highest-volume-list" className="space-y-2 text-sm">
-                  {sites.map((site, index) => (
-                      <li key={site.siteId} id={`highest-volume-item-${index + 1}`} className="flex justify-between items-center">
-                          <p id={`highest-volume-item-${index + 1}-name`} className="text-gray-800">
+                  {sites.map((site, index) => {
+                      const isSelected = selectedSiteId === site.siteName;
+                      return (
+                        <li
+                          key={site.siteId}
+                          id={`highest-volume-item-${index + 1}`}
+                          className={`flex justify-between items-center rounded-md px-2 py-1 cursor-pointer transition-colors ${isSelected ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-100'}`}
+                          onClick={() => onSiteSelect?.(isSelected ? null : site.siteName)}
+                          aria-selected={isSelected}
+                        >
+                          <p id={`highest-volume-item-${index + 1}-name`} className={`text-gray-800 ${isSelected ? 'text-blue-800 font-medium' : ''}`}>
                               {index + 1}. {site.siteName}
                           </p>
                           <p id={`highest-volume-item-${index + 1}-value`} className="text-gray-800 font-medium">
                               {site.totalAADT.toLocaleString()}
                           </p>
-                      </li>
-                  ))}
+                        </li>
+                      );
+                  })}
               </ul>
           )}
       </div>

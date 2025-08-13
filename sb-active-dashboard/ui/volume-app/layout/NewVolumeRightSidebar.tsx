@@ -270,6 +270,8 @@ export default function NewVolumeRightSidebar({
                 showBicyclist={showBicyclist}
                 showPedestrian={showPedestrian}
                 selectedGeometry={selectedGeometry}
+                selectedSiteId={selectedCountSite}
+                onSiteSelect={onCountSiteSelect}
               />
               <ModeBreakdown 
                 selectedGeometry={selectedGeometry}

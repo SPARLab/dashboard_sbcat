@@ -128,16 +128,35 @@ export default function TimelineSparklineChart({
   // Auto-scroll to selected site
   useEffect(() => {
     if (selectedSiteId && scrollContainerRef.current && !isCollapsed) {
-      const selectedElement = document.getElementById(`timeline-sparkline-chart-row-${selectedSiteId}`);
-      if (selectedElement) {
-        const container = scrollContainerRef.current;
-        const elementTop = selectedElement.offsetTop;
-        const elementHeight = selectedElement.offsetHeight;
-        const containerHeight = container.clientHeight;
-        const scrollTop = elementTop - (containerHeight / 2) + (elementHeight / 2);
-        
+      const encodedId = encodeURIComponent(selectedSiteId);
+      const selectedElement = document.getElementById(`timeline-sparkline-chart-row-${encodedId}`);
+      const container = scrollContainerRef.current;
+      if (selectedElement && container) {
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = selectedElement.getBoundingClientRect();
+
+        // Margin to consider an item "visible enough"
+        const visibilityMargin = 4;
+
+        const isFullyVisible = 
+          elementRect.top >= containerRect.top + visibilityMargin &&
+          elementRect.bottom <= containerRect.bottom - visibilityMargin;
+
+        if (isFullyVisible) {
+          return;
+        }
+
+        // Calculate offset needed to center the element within the container viewport
+        const offsetToCenter =
+          (elementRect.top - containerRect.top) - (container.clientHeight / 2 - elementRect.height / 2);
+
+        let targetScrollTop = container.scrollTop + offsetToCenter;
+        const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+        if (targetScrollTop < 0) targetScrollTop = 0;
+        if (targetScrollTop > maxScrollTop) targetScrollTop = maxScrollTop;
+
         container.scrollTo({
-          top: Math.max(0, scrollTop),
+          top: targetScrollTop,
           behavior: 'smooth'
         });
       }
