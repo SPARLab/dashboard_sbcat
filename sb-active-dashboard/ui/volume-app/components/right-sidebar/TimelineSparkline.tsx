@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import TimelineSparklineHeader from "./TimelineSparklineHeader";
 import TimelineSparklineChart from "./TimelineSparklineChart";
 import { type SiteData } from "./SharedTimelineChart";
@@ -115,6 +115,18 @@ export default function TimelineSparkline({
 
   const headerProps = getHeaderProps();
 
+  // Sort sites by coverage (sum of data period widths) descending
+  const sortedSites = useMemo(() => {
+    const calculateCoverage = (site: SiteData) =>
+      site.dataPeriods.reduce((sum, period) => sum + (period.end - period.start), 0);
+
+    return [...sites].sort((a, b) => {
+      const coverageDiff = calculateCoverage(b) - calculateCoverage(a);
+      if (coverageDiff !== 0) return coverageDiff;
+      return a.label.localeCompare(b.label);
+    });
+  }, [sites]);
+
   return (
     <div id="timeline-sparkline-container" className="border border-gray-200 rounded-lg overflow-hidden overflow-x-hidden">
       {headerProps && (
@@ -168,7 +180,7 @@ export default function TimelineSparkline({
         </div>
       ) : (
         <TimelineSparklineChart
-          sites={sites}
+          sites={sortedSites}
           startDate={startDate}
           endDate={endDate}
           dateRange={dateRange}
