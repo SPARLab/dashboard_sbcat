@@ -601,4 +601,120 @@ describe('HighestVolume Component - Data Validation', () => {
       expect(mockVolumeService.getHighestVolumeData).toHaveBeenCalledTimes(1)
     })
   })
+
+  describe('Selection and Rendering', () => {
+    it('highlights the selected site when selectedSiteId matches', async () => {
+      const mockData = createMockHighestVolumeData(3)
+      mockVolumeService.getHighestVolumeData.mockResolvedValue(mockData)
+
+      render(
+        <HighestVolume
+          mapView={mockMapView}
+          sitesLayer={mockSitesLayer}
+          countsLayer={mockCountsLayer}
+          aadtTable={mockAadtTable}
+          showBicyclist={true}
+          showPedestrian={true}
+          selectedGeometry={mockGeometry}
+          selectedSiteId={mockData.sites[1].siteName}
+        />
+      )
+
+      // Wait for list to render
+      await waitFor(() => {
+        expect(screen.getByTestId(testIds.highestVolume.list)).toBeInTheDocument()
+      })
+
+      // Find the LI for the selected site and assert highlight classes + aria-selected
+      const selectedItemName = mockData.sites[1].siteName
+      const nameElement = screen.getByText((content) => content.includes(selectedItemName))
+      const listItem = nameElement.closest('li') as HTMLElement
+      expect(listItem).toBeTruthy()
+      expect(listItem).toHaveAttribute('aria-selected', 'true')
+      expect(listItem.className).toMatch(/bg-blue-100/)
+      expect(listItem.className).toMatch(/border-blue-300/)
+    })
+
+    it('toggles selection on click (selects then deselects the same site)', async () => {
+      const mockData = createMockHighestVolumeData(3)
+      mockVolumeService.getHighestVolumeData.mockResolvedValue(mockData)
+
+      const onSiteSelect = vi.fn()
+
+      const { rerender } = render(
+        <HighestVolume
+          mapView={mockMapView}
+          sitesLayer={mockSitesLayer}
+          countsLayer={mockCountsLayer}
+          aadtTable={mockAadtTable}
+          showBicyclist={true}
+          showPedestrian={true}
+          selectedGeometry={mockGeometry}
+          onSiteSelect={onSiteSelect}
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId(testIds.highestVolume.list)).toBeInTheDocument()
+      })
+
+      // Click first item to select
+      const firstItem = document.getElementById(testIds.highestVolume.item(1)) as HTMLElement
+      await user.click(firstItem)
+      expect(onSiteSelect).toHaveBeenCalledWith(mockData.sites[0].siteName)
+
+      // Simulate parent reflecting selection, then click again to deselect
+      rerender(
+        <HighestVolume
+          mapView={mockMapView}
+          sitesLayer={mockSitesLayer}
+          countsLayer={mockCountsLayer}
+          aadtTable={mockAadtTable}
+          showBicyclist={true}
+          showPedestrian={true}
+          selectedGeometry={mockGeometry}
+          selectedSiteId={mockData.sites[0].siteName}
+          onSiteSelect={onSiteSelect}
+        />
+      )
+
+      await user.click(firstItem)
+      expect(onSiteSelect).toHaveBeenCalledWith(null)
+    })
+
+    it('does not render duplicate site entries', async () => {
+      const mockData = createMockHighestVolumeData(5)
+      mockVolumeService.getHighestVolumeData.mockResolvedValue(mockData)
+
+      render(
+        <HighestVolume
+          mapView={mockMapView}
+          sitesLayer={mockSitesLayer}
+          countsLayer={mockCountsLayer}
+          aadtTable={mockAadtTable}
+          showBicyclist={true}
+          showPedestrian={true}
+          selectedGeometry={mockGeometry}
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId(testIds.highestVolume.list)).toBeInTheDocument()
+      })
+
+      const list = screen.getByTestId(testIds.highestVolume.list)
+      const items = Array.from(list.querySelectorAll('li'))
+      expect(items.length).toBe(mockData.sites.length)
+
+      const names = items.map((li) => {
+        const nameEl = li.querySelector('p[id$="-name"]') as HTMLElement
+        // Remove the leading numbering (e.g., "1. ")
+        const text = nameEl?.textContent || ''
+        const parts = text.split('. ')
+        return parts.length > 1 ? parts.slice(1).join('. ') : text
+      })
+      const uniqueNames = new Set(names)
+      expect(uniqueNames.size).toBe(names.length)
+    })
+  })
 })
