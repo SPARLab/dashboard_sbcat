@@ -2,7 +2,7 @@
 import Polygon from "@arcgis/core/geometry/Polygon";
 import ReactECharts from 'echarts-for-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { TimeScale, YearToYearComparisonDataService, MultiYearComparisonResult } from '../../../../lib/data-services/YearToYearComparisonDataService';
+import { TimeScale, YearToYearComparisonDataService, MultiYearComparisonResult, NormalizationMode } from '../../../../lib/data-services/YearToYearComparisonDataService';
 import Tooltip from '../../../components/Tooltip';
 import CollapseExpandIcon from './CollapseExpandIcon';
 import SelectRegionPlaceholder from '../../../components/SelectRegionPlaceholder';
@@ -40,6 +40,8 @@ export default function YearToYearVolumeComparison({
   const [chartData, setChartData] = useState<MultiYearComparisonResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [normalization, setNormalization] = useState<NormalizationMode>('none');
+  const [scaleHourlyToDaily, setScaleHourlyToDaily] = useState<boolean>(true);
   
   // Cache for background loaded data by time scale
   const [dataCache, setDataCache] = useState<Map<TimeScale, MultiYearComparisonResult>>(new Map());
@@ -66,16 +68,17 @@ export default function YearToYearVolumeComparison({
   }, [dateRange]);
 
   // Generate cache key based on selection and filters
-  const generateCacheKey = (geometry: Polygon | null, bike: boolean, ped: boolean, range: { startDate: Date; endDate: Date }, years: number[]): string => {
+  const generateCacheKey = (geometry: Polygon | null, bike: boolean, ped: boolean, range: { startDate: Date; endDate: Date }, years: number[], normKey: string): string => {
     if (!geometry) return 'default';
     const bounds = geometry.extent;
     if (!bounds) return 'default';
-    return `${bounds.xmin}_${bounds.ymin}_${bounds.xmax}_${bounds.ymax}_${bike}_${ped}_${range.startDate.toISOString()}_${range.endDate.toISOString()}_${years.join(',')}`;
+    return `${bounds.xmin}_${bounds.ymin}_${bounds.xmax}_${bounds.ymax}_${bike}_${ped}_${range.startDate.toISOString()}_${range.endDate.toISOString()}_${years.join(',')}_${normKey}`;
   };
 
   // Background load all time scales for current selection
   const backgroundLoadAllTimeScales = useCallback(async (geometry: Polygon | null, bike: boolean, ped: boolean, range: { startDate: Date; endDate: Date }, years: number[]) => {
-    const newCacheKey = generateCacheKey(geometry, bike, ped, range, years);
+    const scaleFlag = (timeScale !== 'Hour') && scaleHourlyToDaily;
+    const newCacheKey = generateCacheKey(geometry, bike, ped, range, years, normalization + '_' + (scaleFlag ? 'daily' : 'hourly'));
     const newCache = new Map<TimeScale, MultiYearComparisonResult>();
 
     setIsBackgroundLoading(true);
@@ -86,7 +89,7 @@ export default function YearToYearVolumeComparison({
         try {
           if (geometry && years.length > 0) {
             const result = await YearToYearComparisonDataService.queryMultiYearComparison(
-              geometry, scale, years, bike, ped, { start: range.startDate, end: range.endDate }
+              geometry, scale, years, bike, ped, { start: range.startDate, end: range.endDate }, normalization, (scale !== 'Hour') && scaleHourlyToDaily
             );
             return { scale, data: result };
           } else {
@@ -109,7 +112,7 @@ export default function YearToYearVolumeComparison({
     } finally {
       setIsBackgroundLoading(false);
     }
-  }, []);
+  }, [normalization, scaleHourlyToDaily]);
 
   // Fetch data when dependencies change
   useEffect(() => {
@@ -122,7 +125,8 @@ export default function YearToYearVolumeComparison({
         return;
       }
 
-      const newCacheKey = generateCacheKey(selectedGeometry, showBicyclist, showPedestrian, dateRange, includedYears);
+      const computedScale = (timeScale !== 'Hour') && scaleHourlyToDaily;
+      const newCacheKey = generateCacheKey(selectedGeometry, showBicyclist, showPedestrian, dateRange, includedYears, normalization + '_' + (computedScale ? 'daily' : 'hourly'));
       
       // Check if we have cached data for this selection
       if (newCacheKey === cacheKey && dataCache.has(timeScale)) {
@@ -144,7 +148,7 @@ export default function YearToYearVolumeComparison({
         } else {
           // Just time scale changed - load single scale
           const result = await YearToYearComparisonDataService.queryMultiYearComparison(
-            selectedGeometry, timeScale, includedYears, showBicyclist, showPedestrian, { start: dateRange.startDate, end: dateRange.endDate }
+            selectedGeometry, timeScale, includedYears, showBicyclist, showPedestrian, { start: dateRange.startDate, end: dateRange.endDate }, normalization, computedScale
           );
           setChartData(result);
           
@@ -163,7 +167,7 @@ export default function YearToYearVolumeComparison({
     };
 
     fetchData();
-  }, [selectedGeometry, timeScale, showBicyclist, showPedestrian, dateRange, includedYears, cacheKey, dataCache, backgroundLoadAllTimeScales]);
+  }, [selectedGeometry, timeScale, showBicyclist, showPedestrian, dateRange, includedYears, cacheKey, dataCache, backgroundLoadAllTimeScales, normalization, scaleHourlyToDaily]);
 
   const onEvents = useMemo(
     () => ({
@@ -218,23 +222,19 @@ export default function YearToYearVolumeComparison({
       const yearColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#f97316', '#ec4899', '#06b6d4'];
       
       // Build data by taking each series' value for its own year category
-      const yearData = chartData.series.map((series, index) => {
+      const yearDataNumbers = chartData.series.map((series) => {
         const year = series.name;
         const yearIndex = chartData.categories.indexOf(year);
         const value = yearIndex >= 0 ? series.data[yearIndex] || 0 : 0;
-        
-        return {
-          value: value,
-          itemStyle: { color: yearColors[index % yearColors.length], borderRadius: [4, 4, 0, 0] }
-        };
+        return value;
       });
       
       categories = chartData.series.map(series => formatYearToTwoDigit(series.name));
       chartSeries = [{
         name: 'Years',
-        data: yearData,
+        data: yearDataNumbers,
         type: 'bar'
-      }];
+      } as any];
     } else {
       // Format hour categories for display
       if (timeScale === 'Hour') {
@@ -244,21 +244,17 @@ export default function YearToYearVolumeComparison({
       // Format series names to two-digit years and assign colors
       const yearColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#f97316', '#ec4899', '#06b6d4'];
       chartSeries = chartData.series.map((series, index) => ({
-        ...series,
         name: formatYearToTwoDigit(series.name),
-        itemStyle: {
-          color: yearColors[index % yearColors.length]
-        },
-        lineStyle: {
-          color: yearColors[index % yearColors.length]
-        }
+        data: series.data,
+        color: yearColors[index % yearColors.length]
       }));
     }
     
     // Calculate dynamic y-axis range
-    const allValues = chartSeries.flatMap(series => 
-      Array.isArray(series.data) ? series.data.map(item => typeof item === 'object' ? item.value : item) : []
-    ).filter(value => value !== null && value !== undefined && typeof value === 'number');
+    const allValues = chartSeries.flatMap(series => {
+      const data: any[] = (series as any).data || [];
+      return Array.isArray(data) ? data.map((item: any) => typeof item === 'object' ? item.value : item) : [];
+    }).filter(value => value !== null && value !== undefined && typeof value === 'number');
     
     const minValue = allValues.length > 0 ? Math.min(...allValues) : 0;
     const maxValue = allValues.length > 0 ? Math.max(...allValues) : 100;
@@ -327,7 +323,7 @@ export default function YearToYearVolumeComparison({
             return value.toString();
           },
         },
-        name: 'Adjusted Average Daily Volume',
+        name: 'Average daily volume per site (approx.)',
         nameLocation: 'middle',
         nameGap: 35,
         nameTextStyle: {
@@ -381,39 +377,18 @@ export default function YearToYearVolumeComparison({
             ...series,
             type: 'bar',
             barWidth: dynamicBarWidth,
-            emphasis: {
-              itemStyle: {
-                borderColor: series.itemStyle?.color || '#3b82f6',
-                borderWidth: 2,
-                shadowBlur: 0,
-                shadowColor: 'transparent',
-              },
-            },
-          };
+          } as any;
         } else {
           // Line chart for Hour/Day/Month
           return {
             ...series,
             type: 'line',
-            lineStyle: {
-              color: series.lineStyle?.color || '#3b82f6',
-              width: 2,
-            },
-            itemStyle: {
-              color: series.itemStyle?.color || '#3b82f6',
-              borderWidth: 2,
-            },
+            color: (series as any).color || '#3b82f6',
             symbol: 'circle',
             symbolSize: 10,
             showSymbol: true,
             showAllSymbol: true,
             emphasis: {
-              itemStyle: {
-                borderColor: series.itemStyle?.color || '#3b82f6',
-                borderWidth: 3,
-                shadowBlur: 0,
-                shadowColor: 'transparent',
-              },
               lineStyle: {
                 width: 3,
               },
@@ -515,10 +490,74 @@ export default function YearToYearVolumeComparison({
         <div id="year-to-year-volume-comparison-description" className="w-full text-sm text-gray-600">
           {timeScale === 'Hour' 
             ? `Average hourly volumes comparison across ${includedYears.length > 1 ? `${includedYears[0]}-${includedYears[includedYears.length - 1]}` : includedYears[0] || 'selected years'}` 
-            : `Average daily volumes comparison by ${timeScale.toLowerCase()} across ${includedYears.length > 1 ? `${includedYears[0]}-${includedYears[includedYears.length - 1]}` : includedYears[0] || 'selected years'}`}
+            : `Average daily volume (per site, approx. ×24) by ${timeScale.toLowerCase()} across ${includedYears.length > 1 ? `${includedYears[0]}-${includedYears[includedYears.length - 1]}` : includedYears[0] || 'selected years'}`}
           <span id="year-to-year-volume-comparison-info-icon-container" className="ml-1 inline-flex align-middle">
             <Tooltip text={getCalculationExplanation(timeScale)} align="right" />
           </span>
+          <div id="year-to-year-volume-comparison-normalization" className="inline-flex items-center ml-2 gap-2">
+            <label htmlFor="normalization-select" className="text-xs text-gray-500">Normalization</label>
+            <select
+              id="normalization-select"
+              className="text-xs border border-gray-300 rounded px-1 py-0.5"
+              value={normalization}
+              onChange={(e) => setNormalization(e.target.value as NormalizationMode)}
+            >
+              <option value="none">Raw</option>
+              <option value="equal-site">Equal-site weighting</option>
+            </select>
+            <label htmlFor="scale-hourly-toggle" className="text-xs text-gray-500 ml-2">Scale hourly to daily (×24)</label>
+            <input
+              id="scale-hourly-toggle"
+              type="checkbox"
+              className="align-middle"
+              checked={scaleHourlyToDaily}
+              onChange={(e) => setScaleHourlyToDaily(e.target.checked)}
+            />
+          </div>
+          {process.env.NODE_ENV === 'development' && (
+            <button
+              id="year-to-year-volume-comparison-debug-export"
+              onClick={() => {
+                if (selectedGeometry && includedYears.length > 0) {
+                  // Import the service dynamically to avoid circular dependencies
+                  import('../../../../lib/data-services/YearToYearComparisonDataService').then(({ YearToYearComparisonDataService }) => {
+                    YearToYearComparisonDataService.exportRawDataForAnalysis(
+                      selectedGeometry,
+                      includedYears,
+                      showBicyclist,
+                      showPedestrian
+                    );
+                  });
+                } else {
+                  console.warn('Please select an area and ensure years are included before exporting data');
+                }
+              }}
+              className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+              title="Export raw data for analysis (Development only)"
+            >
+              🔍 Debug Export
+            </button>
+          )}
+          {process.env.NODE_ENV === 'development' && (
+            <button
+              id="year-to-year-volume-comparison-full-export"
+              onClick={() => {
+                if (selectedGeometry && includedYears.length > 0) {
+                  import('../../../../lib/data-services/YearToYearComparisonDataService').then(({ YearToYearComparisonDataService }) => {
+                    YearToYearComparisonDataService.exportFullRawCountsData(
+                      selectedGeometry,
+                      includedYears,
+                      false
+                    );
+                  });
+                }
+              }}
+              className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+              title="Export all attributes (Development only)"
+            >
+              ⬇️ Full Export
+            </button>
+          )}
         </div>
 
         <div id="year-to-year-volume-comparison-chart-container" className="relative mt-1">

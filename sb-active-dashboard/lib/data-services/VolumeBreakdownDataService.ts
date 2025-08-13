@@ -175,8 +175,9 @@ export class VolumeBreakdownDataService {
       return this.sortByTimeScale(result, timeScale);
     }
 
-    // For all other scales, first aggregate hourly data to daily totals
-    const dailyTotals: { [dateKey: string]: { [timeKey: string]: number } } = {};
+    // For all other scales, calculate proper average daily volumes
+    // Step 1: Group data by site-date to calculate hourly averages per site-day
+    const siteDayData: { [dateKey: string]: { [timeKey: string]: { total: number, hours: number } } } = {};
     
     filteredData.forEach(record => {
       const timestamp = new Date(record.timestamp);
@@ -210,34 +211,39 @@ export class VolumeBreakdownDataService {
           timeKey = 'Unknown';
       }
       
-      if (!dailyTotals[dateKey]) {
-        dailyTotals[dateKey] = {};
+      if (!siteDayData[dateKey]) {
+        siteDayData[dateKey] = {};
       }
-      if (!dailyTotals[dateKey][timeKey]) {
-        dailyTotals[dateKey][timeKey] = 0;
+      if (!siteDayData[dateKey][timeKey]) {
+        siteDayData[dateKey][timeKey] = { total: 0, hours: 0 };
       }
       
-      // Sum hourly counts to get daily total for this site-date-timekey combination
-      dailyTotals[dateKey][timeKey] += counts;
+      // Accumulate hourly counts and count of hours for this site-date-timekey combination
+      siteDayData[dateKey][timeKey].total += counts;
+      siteDayData[dateKey][timeKey].hours += 1;
     });
 
-    // Now aggregate daily totals by time scale
-    const timeScaleAggregation: { [key: string]: { total: number, count: number } } = {};
+    // Step 2: Calculate average hourly volume for each site-day, then aggregate by time scale
+    const timeScaleAggregation: { [key: string]: { siteDayAverages: number[], count: number } } = {};
     
-    Object.entries(dailyTotals).forEach(([dateKey, timeKeys]) => {
-      Object.entries(timeKeys).forEach(([timeKey, dailyTotal]) => {
+    Object.entries(siteDayData).forEach(([dateKey, timeKeys]) => {
+      Object.entries(timeKeys).forEach(([timeKey, data]) => {
         if (!timeScaleAggregation[timeKey]) {
-          timeScaleAggregation[timeKey] = { total: 0, count: 0 };
+          timeScaleAggregation[timeKey] = { siteDayAverages: [], count: 0 };
         }
         
-        timeScaleAggregation[timeKey].total += dailyTotal;
+        // Calculate average hourly volume for this site-day
+        const siteDayHourlyAverage = data.hours > 0 ? data.total / data.hours : 0;
+        timeScaleAggregation[timeKey].siteDayAverages.push(siteDayHourlyAverage);
         timeScaleAggregation[timeKey].count += 1;
       });
     });
 
-    // Calculate average daily traffic for each time period
+    // Step 3: Calculate the final average across all site-days for each time period
     const result = Object.entries(timeScaleAggregation).map(([name, data]) => {
-      const averageDailyTraffic = data.count > 0 ? Math.round(data.total / data.count) : 0;
+      const averageDailyTraffic = data.siteDayAverages.length > 0 
+        ? Math.round(data.siteDayAverages.reduce((sum, avg) => sum + avg, 0) / data.siteDayAverages.length)
+        : 0;
       
       return { 
         name, 

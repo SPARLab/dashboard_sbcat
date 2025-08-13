@@ -29,6 +29,7 @@ export interface MultiYearComparisonResult {
 }
 
 export type TimeScale = 'Hour' | 'Day' | 'Weekday vs Weekend' | 'Month' | 'Year';
+export type NormalizationMode = 'none' | 'equal-site';
 
 /**
  * Service for querying and aggregating volume data for year-to-year comparison charts
@@ -44,7 +45,9 @@ export class YearToYearComparisonDataService {
     selectedGeometry: Polygon | null,
     timeScale: TimeScale,
     showBicyclist: boolean = true,
-    showPedestrian: boolean = true
+    showPedestrian: boolean = true,
+    normalization: NormalizationMode = 'none',
+    scaleHourlyToDaily: boolean = false
   ): Promise<YearToYearComparisonResult> {
     try {
       if (!selectedGeometry) {
@@ -63,8 +66,8 @@ export class YearToYearComparisonDataService {
       const year2024Data = await this.queryCountsForSitesAndYear(siteIds, 2024, showBicyclist, showPedestrian);
       
       // Aggregate data based on time scale for both years
-      const aggregated2023 = this.aggregateByTimeScale(year2023Data, timeScale);
-      const aggregated2024 = this.aggregateByTimeScale(year2024Data, timeScale);
+      const aggregated2023 = this.aggregateByTimeScale(year2023Data, timeScale, normalization, scaleHourlyToDaily);
+      const aggregated2024 = this.aggregateByTimeScale(year2024Data, timeScale, normalization, scaleHourlyToDaily);
 
       // Combine the data for comparison
       const comparisonData = this.combineYearData(aggregated2023, aggregated2024, timeScale);
@@ -149,11 +152,19 @@ export class YearToYearComparisonDataService {
   /**
    * Aggregate count data by time scale
    */
-  private static aggregateByTimeScale(countsData: any[], timeScale: TimeScale): { name: string; value: number }[] {
-    // Filter out suspicious data points
+  private static aggregateByTimeScale(
+    countsData: any[],
+    timeScale: TimeScale,
+    normalization: NormalizationMode = 'none',
+    scaleHourlyToDaily: boolean = false
+  ): { name: string; value: number }[] {
+    // Debug: Log data quality analysis
+    this.logDataQualityAnalysis(countsData, timeScale);
+    
+    // Keep all data but log outliers for investigation
     const filteredData = countsData.filter(record => {
       const counts = record.counts || 0;
-      return counts > 0 && counts < 10000;
+      return counts > 0; // Only remove zero/negative values
     });
 
     // For Hour scale, work directly with hourly data
@@ -174,15 +185,17 @@ export class YearToYearComparisonDataService {
       });
 
       const result = Object.entries(hourlyAggregation).map(([name, data]) => {
-        const averageValue = data.count > 0 ? Math.round(data.total / data.count) : 0;
+        const avgHourly = data.count > 0 ? data.total / data.count : 0;
+        const averageValue = Math.round(scaleHourlyToDaily ? avgHourly * 24 : avgHourly);
         return { name, value: averageValue };
       });
       
       return this.sortByTimeScale(result, timeScale);
     }
 
-    // For all other scales, first aggregate hourly data to daily totals
-    const dailyTotals: { [dateKey: string]: { [timeKey: string]: number } } = {};
+    // For all other scales, calculate proper average daily volumes
+    // Step 1: Group data by site-date to calculate hourly averages per site-day
+    const siteDayData: { [dateKey: string]: { [timeKey: string]: { total: number, hours: number } } } = {};
     
     filteredData.forEach(record => {
       const timestamp = new Date(record.timestamp);
@@ -214,34 +227,64 @@ export class YearToYearComparisonDataService {
           timeKey = 'Unknown';
       }
       
-      if (!dailyTotals[dateKey]) {
-        dailyTotals[dateKey] = {};
+      if (!siteDayData[dateKey]) {
+        siteDayData[dateKey] = {};
       }
-      if (!dailyTotals[dateKey][timeKey]) {
-        dailyTotals[dateKey][timeKey] = 0;
+      if (!siteDayData[dateKey][timeKey]) {
+        siteDayData[dateKey][timeKey] = { total: 0, hours: 0 };
       }
       
-      dailyTotals[dateKey][timeKey] += counts;
+      siteDayData[dateKey][timeKey].total += counts;
+      siteDayData[dateKey][timeKey].hours += 1;
     });
 
-    // Aggregate daily totals by time scale
-    const timeScaleAggregation: { [key: string]: { total: number, count: number } } = {};
+    // Step 2: Calculate average hourly volume for each site-day, then aggregate by time scale
+    const timeScaleAggregation: { [key: string]: { siteDayAverages: number[], count: number } } = {};
+    // For equal-site normalization, collect per-site arrays of site-day averages
+    const timeKeyToSiteAverages: { [timeKey: string]: { [siteId: string]: number[] } } = {};
     
-    Object.entries(dailyTotals).forEach(([dateKey, timeKeys]) => {
-      Object.entries(timeKeys).forEach(([timeKey, dailyTotal]) => {
+    Object.entries(siteDayData).forEach(([dateKey, timeKeys]) => {
+      const siteId = dateKey.split('_')[0];
+      Object.entries(timeKeys).forEach(([timeKey, data]) => {
         if (!timeScaleAggregation[timeKey]) {
-          timeScaleAggregation[timeKey] = { total: 0, count: 0 };
+          timeScaleAggregation[timeKey] = { siteDayAverages: [], count: 0 };
         }
         
-        timeScaleAggregation[timeKey].total += dailyTotal;
+        // Calculate average hourly volume for this site-day
+        const siteDayHourlyAverage = data.hours > 0 ? data.total / data.hours : 0;
+        timeScaleAggregation[timeKey].siteDayAverages.push(siteDayHourlyAverage);
         timeScaleAggregation[timeKey].count += 1;
+
+        if (normalization === 'equal-site') {
+          if (!timeKeyToSiteAverages[timeKey]) timeKeyToSiteAverages[timeKey] = {};
+          if (!timeKeyToSiteAverages[timeKey][siteId]) timeKeyToSiteAverages[timeKey][siteId] = [];
+          timeKeyToSiteAverages[timeKey][siteId].push(siteDayHourlyAverage);
+        }
       });
     });
 
-    const result = Object.entries(timeScaleAggregation).map(([name, data]) => {
-      const averageDailyTraffic = data.count > 0 ? Math.round(data.total / data.count) : 0;
-      return { name, value: averageDailyTraffic };
-    });
+    // Step 3: Calculate the final average across all site-days for each time period
+    let result: { name: string; value: number }[];
+    if (normalization === 'equal-site') {
+      // Compute site-month (or site-timeKey) averages, then equal-mean across sites
+      result = Object.entries(timeKeyToSiteAverages).map(([timeKey, bySite]) => {
+        const siteAvgs: number[] = Object.values(bySite).map(arr => {
+          if (arr.length === 0) return 0;
+          return arr.reduce((s, v) => s + v, 0) / arr.length;
+        });
+        const meanAcrossSites = siteAvgs.length > 0 ? siteAvgs.reduce((s, v) => s + v, 0) / siteAvgs.length : 0;
+        const value = Math.round(scaleHourlyToDaily ? meanAcrossSites * 24 : meanAcrossSites);
+        return { name: timeKey, value };
+      });
+    } else {
+      result = Object.entries(timeScaleAggregation).map(([name, data]) => {
+        const meanHourly = data.siteDayAverages.length > 0 
+          ? (data.siteDayAverages.reduce((sum, avg) => sum + avg, 0) / data.siteDayAverages.length)
+          : 0;
+        const value = Math.round(scaleHourlyToDaily ? meanHourly * 24 : meanHourly);
+        return { name, value };
+      });
+    }
     
     return this.sortByTimeScale(result, timeScale);
   }
@@ -331,6 +374,287 @@ export class YearToYearComparisonDataService {
   }
 
   /**
+   * Log detailed data quality analysis for debugging
+   */
+  private static logDataQualityAnalysis(countsData: any[], timeScale: TimeScale): void {
+    if (countsData.length === 0) return;
+
+    const counts = countsData.map(record => record.counts || 0).filter(c => c > 0);
+    const timestamps = countsData.map(record => new Date(record.timestamp));
+    
+    // Basic statistics
+    const min = Math.min(...counts);
+    const max = Math.max(...counts);
+    const mean = counts.reduce((sum, c) => sum + c, 0) / counts.length;
+    const median = counts.sort((a, b) => a - b)[Math.floor(counts.length / 2)];
+    
+    // Identify outliers (values > 3 standard deviations from mean)
+    const stdDev = Math.sqrt(counts.reduce((sum, c) => sum + Math.pow(c - mean, 2), 0) / counts.length);
+    const outlierThreshold = mean + (3 * stdDev);
+    const outliers = countsData.filter(record => (record.counts || 0) > outlierThreshold);
+    
+    // Group data by month-year for July 2022 analysis
+    const monthlyGroups: { [key: string]: any[] } = {};
+    countsData.forEach(record => {
+      const timestamp = new Date(record.timestamp);
+      const monthYear = `${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthlyGroups[monthYear]) monthlyGroups[monthYear] = [];
+      monthlyGroups[monthYear].push(record);
+    });
+
+    console.group(`📊 Data Quality Analysis - ${timeScale} Scale`);
+    console.log(`Total records: ${countsData.length}`);
+    console.log(`Valid counts: ${counts.length}`);
+    console.log(`Count range: ${min} - ${max}`);
+    console.log(`Mean: ${mean.toFixed(2)}, Median: ${median}`);
+    console.log(`Standard deviation: ${stdDev.toFixed(2)}`);
+    console.log(`Outlier threshold (>3σ): ${outlierThreshold.toFixed(2)}`);
+    
+    if (outliers.length > 0) {
+      console.warn(`🚨 Found ${outliers.length} outlier records:`);
+      outliers.forEach(record => {
+        const timestamp = new Date(record.timestamp);
+        console.warn(`  Site ${record.site_id}, ${timestamp.toISOString().split('T')[0]}: ${record.counts} counts`);
+      });
+    }
+
+    // July 2022 specific analysis
+    const july2022 = monthlyGroups['2022-07'] || [];
+    if (july2022.length > 0) {
+      const july2022Counts = july2022.map(r => r.counts || 0).filter(c => c > 0);
+      const july2022Mean = july2022Counts.reduce((sum, c) => sum + c, 0) / july2022Counts.length;
+      const july2022Max = Math.max(...july2022Counts);
+      
+      console.group(`🔍 July 2022 Analysis`);
+      console.log(`July 2022 records: ${july2022.length}`);
+      console.log(`July 2022 mean: ${july2022Mean.toFixed(2)}`);
+      console.log(`July 2022 max: ${july2022Max}`);
+      
+      // Show highest values in July 2022
+      const july2022Sorted = july2022.sort((a, b) => (b.counts || 0) - (a.counts || 0));
+      console.log(`Top 5 highest July 2022 counts:`);
+      july2022Sorted.slice(0, 5).forEach((record, i) => {
+        const timestamp = new Date(record.timestamp);
+        console.log(`  ${i + 1}. Site ${record.site_id}, ${timestamp.toISOString()}: ${record.counts} counts`);
+      });
+      console.groupEnd();
+    }
+
+    // Compare with other months in 2022
+    const months2022 = Object.keys(monthlyGroups).filter(key => key.startsWith('2022-'));
+    if (months2022.length > 1) {
+      console.group(`📅 2022 Monthly Comparison`);
+      months2022.forEach(monthYear => {
+        const monthData = monthlyGroups[monthYear];
+        const monthCounts = monthData.map(r => r.counts || 0).filter(c => c > 0);
+        const monthMean = monthCounts.length > 0 ? monthCounts.reduce((sum, c) => sum + c, 0) / monthCounts.length : 0;
+        const monthName = new Date(2022, parseInt(monthYear.split('-')[1]) - 1, 1).toLocaleDateString('en-US', { month: 'short' });
+        console.log(`${monthName} 2022: ${monthData.length} records, mean: ${monthMean.toFixed(2)}`);
+      });
+      console.groupEnd();
+    }
+
+    console.groupEnd();
+  }
+
+  /**
+   * Export detailed raw data for external analysis (call from browser console)
+   * Usage: YearToYearComparisonDataService.exportRawDataForAnalysis(selectedGeometry, [2022], true, true)
+   */
+  static async exportRawDataForAnalysis(
+    selectedGeometry: Polygon | null,
+    years: number[],
+    showBicyclist: boolean = true,
+    showPedestrian: boolean = true
+  ): Promise<void> {
+    if (!selectedGeometry || years.length === 0) {
+      console.error('Please provide a selected geometry and years array');
+      return;
+    }
+
+    try {
+      console.log('🔍 Exporting raw data for analysis...');
+      
+      // Get site IDs within the selected geometry
+      const siteIds = await this.getSiteIdsInPolygon(selectedGeometry);
+      console.log(`Found ${siteIds.length} sites in selected area:`, siteIds);
+      
+      // Build count type filter
+      const countTypeConditions: string[] = [];
+      if (showBicyclist) countTypeConditions.push("count_type = 'bike'");
+      if (showPedestrian) countTypeConditions.push("count_type = 'ped'");
+      
+      if (countTypeConditions.length === 0) {
+        console.error('No count types selected');
+        return;
+      }
+
+      // Query raw data for each year
+      const allRawData: any[] = [];
+      for (const year of years) {
+        const yearStart = new Date(year, 0, 1).toISOString();
+        const yearEnd = new Date(year + 1, 0, 1).toISOString();
+        
+        const whereClause = `site_id IN (${siteIds.join(',')}) AND (${countTypeConditions.join(' OR ')}) AND timestamp >= '${yearStart}' AND timestamp < '${yearEnd}'`;
+        
+        const countsLayer = new FeatureLayer({ url: this.COUNTS_URL });
+        const query = countsLayer.createQuery();
+        query.where = whereClause;
+        query.outFields = ["site_id", "timestamp", "count_type", "counts"];
+        query.returnGeometry = false;
+
+        console.log(`Querying ${year} data with: ${whereClause}`);
+        const features = await this.queryAllFeaturesInParallel(countsLayer, query);
+        const yearData = features.map(feature => ({
+          ...feature.attributes,
+          year: year
+        }));
+        
+        console.log(`${year}: Found ${yearData.length} records`);
+        allRawData.push(...yearData);
+      }
+
+      // Process and group data for analysis
+      const processedData = allRawData.map(record => {
+        const timestamp = new Date(record.timestamp);
+        return {
+          site_id: record.site_id,
+          year: record.year,
+          month: timestamp.getMonth() + 1,
+          day: timestamp.getDate(),
+          hour: timestamp.getHours(),
+          count_type: record.count_type,
+          counts: record.counts,
+          timestamp: record.timestamp,
+          date_string: timestamp.toISOString().split('T')[0],
+          month_name: timestamp.toLocaleDateString('en-US', { month: 'short' })
+        };
+      });
+
+      // Group by month for easy analysis
+      const monthlyData: { [key: string]: any[] } = {};
+      processedData.forEach(record => {
+        const key = `${record.year}-${String(record.month).padStart(2, '0')}`;
+        if (!monthlyData[key]) monthlyData[key] = [];
+        monthlyData[key].push(record);
+      });
+
+      console.group('📈 Raw Data Export Summary');
+      console.log(`Total records exported: ${processedData.length}`);
+      console.log('Monthly breakdown:');
+      Object.keys(monthlyData).sort().forEach(monthKey => {
+        const data = monthlyData[monthKey];
+        const counts = data.map(r => r.counts).filter(c => c > 0);
+        const mean = counts.length > 0 ? counts.reduce((sum, c) => sum + c, 0) / counts.length : 0;
+        const max = counts.length > 0 ? Math.max(...counts) : 0;
+        console.log(`  ${monthKey}: ${data.length} records, mean: ${mean.toFixed(2)}, max: ${max}`);
+      });
+      console.groupEnd();
+
+      // Make data available in global scope for analysis
+      (window as any).rawVolumeData = processedData;
+      (window as any).monthlyVolumeData = monthlyData;
+      
+      console.log('✅ Data exported to window.rawVolumeData and window.monthlyVolumeData');
+      console.log('💡 You can now copy this data to CSV or analyze in browser console');
+      
+      // Example analysis queries
+      console.group('🔧 Example Analysis Queries');
+      console.log('// Find July 2022 outliers:');
+      console.log('window.rawVolumeData.filter(r => r.year === 2022 && r.month === 7 && r.counts > 1000)');
+      console.log('');
+      console.log('// Group by site and date to see daily totals:');
+      console.log('const dailyTotals = {}; window.rawVolumeData.forEach(r => { const key = `${r.site_id}_${r.date_string}`; if (!dailyTotals[key]) dailyTotals[key] = 0; dailyTotals[key] += r.counts; });');
+      console.log('');
+      console.log('// Convert to CSV:');
+      console.log('console.log("site_id,year,month,day,hour,count_type,counts,timestamp\\n" + window.rawVolumeData.map(r => `${r.site_id},${r.year},${r.month},${r.day},${r.hour},${r.count_type},${r.counts},${r.timestamp}`).join("\\n"))');
+      console.groupEnd();
+
+    } catch (error) {
+      console.error('Error exporting raw data:', error);
+    }
+  }
+
+  /**
+   * Export full raw counts layer data (all attributes) for the selected region and years
+   * Writes both JSON and CSV to disk and exposes window.fullRawCountsData
+   */
+  static async exportFullRawCountsData(
+    selectedGeometry: Polygon | null,
+    years: number[],
+    includeGeometry: boolean = false
+  ): Promise<void> {
+    if (!selectedGeometry || years.length === 0) {
+      console.error('Please provide a selected geometry and years array');
+      return;
+    }
+
+    try {
+      const countsLayer = new FeatureLayer({ url: this.COUNTS_URL });
+      const siteIds = await this.getSiteIdsInPolygon(selectedGeometry);
+      console.log(`Full export: ${siteIds.length} sites in polygon`);
+
+      const allRecords: any[] = [];
+      for (const year of years) {
+        const yearStart = new Date(year, 0, 1).toISOString();
+        const yearEnd = new Date(year + 1, 0, 1).toISOString();
+        const whereClause = `site_id IN (${siteIds.join(',')}) AND timestamp >= '${yearStart}' AND timestamp < '${yearEnd}'`;
+
+        const query = countsLayer.createQuery();
+        query.where = whereClause;
+        query.outFields = ['*'];
+        query.returnGeometry = includeGeometry;
+
+        console.log(`Full export querying ${year} with outFields=* includeGeometry=${includeGeometry}`);
+        const features = await this.queryAllFeaturesInParallel(countsLayer, query);
+        for (const f of features) {
+          const attrs = { ...f.attributes };
+          if (includeGeometry) {
+            (attrs as any).geometry_json = f.geometry ? JSON.stringify((f.geometry as any).toJSON ? (f.geometry as any).toJSON() : f.geometry) : null;
+          }
+          allRecords.push(attrs);
+        }
+      }
+
+      // Deduce header keys from union of all attribute keys
+      const keySet = new Set<string>();
+      allRecords.forEach(r => Object.keys(r || {}).forEach(k => keySet.add(k)));
+      const headers = Array.from(keySet);
+
+      const escapeCsv = (val: any) => {
+        if (val === null || val === undefined) return '';
+        const s = String(val);
+        const needsQuotes = /[",\n]/.test(s);
+        const escaped = s.replace(/"/g, '""');
+        return needsQuotes ? `"${escaped}"` : escaped;
+      };
+
+      const rows = allRecords.map(r => headers.map(h => escapeCsv((r as any)[h])).join(','));
+      const csv = headers.join(',') + '\n' + rows.join('\n');
+
+      // Download helpers
+      const download = (name: string, content: string, type: string) => {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      // Expose and download
+      (window as any).fullRawCountsData = allRecords;
+      download(`full_raw_counts_${years[0]}-${years[years.length - 1]}.json`, JSON.stringify(allRecords, null, 2), 'application/json');
+      download(`full_raw_counts_${years[0]}-${years[years.length - 1]}.csv`, csv, 'text/csv');
+
+      console.log(`✅ Exported ${allRecords.length} records with ${headers.length} fields to JSON and CSV.`);
+    } catch (err) {
+      console.error('Error exporting full raw counts data:', err);
+    }
+  }
+
+  /**
    * Helper method to query all features from a layer in parallel, bypassing record limits
    */
   private static async queryAllFeaturesInParallel(layer: FeatureLayer, query: __esri.Query): Promise<__esri.Graphic[]> {
@@ -372,7 +696,9 @@ export class YearToYearComparisonDataService {
     years: number[],
     showBicyclist: boolean = true,
     showPedestrian: boolean = true,
-    dateRange: { start: Date; end: Date }
+    dateRange: { start: Date; end: Date },
+    normalization: NormalizationMode = 'none',
+    scaleHourlyToDaily: boolean = false
   ): Promise<MultiYearComparisonResult> {
     try {
       if (!selectedGeometry || years.length === 0) {
@@ -433,7 +759,7 @@ export class YearToYearComparisonDataService {
       const totalsByYear: Record<number, number> = {};
 
       yearResults.forEach(({ year, data }) => {
-        const aggregated = this.aggregateByTimeScale(data, timeScale);
+        const aggregated = this.aggregateByTimeScale(data, timeScale, normalization, scaleHourlyToDaily);
         aggregatedByYear.set(year, aggregated);
         totalsByYear[year] = aggregated.reduce((sum, item) => sum + item.value, 0);
       });
