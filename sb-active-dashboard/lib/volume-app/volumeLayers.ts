@@ -21,6 +21,11 @@ export async function createAADTLayer() {
   // Define fields for the layer
   const layerFields = [
     new Field({
+      name: "id",
+      alias: "Site ID",
+      type: "integer",
+    }),
+    new Field({
       name: "OBJECTID",
       alias: "ObjectId",
       type: "oid",

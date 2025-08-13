@@ -19,6 +19,7 @@ export default function NewVolumeApp() {
   const [showPedestrian, setShowPedestrian] = useState(true);
   const [modelCountsBy, setModelCountsBy] = useState<string>("cost-benefit");
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
+  const [aadtLayer, setAadtLayer] = useState<__esri.FeatureLayer | null>(null);
   const [geographicLevel, setGeographicLevel] = useState('city-service-area');
   
   // Date range state for timeline and filtering
@@ -59,6 +60,7 @@ export default function NewVolumeApp() {
           showPedestrian={showPedestrian}
           modelCountsBy={modelCountsBy}
           onMapViewReady={handleMapViewReady}
+          onAadtLayerReady={setAadtLayer}
           geographicLevel={geographicLevel}
           onSelectionChange={onSelectionChange}
           selectedCountSite={selectedCountSite}
@@ -69,6 +71,7 @@ export default function NewVolumeApp() {
           showPedestrian={showPedestrian}
           modelCountsBy={modelCountsBy}
           mapView={mapView}
+          aadtLayer={aadtLayer}
           selectedGeometry={selectedGeometry}
           selectedAreaName={selectedAreaName}
           dateRange={dateRange}

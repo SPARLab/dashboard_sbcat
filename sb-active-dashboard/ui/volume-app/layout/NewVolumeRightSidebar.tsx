@@ -1,5 +1,8 @@
 import Polygon from "@arcgis/core/geometry/Polygon";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import UniqueValueRenderer from "@arcgis/core/renderers/UniqueValueRenderer";
+import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
+import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import React, { useCallback, useEffect, useState } from "react";
 import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDataService";
 import { useSpatialQuery, useVolumeSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
@@ -39,6 +42,7 @@ interface NewVolumeRightSidebarProps {
   showPedestrian: boolean;
   modelCountsBy: string;
   mapView?: __esri.MapView | null;
+  aadtLayer?: FeatureLayer | null;
   selectedGeometry?: Polygon | null;
   selectedAreaName?: string | null;
   dateRange: DateRangeValue;
@@ -52,6 +56,7 @@ export default function NewVolumeRightSidebar({
   showPedestrian,
   modelCountsBy,
   mapView,
+  aadtLayer: aadtLayerProp,
   selectedGeometry,
   selectedAreaName,
   dateRange,
@@ -75,29 +80,146 @@ export default function NewVolumeRightSidebar({
   }));
   const [aadtLayer, setAadtLayer] = useState<FeatureLayer | null>(null);
 
-  // Find the AADT layer from the map once the map is loaded
+  // Prefer the passed-in layer; fall back to searching the map
   useEffect(() => {
+    if (aadtLayerProp) {
+      setAadtLayer(aadtLayerProp);
+      return;
+    }
     if (!mapView || !mapView.map) return;
-
-    // Check if layer is already there
     const existingLayer = mapView.map.allLayers.find(l => l.title === "AADT Count Sites") as FeatureLayer;
     if (existingLayer) {
       setAadtLayer(existingLayer);
       return;
     }
-
-    // If not, listen for layer changes
     const handle = mapView.map.allLayers.on("change", (event) => {
-        const addedLayer = event.added.find((l: __esri.Layer) => l.title === "AADT Count Sites");
-        if (addedLayer) {
-            setAadtLayer(addedLayer as FeatureLayer);
-            handle.remove();
-        }
+      const addedLayer = event.added.find((l: __esri.Layer) => l.title === "AADT Count Sites");
+      if (addedLayer) {
+        setAadtLayer(addedLayer as FeatureLayer);
+        handle.remove();
+      }
     });
-
     return () => handle.remove();
+  }, [aadtLayerProp, mapView]);
 
-  }, [mapView]);
+  // Debug logs to diagnose effect not firing
+  useEffect(() => {
+    console.log('[RightSidebar] mounted. Props received:', { activeTab, showBicyclist, showPedestrian });
+    console.log('[RightSidebar] map layers at mount:', mapView?.map?.allLayers?.toArray()?.map(l => l.title));
+  }, []);
+
+  // Compute contributing site IDs and apply renderer to AADT layer
+  useEffect(() => {
+    const applyStyling = async () => {
+      if (!aadtLayer) return;
+
+      // If no geometry selected, reset to hollow gray
+      if (!selectedGeometry) {
+        const hollowSymbol = new SimpleMarkerSymbol({
+          size: 8,
+          color: [0, 0, 0, 0],
+          outline: { width: 1.5, color: [128, 128, 128, 1] },
+        });
+        aadtLayer.renderer = new SimpleRenderer({ symbol: hollowSymbol });
+        return;
+      }
+
+      // If both toggles off, style all as hollow
+      if (!showBicyclist && !showPedestrian) {
+        const hollowSymbol = new SimpleMarkerSymbol({
+          size: 8,
+          color: [0, 0, 0, 0],
+          outline: { width: 1.5, color: [128, 128, 128, 1] },
+        });
+        aadtLayer.renderer = new SimpleRenderer({ symbol: hollowSymbol });
+        return;
+      }
+
+      try {
+        // 1) Query sites intersecting geometry
+        const sitesQuery = sitesLayer.createQuery();
+        sitesQuery.geometry = selectedGeometry;
+        sitesQuery.spatialRelationship = "intersects" as const;
+        sitesQuery.returnGeometry = false;
+        sitesQuery.outFields = ["id"]; // site id field
+        const sitesResult = await sitesLayer.queryFeatures(sitesQuery as __esri.QueryProperties);
+        const siteIds: number[] = sitesResult.features.map(f => Number(f.attributes.id)).filter((v) => Number.isFinite(v));
+
+        if (siteIds.length === 0) {
+          const hollowSymbol = new SimpleMarkerSymbol({
+            size: 8,
+            color: [0, 0, 0, 0],
+            outline: { width: 1.5, color: [128, 128, 128, 1] },
+          });
+          aadtLayer.renderer = new SimpleRenderer({ symbol: hollowSymbol });
+          return;
+        }
+
+        // 2) Query counts for those sites within the date range and count_type filters; group by site_id
+        const start = dateRange.startDate.toISOString().split('T')[0];
+        const end = dateRange.endDate.toISOString().split('T')[0];
+        const typeClauses: string[] = [];
+        if (showBicyclist) typeClauses.push("'bike'");
+        if (showPedestrian) typeClauses.push("'ped'");
+        const countTypeWhere = typeClauses.length ? ` AND count_type IN (${typeClauses.join(',')})` : '';
+
+        const countsQuery = countsLayer.createQuery();
+        countsQuery.where = `site_id IN (${siteIds.join(',')}) AND timestamp >= DATE '${start}' AND timestamp <= DATE '${end}'${countTypeWhere}`;
+        countsQuery.returnGeometry = false;
+        countsQuery.outFields = ["site_id"]; // needed for groupBy
+        countsQuery.groupByFieldsForStatistics = ["site_id"];
+        countsQuery.outStatistics = [{
+          statisticType: "count",
+          onStatisticField: "site_id",
+          outStatisticFieldName: "site_count",
+        } as __esri.StatisticDefinition];
+
+        const countsResult = await countsLayer.queryFeatures(countsQuery as __esri.QueryProperties);
+        const contributingIds = countsResult.features.map(f => Number(f.attributes.site_id)).filter(v => Number.isFinite(v));
+
+        // 3) Apply renderer: contributing -> solid blue; others -> hollow gray
+        if (contributingIds.length === 0) {
+          const hollowSymbol = new SimpleMarkerSymbol({
+            size: 8,
+            color: [0, 0, 0, 0],
+            outline: { width: 1.5, color: [128, 128, 128, 1] },
+          });
+          aadtLayer.renderer = new SimpleRenderer({ symbol: hollowSymbol });
+          return;
+        }
+
+        const arrayLiteral = `[${contributingIds.join(',')}]`;
+        const valueExpression = `IIF(IndexOf(${arrayLiteral}, Number($feature.id)) > -1, 1, 0)`;
+        const filledBlue = new SimpleMarkerSymbol({
+          size: 8,
+          color: [0, 102, 255, 0.95],
+          outline: { width: 1, color: [255, 255, 255, 1] },
+        });
+        const hollowGray = new SimpleMarkerSymbol({
+          size: 8,
+          color: [0, 0, 0, 0],
+          outline: { width: 1.5, color: [128, 128, 128, 1] },
+        });
+
+        const uvRenderer = new UniqueValueRenderer({
+          valueExpression,
+          uniqueValueInfos: [
+            { value: 1, symbol: filledBlue },
+          ],
+          defaultSymbol: hollowGray,
+        });
+
+        console.log(`[RightSidebar] Applying renderer with ${contributingIds.length} contributing site ids`);
+        aadtLayer.renderer = uvRenderer;
+      } catch (err) {
+        console.error('[RightSidebar] Failed to compute/apply site highlighting:', err);
+      }
+    };
+
+    applyStyling();
+  }, [aadtLayer, selectedGeometry, dateRange.startDate, dateRange.endDate, showBicyclist, showPedestrian, sitesLayer, countsLayer]);
+
+  // (moved below state declarations)
 
   // Use spatial query hooks (keeping for future use)
   useSpatialQuery(
@@ -187,6 +309,14 @@ export default function NewVolumeRightSidebar({
 
     fetchTimelineData();
   }, [mapView, selectedGeometry, sitesLayer, countsLayer, aadtTable, dateRange, showBicyclist, showPedestrian]);
+
+  // Diagnostics for timeline fetch completion (after state is declared)
+  useEffect(() => {
+    if (!timelineLoading) {
+      const ids = timelineData.slice(0, 5).map(s => s.id);
+      console.log(`[RightSidebar] timelineData loaded: length=${timelineData.length}, sample IDs=`, ids);
+    }
+  }, [timelineLoading, timelineData]);
 
 
 

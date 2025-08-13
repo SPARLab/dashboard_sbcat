@@ -377,6 +377,9 @@ export class YearToYearComparisonDataService {
    * Log detailed data quality analysis for debugging
    */
   private static logDataQualityAnalysis(countsData: any[], timeScale: TimeScale): void {
+    return;
+
+    // TODO: Remove this once we have a better way to handle data quality analysis
     if (countsData.length === 0) return;
 
     const counts = countsData.map(record => record.counts || 0).filter(c => c > 0);
@@ -410,13 +413,6 @@ export class YearToYearComparisonDataService {
     console.log(`Standard deviation: ${stdDev.toFixed(2)}`);
     console.log(`Outlier threshold (>3σ): ${outlierThreshold.toFixed(2)}`);
     
-    if (outliers.length > 0) {
-      console.warn(`🚨 Found ${outliers.length} outlier records:`);
-      outliers.forEach(record => {
-        const timestamp = new Date(record.timestamp);
-        console.warn(`  Site ${record.site_id}, ${timestamp.toISOString().split('T')[0]}: ${record.counts} counts`);
-      });
-    }
 
     // July 2022 specific analysis
     const july2022 = monthlyGroups['2022-07'] || [];

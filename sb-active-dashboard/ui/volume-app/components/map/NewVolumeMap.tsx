@@ -22,6 +22,7 @@ interface NewVolumeMapProps {
   showPedestrian: boolean;
   modelCountsBy: string;
   onMapViewReady?: (mapView: __esri.MapView) => void;
+  onAadtLayerReady?: (layer: FeatureLayer) => void;
   geographicLevel: string;
   onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void;
   selectedCountSite?: string | null;
@@ -33,6 +34,7 @@ export default function NewVolumeMap({
   showPedestrian, 
   modelCountsBy,
   onMapViewReady,
+  onAadtLayerReady,
   geographicLevel,
   onSelectionChange,
   selectedCountSite,
@@ -127,6 +129,13 @@ export default function NewVolumeMap({
           // Store layer references
           setAadtLayer(aadt);
           setHexagonLayer(hexagon);
+          if (onAadtLayerReady) {
+            try {
+              onAadtLayerReady(aadt);
+            } catch (err) {
+              console.warn('onAadtLayerReady callback failed:', err);
+            }
+          }
           
         } catch (error) {
           console.error("Error loading layers:", error);
