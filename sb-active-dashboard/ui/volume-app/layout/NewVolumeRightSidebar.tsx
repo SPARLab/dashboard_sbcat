@@ -10,7 +10,7 @@ import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVol
 import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
 import HighestVolume from "../components/right-sidebar/HighestVolume";
 import LowDataCoverage from "../components/right-sidebar/LowDataCoverage";
-import MilesOfStreetByTrafficLevelBarChart from "../components/right-sidebar/MilesOfStreetByTrafficLevelBarChart";
+import PercentOfNetworkByTrafficLevelBarChart from "../components/right-sidebar/PercentOfNetworkByTrafficLevelBarChart";
 import ModeBreakdown from "../components/right-sidebar/ModeBreakdown";
 import SummaryStatistics from "../components/right-sidebar/SummaryStatistics";
 import TimelineSparkline from "../components/right-sidebar/TimelineSparkline";
@@ -340,7 +340,7 @@ export default function NewVolumeRightSidebar({
         
         <div className="w-full h-[1px] bg-gray-200 my-4"></div>
         {activeTab === 'modeled-data' && (
-          <MilesOfStreetByTrafficLevelBarChart 
+          <PercentOfNetworkByTrafficLevelBarChart 
             dataType={activeTab} 
             horizontalMargins={horizontalMargins}
             mapView={mapView || undefined}

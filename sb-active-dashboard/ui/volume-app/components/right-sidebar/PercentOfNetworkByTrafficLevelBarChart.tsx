@@ -10,7 +10,7 @@ interface ChartEventParams {
   seriesName?: string;
 }
 
-interface MilesOfStreetByTrafficLevelBarChartProps {
+interface PercentOfNetworkByTrafficLevelBarChartProps {
   dataType: string;
   horizontalMargins: string;
   mapView?: __esri.MapView;
@@ -25,7 +25,7 @@ interface HoveredBarData {
   value: number;
 }
 
-export default function MilesOfStreetByTrafficLevelBarChart({ 
+export default function PercentOfNetworkByTrafficLevelBarChart({ 
   dataType, 
   horizontalMargins, 
   mapView,
@@ -34,7 +34,7 @@ export default function MilesOfStreetByTrafficLevelBarChart({
   modelCountsBy = 'cost-benefit',
   year = 2023,
   selectedGeometry
-}: MilesOfStreetByTrafficLevelBarChartProps) {
+}: PercentOfNetworkByTrafficLevelBarChartProps) {
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
   const [chartData, setChartData] = useState<{ name: string; value: number }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,7 +66,7 @@ export default function MilesOfStreetByTrafficLevelBarChart({
         
         const newChartData = trafficData.categories.map((category, index) => ({
           name: category,
-          value: trafficData.totalMiles[index] || 0
+          value: trafficData.percentages[index] || 0
         }));
 
         setChartData(newChartData);
@@ -89,13 +89,13 @@ export default function MilesOfStreetByTrafficLevelBarChart({
     mouseout: () => setHoveredBar(null),
   }), []);
 
-  const totalMiles = useMemo(() => chartData.reduce((sum, item) => sum + item.value, 0), [chartData]);
-  const noDataAvailable = totalMiles === 0 && selectedGeometry !== null;
+  const totalPercent = useMemo(() => chartData.reduce((sum, item) => sum + item.value, 0), [chartData]);
+  const noDataAvailable = totalPercent === 0 && selectedGeometry !== null;
   const noRegionSelected = selectedGeometry === null;
 
   const option = useMemo(() => {
     const baseOption = {
-      grid: { left: '17px', right: '0px', top: '20px', bottom: '0px', containLabel: true },
+      grid: { left: '12px', right: '0px', top: '20px', bottom: '0px', containLabel: true },
       xAxis: {
         type: 'category',
         data: ['Low', 'Medium', 'High'],
@@ -106,12 +106,17 @@ export default function MilesOfStreetByTrafficLevelBarChart({
       yAxis: {
         type: 'value',
         min: 0,
+        max: 100,
         axisLine: { show: true, lineStyle: { color: '#9ca3af', width: 1 } },
         axisTick: { show: false },
-        axisLabel: { color: '#6b7280', fontSize: 14, formatter: (value: number) => value.toFixed(1) },
-        name: 'Network Miles',
+        axisLabel: { 
+          color: '#6b7280', 
+          fontSize: 14, 
+          formatter: (value: number) => `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })}%` 
+        },
+        name: 'Percent of Network',
         nameLocation: 'middle',
-        nameGap: 35,
+        nameGap: 40,
         nameTextStyle: { color: '#6b7280', fontSize: 14, fontWeight: 500 },
         splitLine: { show: true, lineStyle: { color: '#e5e7eb', width: 1, type: [3, 3] } },
       },
@@ -150,13 +155,13 @@ export default function MilesOfStreetByTrafficLevelBarChart({
   ), [option, onEvents]);
 
   return (
-    <div className={`rounded-lg border border-gray-200 bg-white py-4 px-4 ${horizontalMargins}`}>
+    <div id="percent-network-by-traffic-card" className={`rounded-lg border border-gray-200 bg-white py-4 px-4 ${horizontalMargins}`}>
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-gray-900">Miles of Street by Traffic Level</h3>
+        <h3 id="percent-network-by-traffic-title" className="text-lg font-medium text-gray-900">Percent of Network by Traffic Level</h3>
       </div>
       <div className="w-full h-[1px] bg-gray-200 my-2"></div>
-      <p className="w-full mt-1 text-sm text-gray-600">
-        Miles within network assigned to each category{selectedGeometry ? ', filtered by selected area' : ''}
+      <p id="percent-network-by-traffic-description" className="w-full mt-1 text-sm text-gray-600">
+        Percent of network miles assigned to each category{selectedGeometry ? ', filtered by selected area' : ''}
       </p>
 
       {error && (
@@ -165,18 +170,19 @@ export default function MilesOfStreetByTrafficLevelBarChart({
         </div>
       )}
 
-      <div className="relative mt-1" style={{ height: '300px' }}>
+      <div id="percent-network-by-traffic-chart-container" className="relative mt-1" style={{ height: '300px' }}>
         {hoveredBar && !isLoading && (
           <div
-            id="volume-chart-tooltip"
+            id="percent-network-chart-tooltip"
             className="absolute -top-0 left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
           >
-            {`${hoveredBar.value.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} Network Miles`}
+            {`${hoveredBar.value.toLocaleString(undefined, { maximumFractionDigits: 1 })}% of Network`}
           </div>
         )}
 
         {isLoading ? (
             <div 
+              id="percent-network-by-traffic-loading"
               className="absolute inset-0 bg-white bg-opacity-75 flex justify-center items-center z-20 rounded-md"
             >
               <div className="flex flex-col items-center">
@@ -187,6 +193,7 @@ export default function MilesOfStreetByTrafficLevelBarChart({
             </div>
         ) : noRegionSelected ? (
             <div 
+              id="percent-network-by-traffic-no-region"
               className="flex justify-center items-center h-full"
             >
               <div className="text-center">
@@ -196,6 +203,7 @@ export default function MilesOfStreetByTrafficLevelBarChart({
             </div>
         ) : noDataAvailable ? (
             <div 
+              id="percent-network-by-traffic-no-data"
               className="flex justify-center items-center h-full"
             >
               <div className="text-center">
@@ -212,3 +220,4 @@ export default function MilesOfStreetByTrafficLevelBarChart({
     </div>
   );
 }
+
