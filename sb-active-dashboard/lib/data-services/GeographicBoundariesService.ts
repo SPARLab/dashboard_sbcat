@@ -135,7 +135,14 @@ export class GeographicBoundariesService {
       "Counties",
       "NAME IN ('Santa Barbara County', 'San Luis Obispo County') OR NAME LIKE '%Santa Barbara%' OR NAME LIKE '%San Luis Obispo%'"
     );
-    this.censusTractLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.CENSUS_TRACTS, "Census Tracts");
+    // Filter census tracts to only show those in Santa Barbara County
+    // Census tract GEOID format: STATEFP + COUNTYFP + TRACTCE
+    // Santa Barbara County FIPS: 06083 (California state 06, Santa Barbara county 083)
+    this.censusTractLayer = createBoundaryLayer(
+      BOUNDARY_LAYER_URLS.CENSUS_TRACTS, 
+      "Census Tracts",
+      "GEOID LIKE '06083%'"
+    );
 
     this.highlightLayer = new GraphicsLayer({
         title: "Boundary Highlights",

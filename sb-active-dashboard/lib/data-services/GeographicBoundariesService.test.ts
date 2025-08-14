@@ -4,7 +4,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 const TIGER_URLS = {
   CITIES: 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/25',
   SERVICE_AREAS: 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/26',
-  COUNTIES: 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1'
+  COUNTIES: 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1',
+  CENSUS_TRACTS: 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0'
 };
 
 // Helper function to query TIGER service
@@ -167,6 +168,33 @@ describe('TIGER Geographic Boundaries Query Tests', () => {
     }, NETWORK_TIMEOUT);
   });
 
+  describe('Census Tract Query Validation', () => {
+    it('should return census tracts for Santa Barbara County using GEOID filtering', async () => {
+      const whereClause = "GEOID LIKE '06083%'";
+      const result = await queryTigerService(TIGER_URLS.CENSUS_TRACTS, whereClause);
+      
+      expect(result.features).toBeDefined();
+      expect(result.features.length).toBeGreaterThan(0);
+      
+      // Verify all returned tracts are from Santa Barbara County (GEOID starts with 06083)
+      result.features.forEach((feature: any) => {
+        expect(feature.attributes.GEOID).toMatch(/^06083/);
+      });
+    }, NETWORK_TIMEOUT);
+
+    it('should not return census tracts from other counties', async () => {
+      const whereClause = "GEOID LIKE '06083%'";
+      const result = await queryTigerService(TIGER_URLS.CENSUS_TRACTS, whereClause);
+      
+      // Verify no tracts from neighboring counties (e.g., Ventura County 06111, Kern County 06029)
+      result.features.forEach((feature: any) => {
+        expect(feature.attributes.GEOID).not.toMatch(/^06111/); // Not Ventura County
+        expect(feature.attributes.GEOID).not.toMatch(/^06029/); // Not Kern County
+        expect(feature.attributes.GEOID).not.toMatch(/^06079/); // Not San Luis Obispo County
+      });
+    }, NETWORK_TIMEOUT);
+  });
+
   describe('SQL Query Syntax Validation', () => {
     it('should construct valid SQL WHERE clauses for cities', async () => {
       const cities = ['Santa Barbara', 'Goleta', 'Carpinteria', 'Santa Maria'];
@@ -203,18 +231,21 @@ describe('TIGER Geographic Boundaries Query Tests', () => {
       const cityQuery = "STATE = '06' AND (NAME LIKE '%Santa Barbara%' OR NAME LIKE '%Goleta%' OR NAME LIKE '%Carpinteria%' OR NAME LIKE '%Santa Maria%')";
       const cdpQuery = "STATE = '06' AND (NAME LIKE '%Isla Vista%' OR NAME LIKE '%Montecito%' OR NAME LIKE '%Eastern Goleta Valley%' OR NAME LIKE '%Toro Canyon%' OR NAME LIKE '%Summerland%' OR NAME LIKE '%Santa Maria%')";
       const countyQuery = "NAME IN ('Santa Barbara County', 'San Luis Obispo County') OR NAME LIKE '%Santa Barbara%' OR NAME LIKE '%San Luis Obispo%'";
+      const censusTractQuery = "GEOID LIKE '06083%'"; // Santa Barbara County census tracts only
       
       // Execute all queries in parallel
-      const [cityResult, cdpResult, countyResult] = await Promise.all([
+      const [cityResult, cdpResult, countyResult, censusTractResult] = await Promise.all([
         queryTigerService(TIGER_URLS.CITIES, cityQuery),
         queryTigerService(TIGER_URLS.SERVICE_AREAS, cdpQuery),
-        queryTigerService(TIGER_URLS.COUNTIES, countyQuery)
+        queryTigerService(TIGER_URLS.COUNTIES, countyQuery),
+        queryTigerService(TIGER_URLS.CENSUS_TRACTS, censusTractQuery)
       ]);
       
       // Verify we get results from all queries
       expect(cityResult.features.length).toBeGreaterThan(0);
       expect(cdpResult.features.length).toBeGreaterThan(0);
       expect(countyResult.features.length).toBeGreaterThanOrEqual(2);
+      expect(censusTractResult.features.length).toBeGreaterThan(0);
       
       // Verify Eastern Goleta Valley is included (the main fix we implemented)
       const easternGoleta = cdpResult.features.find((f: any) => 
@@ -226,6 +257,11 @@ describe('TIGER Geographic Boundaries Query Tests', () => {
       const countyNames = countyResult.features.map((f: any) => f.attributes.NAME);
       expect(countyNames.some((name: string) => name.includes('Santa Barbara'))).toBe(true);
       expect(countyNames.some((name: string) => name.includes('San Luis Obispo'))).toBe(true);
+      
+      // Verify all census tracts are from Santa Barbara County
+      censusTractResult.features.forEach((feature: any) => {
+        expect(feature.attributes.GEOID).toMatch(/^06083/);
+      });
       
       // Verify all results are from California
       [...cityResult.features, ...cdpResult.features].forEach((feature: any) => {
