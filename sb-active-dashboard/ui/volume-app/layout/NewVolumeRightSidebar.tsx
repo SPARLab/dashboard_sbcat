@@ -10,7 +10,7 @@ import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVol
 import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
 import HighestVolume from "../components/right-sidebar/HighestVolume";
 import LowDataCoverage from "../components/right-sidebar/LowDataCoverage";
-import PercentOfNetworkByTrafficLevelBarChart from "../components/right-sidebar/PercentOfNetworkByTrafficLevelBarChart";
+import PercentOfNetworkByVolumeLevelBarChart from "../components/right-sidebar/PercentOfNetworkByVolumeLevelBarChart";
 import ModeBreakdown from "../components/right-sidebar/ModeBreakdown";
 import SummaryStatistics from "../components/right-sidebar/SummaryStatistics";
 import TimelineSparkline from "../components/right-sidebar/TimelineSparkline";
@@ -101,12 +101,6 @@ export default function NewVolumeRightSidebar({
     });
     return () => handle.remove();
   }, [aadtLayerProp, mapView]);
-
-  // Debug logs to diagnose effect not firing
-  useEffect(() => {
-    console.log('[RightSidebar] mounted. Props received:', { activeTab, showBicyclist, showPedestrian });
-    console.log('[RightSidebar] map layers at mount:', mapView?.map?.allLayers?.toArray()?.map(l => l.title));
-  }, []);
 
   // Compute contributing site IDs and apply renderer to AADT layer
   useEffect(() => {
@@ -209,7 +203,6 @@ export default function NewVolumeRightSidebar({
           defaultSymbol: hollowGray,
         });
 
-        console.log(`[RightSidebar] Applying renderer with ${contributingIds.length} contributing site ids`);
         aadtLayer.renderer = uvRenderer;
       } catch (err) {
         console.error('[RightSidebar] Failed to compute/apply site highlighting:', err);
@@ -310,14 +303,6 @@ export default function NewVolumeRightSidebar({
     fetchTimelineData();
   }, [mapView, selectedGeometry, sitesLayer, countsLayer, aadtTable, dateRange, showBicyclist, showPedestrian]);
 
-  // Diagnostics for timeline fetch completion (after state is declared)
-  useEffect(() => {
-    if (!timelineLoading) {
-      const ids = timelineData.slice(0, 5).map(s => s.id);
-      console.log(`[RightSidebar] timelineData loaded: length=${timelineData.length}, sample IDs=`, ids);
-    }
-  }, [timelineLoading, timelineData]);
-
 
 
   return (
@@ -340,7 +325,7 @@ export default function NewVolumeRightSidebar({
         
         <div className="w-full h-[1px] bg-gray-200 my-4"></div>
         {activeTab === 'modeled-data' && (
-          <PercentOfNetworkByTrafficLevelBarChart 
+                          <PercentOfNetworkByVolumeLevelBarChart 
             dataType={activeTab} 
             horizontalMargins={horizontalMargins}
             mapView={mapView || undefined}

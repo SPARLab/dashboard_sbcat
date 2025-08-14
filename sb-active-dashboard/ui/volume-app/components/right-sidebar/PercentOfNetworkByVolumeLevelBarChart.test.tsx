@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import PercentOfNetworkByTrafficLevelBarChart from './PercentOfNetworkByTrafficLevelBarChart'
+import PercentOfNetworkByVolumeLevelBarChart from './PercentOfNetworkByVolumeLevelBarChart'
 import { createMockPolygonGeometry, createMockMapView } from '../../../../src/test-utils/factories'
 
 // Mock the data service used inside the component to control returned values
@@ -24,7 +24,7 @@ vi.mock('../../../../lib/data-services/ModeledVolumeChartDataService', () => {
   }
 })
 
-describe('PercentOfNetworkByTrafficLevelBarChart', () => {
+describe('PercentOfNetworkByVolumeLevelBarChart', () => {
   const baseProps = {
     dataType: 'modeled-data',
     horizontalMargins: 'mx-4',
@@ -37,14 +37,14 @@ describe('PercentOfNetworkByTrafficLevelBarChart', () => {
   }
 
   it('renders title and description for percent view', async () => {
-    render(<PercentOfNetworkByTrafficLevelBarChart {...baseProps} />)
+    render(<PercentOfNetworkByVolumeLevelBarChart {...baseProps} />)
 
-    expect(screen.getByText('Percent of Network by Traffic Level')).toBeInTheDocument()
+    expect(screen.getByText('Percent of Network by Volume Level')).toBeInTheDocument()
     expect(screen.getByText(/Percent of network miles assigned to each category/)).toBeInTheDocument()
   })
 
   it('maps service percentages directly to chart data (sanity check)', async () => {
-    const { container } = render(<PercentOfNetworkByTrafficLevelBarChart {...baseProps} />)
+    const { container } = render(<PercentOfNetworkByVolumeLevelBarChart {...baseProps} />)
 
     // Wait for the component to load and render the chart
     await screen.findByText('Mocked ECharts Component')
@@ -70,7 +70,7 @@ describe('PercentOfNetworkByTrafficLevelBarChart', () => {
       return originalMock({ onEvents, ...props })
     })
 
-    render(<PercentOfNetworkByTrafficLevelBarChart {...baseProps} />)
+    render(<PercentOfNetworkByVolumeLevelBarChart {...baseProps} />)
 
     // Wait for the chart to load
     await screen.findByText('Mocked ECharts Component')
@@ -100,7 +100,7 @@ describe('PercentOfNetworkByTrafficLevelBarChart', () => {
       return originalMock({ onEvents, ...props })
     })
 
-    render(<PercentOfNetworkByTrafficLevelBarChart {...baseProps} />)
+    render(<PercentOfNetworkByVolumeLevelBarChart {...baseProps} />)
 
     // Wait for the chart to load
     await screen.findByText('Mocked ECharts Component')
@@ -117,4 +117,3 @@ describe('PercentOfNetworkByTrafficLevelBarChart', () => {
     ReactECharts.default = originalMock
   })
 })
-

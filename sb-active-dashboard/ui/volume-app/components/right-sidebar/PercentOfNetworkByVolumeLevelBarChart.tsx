@@ -10,7 +10,7 @@ interface ChartEventParams {
   seriesName?: string;
 }
 
-interface PercentOfNetworkByTrafficLevelBarChartProps {
+interface PercentOfNetworkByVolumeLevelBarChartProps {
   dataType: string;
   horizontalMargins: string;
   mapView?: __esri.MapView;
@@ -25,7 +25,7 @@ interface HoveredBarData {
   value: number;
 }
 
-export default function PercentOfNetworkByTrafficLevelBarChart({ 
+export default function PercentOfNetworkByVolumeLevelBarChart({ 
   dataType, 
   horizontalMargins, 
   mapView,
@@ -34,7 +34,7 @@ export default function PercentOfNetworkByTrafficLevelBarChart({
   modelCountsBy = 'cost-benefit',
   year = 2023,
   selectedGeometry
-}: PercentOfNetworkByTrafficLevelBarChartProps) {
+}: PercentOfNetworkByVolumeLevelBarChartProps) {
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
   const [chartData, setChartData] = useState<{ name: string; value: number }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -157,7 +157,7 @@ export default function PercentOfNetworkByTrafficLevelBarChart({
   return (
     <div id="percent-network-by-traffic-card" className={`rounded-lg border border-gray-200 bg-white py-4 px-4 ${horizontalMargins}`}>
       <div className="flex items-center justify-between">
-        <h3 id="percent-network-by-traffic-title" className="text-lg font-medium text-gray-900">Percent of Network by Traffic Level</h3>
+        <h3 id="percent-network-by-traffic-title" className="text-lg font-medium text-gray-900">Percent of Network by Volume Level</h3>
       </div>
       <div className="w-full h-[1px] bg-gray-200 my-2"></div>
       <p id="percent-network-by-traffic-description" className="w-full mt-1 text-sm text-gray-600">

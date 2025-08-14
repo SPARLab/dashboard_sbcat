@@ -222,7 +222,6 @@ export class GeographicBoundariesService {
   }
   
   async switchGeographicLevel(level: GeographicLevel['id'], mapView: MapView) {
-    console.log(`🎯 Switching to geographic level: ${level}`);
     
     // Store the current level for potential recreation
     this.currentGeographicLevel = level;
@@ -241,30 +240,21 @@ export class GeographicBoundariesService {
 
     const layers: FeatureLayer[] = [];
     if (level === 'city' || level === 'city-service-area') {
-      console.log(`🏙️ Making city layer visible`);
       this.cityLayer.visible = true;
       layers.push(this.cityLayer);
     }
     if (level === 'city-service-area') {
-      console.log(`🏘️ Making service area layer visible`);
       this.serviceAreaLayer.visible = true;
       layers.push(this.serviceAreaLayer);
     }
     if (level === 'county') {
-      console.log(`🏞️ Making county layer visible`);
       this.countyLayer.visible = true;
       layers.push(this.countyLayer);
     }
     if (level === 'census-tract') {
-      console.log(`📍 Making census tract layer visible`);
       this.censusTractLayer.visible = true;
       layers.push(this.censusTractLayer);
     }
-    
-    console.log(`📋 Total layers activated: ${layers.length}`);
-    layers.forEach((layer, i) => {
-      console.log(`   ${i + 1}. ${layer.title} - Visible: ${layer.visible}`);
-    });
 
     if (layers.length > 0) {
       this.setupInteractivity(mapView, layers);

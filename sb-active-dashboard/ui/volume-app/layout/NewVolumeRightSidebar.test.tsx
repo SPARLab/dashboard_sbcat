@@ -15,7 +15,7 @@ vi.mock('../components/right-sidebar/HighestVolume', () => ({
 vi.mock('../components/right-sidebar/LowDataCoverage', () => ({
   default: () => null,
 }));
-vi.mock('../components/right-sidebar/PercentOfNetworkByTrafficLevelBarChart', () => ({
+vi.mock('../components/right-sidebar/PercentOfNetworkByVolumeLevelBarChart', () => ({
   default: () => null,
 }));
 vi.mock('../components/right-sidebar/ModeBreakdown', () => ({
