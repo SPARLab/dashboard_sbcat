@@ -46,6 +46,9 @@ describe('PercentOfNetworkByTrafficLevelBarChart', () => {
   it('maps service percentages directly to chart data (sanity check)', async () => {
     const { container } = render(<PercentOfNetworkByTrafficLevelBarChart {...baseProps} />)
 
+    // Wait for the component to load and render the chart
+    await screen.findByText('Mocked ECharts Component')
+
     // Our echarts mock stores the provided option JSON on the element for inspection
     const chartEl = container.querySelector('[data-testid="echarts-mock"]') as HTMLElement
     expect(chartEl).toBeTruthy()
@@ -56,30 +59,62 @@ describe('PercentOfNetworkByTrafficLevelBarChart', () => {
   })
 
   it('formats tooltip percent text when hovering (uses event wiring)', async () => {
-    // The echarts mock triggers mouseover and sets value 100 in test-setup,
-    // but we want to verify percent formatting path. We'll override the mock locally.
-    const addEventListenerSpy = vi.spyOn(Element.prototype, 'addEventListener')
+    // Import the mock to access the React component directly
+    const ReactECharts = await import('echarts-for-react')
+    const originalMock = ReactECharts.default as any
+
+    // Set up a custom mock that calls the onEvents.mouseover handler
+    let mockOnEvents: any = null
+    ReactECharts.default = vi.fn(({ onEvents, ...props }) => {
+      mockOnEvents = onEvents
+      return originalMock({ onEvents, ...props })
+    })
+
     render(<PercentOfNetworkByTrafficLevelBarChart {...baseProps} />)
 
-    // Find the last call to mouseover registration and invoke the handler with a custom value
-    const mouseoverCall = addEventListenerSpy.mock.calls.find((c) => c[0] === 'mouseover')
-    expect(mouseoverCall).toBeTruthy()
-    const handler = mouseoverCall?.[1] as (e: any) => void
-    handler?.({ value: 42.345 })
+    // Wait for the chart to load
+    await screen.findByText('Mocked ECharts Component')
+
+    // Directly call the mouseover event handler with our test value
+    expect(mockOnEvents).toBeTruthy()
+    expect(mockOnEvents.mouseover).toBeTruthy()
+    
+    mockOnEvents.mouseover({ value: 42.345 })
 
     // Tooltip should show our formatted percentage value
     expect(await screen.findByText('42.3% of Network')).toBeInTheDocument()
+
+    // Restore the original mock
+    ReactECharts.default = originalMock
   })
 
   it('drops trailing .0 for whole-number percentages', async () => {
-    const addEventListenerSpy = vi.spyOn(Element.prototype, 'addEventListener')
+    // Import the mock to access the React component directly
+    const ReactECharts = await import('echarts-for-react')
+    const originalMock = ReactECharts.default as any
+
+    // Set up a custom mock that calls the onEvents.mouseover handler
+    let mockOnEvents: any = null
+    ReactECharts.default = vi.fn(({ onEvents, ...props }) => {
+      mockOnEvents = onEvents
+      return originalMock({ onEvents, ...props })
+    })
+
     render(<PercentOfNetworkByTrafficLevelBarChart {...baseProps} />)
 
-    const mouseoverCall = addEventListenerSpy.mock.calls.find((c) => c[0] === 'mouseover')
-    const handler = mouseoverCall?.[1] as (e: any) => void
-    handler?.({ value: 60.0 })
+    // Wait for the chart to load
+    await screen.findByText('Mocked ECharts Component')
+
+    // Directly call the mouseover event handler with a whole number value
+    expect(mockOnEvents).toBeTruthy()
+    expect(mockOnEvents.mouseover).toBeTruthy()
+    
+    mockOnEvents.mouseover({ value: 60.0 })
 
     expect(await screen.findByText('60% of Network')).toBeInTheDocument()
+
+    // Restore the original mock
+    ReactECharts.default = originalMock
   })
 })
 

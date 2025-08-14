@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
+import React from 'react'
 
 // Mock ArcGIS modules globally since they're used throughout the app
 vi.mock('@arcgis/core/geometry/Polygon', () => ({
@@ -69,31 +70,25 @@ vi.mock('@arcgis/core/Graphic', () => ({
 }))
 
 // Mock ECharts components
+
 vi.mock('echarts-for-react', () => ({
   default: vi.fn(({ option, onEvents, style }) => {
-    const mockChart = document.createElement('div')
-    mockChart.setAttribute('data-testid', 'echarts-mock')
-    mockChart.setAttribute('data-option', JSON.stringify(option || {}))
-    mockChart.style.width = style?.width || '100%'
-    mockChart.style.height = style?.height || '400px'
-    mockChart.textContent = 'Mocked ECharts Component'
-    
-    // Simulate event handlers if provided
-    if (onEvents) {
-      mockChart.addEventListener('click', () => {
-        if (onEvents.click) {
-          onEvents.click({ value: 100, name: 'Test', seriesName: 'MockSeries' })
-        }
-      })
-      
-      mockChart.addEventListener('mouseover', () => {
-        if (onEvents.mouseover) {
-          onEvents.mouseover({ value: 100, name: 'Test', seriesName: 'MockSeries' })
-        }
-      })
-    }
-    
-    return mockChart
+    // Return a proper React element instead of raw HTML
+    return React.createElement('div', {
+      'data-testid': 'echarts-mock',
+      'data-option': JSON.stringify(option || {}),
+      style: {
+        width: style?.width || '100%',
+        height: style?.height || '400px'
+      },
+      // Simulate event handlers if provided  
+      onMouseOver: onEvents?.mouseover ? () => {
+        onEvents.mouseover({ value: 100, name: 'Test', seriesName: 'MockSeries' })
+      } : undefined,
+      onClick: onEvents?.click ? () => {
+        onEvents.click({ value: 100, name: 'Test', seriesName: 'MockSeries' })
+      } : undefined
+    }, 'Mocked ECharts Component')
   })
 }))
 

@@ -73,12 +73,12 @@ export class GeographicBoundariesService {
 
   constructor() {
     const createBoundaryLayer = (url: string, title: string, whereClause?: string) => {
-      return new FeatureLayer({
+      const layer = new FeatureLayer({
         url,
         title,
         visible: false,
         popupEnabled: false,
-        outFields: ["OBJECTID", "NAME"],
+        outFields: ["OBJECTID", "NAME", "STATE", "GEOID"], // Added STATE and GEOID for debugging
         minScale: 0, // No minimum scale limit - visible at all zoom levels
         maxScale: 0, // No maximum scale limit - visible at all zoom levels
         definitionExpression: whereClause,
@@ -89,10 +89,46 @@ export class GeographicBoundariesService {
           })
         })
       });
+      
+
+      
+      return layer;
     };
     
-    this.cityLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.CITIES, "Cities & Towns");
-    this.serviceAreaLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.SERVICE_AREAS, "Census Designated Places");
+    // Filter cities to only show those in Santa Barbara and San Luis Obispo counties
+    // Using name-based filtering since TIGER data structure varies across layers
+    // TIGER Places data doesn't have consistent county fields, so we use known city names
+    const sbCountyCities = [
+      'Santa Barbara', 'Goleta', 'Carpinteria','Santa Maria',
+    ];
+    const sloCountyCities: string[] = [
+    ];
+    const allCities = [...sbCountyCities, ...sloCountyCities];
+    const cityNameFilter = allCities.map(city => `NAME LIKE '%${city}%'`).join(' OR ');
+    
+    this.cityLayer = createBoundaryLayer(
+      BOUNDARY_LAYER_URLS.CITIES, 
+      "Cities & Towns",
+      `STATE = '06' AND (${cityNameFilter})`
+    );
+    
+    // Filter service areas (CDPs) to known communities in these counties
+    const sbCountyPlaces = [
+      'Isla Vista', 'Montecito', 'Eastern Goleta Valley', "Toro Canyon", "Summerland"
+    ];
+    const sloCountyPlaces = [
+      'Santa Maria'  // Simplified to just Santa Maria as requested
+    ];
+    const allPlaces = [...sbCountyPlaces, ...sloCountyPlaces];
+    const placeNameFilter = allPlaces.map(place => `NAME LIKE '%${place}%'`).join(' OR ');
+    
+    this.serviceAreaLayer = createBoundaryLayer(
+      BOUNDARY_LAYER_URLS.SERVICE_AREAS, 
+      "Census Designated Places",
+      `STATE = '06' AND (${placeNameFilter})`
+    );
+
+    
     // Filter counties to only show Santa Barbara and San Luis Obispo counties
     this.countyLayer = createBoundaryLayer(
       BOUNDARY_LAYER_URLS.COUNTIES, 
@@ -179,6 +215,8 @@ export class GeographicBoundariesService {
   }
   
   async switchGeographicLevel(level: GeographicLevel['id'], mapView: MapView) {
+    console.log(`🎯 Switching to geographic level: ${level}`);
+    
     // Store the current level for potential recreation
     this.currentGeographicLevel = level;
     
@@ -196,21 +234,30 @@ export class GeographicBoundariesService {
 
     const layers: FeatureLayer[] = [];
     if (level === 'city' || level === 'city-service-area') {
+      console.log(`🏙️ Making city layer visible`);
       this.cityLayer.visible = true;
       layers.push(this.cityLayer);
     }
     if (level === 'city-service-area') {
+      console.log(`🏘️ Making service area layer visible`);
       this.serviceAreaLayer.visible = true;
       layers.push(this.serviceAreaLayer);
     }
     if (level === 'county') {
+      console.log(`🏞️ Making county layer visible`);
       this.countyLayer.visible = true;
       layers.push(this.countyLayer);
     }
     if (level === 'census-tract') {
+      console.log(`📍 Making census tract layer visible`);
       this.censusTractLayer.visible = true;
       layers.push(this.censusTractLayer);
     }
+    
+    console.log(`📋 Total layers activated: ${layers.length}`);
+    layers.forEach((layer, i) => {
+      console.log(`   ${i + 1}. ${layer.title} - Visible: ${layer.visible}`);
+    });
 
     if (layers.length > 0) {
       this.setupInteractivity(mapView, layers);
