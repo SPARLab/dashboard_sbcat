@@ -14,7 +14,12 @@ vi.mock('./components/map/NewVolumeMap', () => ({
 }));
 
 vi.mock('./layout/NewVolumeRightSidebar', () => ({
-  default: vi.fn(() => <div data-testid="volume-right-sidebar">Right Sidebar</div>)
+  default: vi.fn((props) => (
+    <div data-testid="volume-right-sidebar">
+      <span data-testid="sidebar-selected-year">{props.selectedYear}</span>
+      <span data-testid="sidebar-active-tab">{props.activeTab}</span>
+    </div>
+  ))
 }));
 
 vi.mock('./layout/NewVolumeSubHeader', () => ({
@@ -64,7 +69,7 @@ describe('NewVolumeApp Year Selector Bug Prevention', () => {
     );
 
     // Verify the change was applied (state updated)
-    expect(yearDropdown.value).toBe('2020');
+    expect((yearDropdown as HTMLSelectElement).value).toBe('2020');
 
     // Verify the map component received the updated year
     expect(screen.getByTestId('map-selected-year')).toHaveTextContent('2020');
@@ -72,11 +77,14 @@ describe('NewVolumeApp Year Selector Bug Prevention', () => {
     consoleError.mockRestore();
   });
 
-  it('should pass selectedYear prop to map component by default', () => {
+  it('should pass selectedYear prop to both map and sidebar components by default', () => {
     render(<NewVolumeApp />);
     
     // Map should receive the default selectedYear (2023)
     expect(screen.getByTestId('map-selected-year')).toHaveTextContent('2023');
+    
+    // Sidebar should also receive the selectedYear prop
+    expect(screen.getByTestId('sidebar-selected-year')).toHaveTextContent('2023');
   });
 
   it('should show year selector in modeled data tab', async () => {
@@ -102,8 +110,9 @@ describe('NewVolumeApp Year Selector Bug Prevention', () => {
     const yearSelect = screen.getByDisplayValue('2023');
     await user.selectOptions(yearSelect, '2019');
 
-    // Map should receive updated year
+    // Both map and sidebar should receive updated year
     expect(screen.getByTestId('map-selected-year')).toHaveTextContent('2019');
+    expect(screen.getByTestId('sidebar-selected-year')).toHaveTextContent('2019');
   });
 
   it('should have working onYearChange function for all available years', async () => {
@@ -120,8 +129,9 @@ describe('NewVolumeApp Year Selector Bug Prevention', () => {
     
     for (const year of years) {
       await user.selectOptions(yearSelect, year);
-      expect(yearSelect.value).toBe(year);
+      expect((yearSelect as HTMLSelectElement).value).toBe(year);
       expect(screen.getByTestId('map-selected-year')).toHaveTextContent(year);
+      expect(screen.getByTestId('sidebar-selected-year')).toHaveTextContent(year);
     }
   });
 });

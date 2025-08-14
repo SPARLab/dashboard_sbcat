@@ -16,7 +16,13 @@ vi.mock('../components/right-sidebar/LowDataCoverage', () => ({
   default: () => null,
 }));
 vi.mock('../components/right-sidebar/PercentOfNetworkByVolumeLevelBarChart', () => ({
-  default: () => null,
+  default: vi.fn((props) => (
+    <div data-testid="percent-network-chart">
+      <span data-testid="chart-year">{props.year}</span>
+      <span data-testid="chart-model-type">{props.modelCountsBy}</span>
+      <span data-testid="chart-data-type">{props.dataType}</span>
+    </div>
+  ))
 }));
 vi.mock('../components/right-sidebar/ModeBreakdown', () => ({
   default: () => null,
@@ -63,6 +69,7 @@ describe('NewVolumeRightSidebar - AADT site highlighting', () => {
       dateRange: { startDate: new Date('2020-01-01'), endDate: new Date('2020-12-31') },
       selectedCountSite: null,
       onCountSiteSelect: () => {},
+      selectedYear: 2023,
     };
 
     const utils = render(<NewVolumeRightSidebar {...defaultProps} {...uiProps} />);
@@ -186,6 +193,96 @@ describe('NewVolumeRightSidebar - AADT site highlighting', () => {
     await waitFor(() => {
       expect(aadtLayer2.renderer?.valueExpression).toContain('[3]');
     });
+  });
+});
+
+describe('NewVolumeRightSidebar - selectedYear prop handling', () => {
+  beforeEach(() => {
+    (FeatureLayer as unknown as { mockClear: () => void }).mockClear?.();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  function renderSidebar(uiProps?: Partial<React.ComponentProps<typeof NewVolumeRightSidebar>>) {
+    const aadtLayer: any = { title: 'AADT Count Sites', renderer: null };
+
+    const defaultProps: React.ComponentProps<typeof NewVolumeRightSidebar> = {
+      activeTab: 'modeled-data',
+      showBicyclist: true,
+      showPedestrian: true,
+      modelCountsBy: 'cost-benefit',
+      mapView: null,
+      aadtLayer,
+      selectedGeometry: {} as any,
+      selectedAreaName: null,
+      dateRange: { startDate: new Date('2020-01-01'), endDate: new Date('2020-12-31') },
+      selectedCountSite: null,
+      onCountSiteSelect: () => {},
+      selectedYear: 2023,
+    };
+
+    const utils = render(<NewVolumeRightSidebar {...defaultProps} {...uiProps} />);
+    return { ...utils, aadtLayer };
+  }
+
+  it('should pass selectedYear prop to PercentOfNetworkByVolumeLevelBarChart', () => {
+    const { getByTestId } = renderSidebar({ selectedYear: 2020 });
+    
+    expect(getByTestId('chart-year')).toHaveTextContent('2020');
+  });
+
+  it('should pass model type to chart component', () => {
+    const { getByTestId } = renderSidebar({ modelCountsBy: 'cost-benefit' });
+    
+    expect(getByTestId('chart-model-type')).toHaveTextContent('cost-benefit');
+  });
+
+  it('should pass active tab as data type to chart', () => {
+    const { getByTestId } = renderSidebar({ activeTab: 'modeled-data' });
+    
+    expect(getByTestId('chart-data-type')).toHaveTextContent('modeled-data');
+  });
+
+  it('should only show chart for modeled-data tab', () => {
+    const { queryByTestId } = renderSidebar({ activeTab: 'raw-data' });
+    
+    expect(queryByTestId('percent-network-chart')).not.toBeInTheDocument();
+  });
+
+  it('should show chart for modeled-data tab', () => {
+    const { getByTestId } = renderSidebar({ activeTab: 'modeled-data' });
+    
+    expect(getByTestId('percent-network-chart')).toBeInTheDocument();
+  });
+
+  it('should update chart year when selectedYear prop changes', () => {
+    const { getByTestId, rerender } = renderSidebar({ selectedYear: 2019 });
+    
+    expect(getByTestId('chart-year')).toHaveTextContent('2019');
+    
+    // Mock the component constructor to avoid re-creating FeatureLayer instances
+    const aadtLayer: any = { title: 'AADT Count Sites', renderer: null };
+    const updatedProps: React.ComponentProps<typeof NewVolumeRightSidebar> = {
+      activeTab: 'modeled-data',
+      showBicyclist: true,
+      showPedestrian: true,
+      modelCountsBy: 'cost-benefit',
+      mapView: null,
+      aadtLayer,
+      selectedGeometry: {} as any,
+      selectedAreaName: null,
+      dateRange: { startDate: new Date('2020-01-01'), endDate: new Date('2020-12-31') },
+      selectedCountSite: null,
+      onCountSiteSelect: () => {},
+      selectedYear: 2022,
+    };
+    
+    rerender(<NewVolumeRightSidebar {...updatedProps} />);
+    
+    expect(getByTestId('chart-year')).toHaveTextContent('2022');
   });
 });
 

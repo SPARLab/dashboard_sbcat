@@ -83,6 +83,7 @@ export default function NewVolumeApp() {
           dateRange={dateRange}
           selectedCountSite={selectedCountSite}
           onCountSiteSelect={setSelectedCountSite}
+          selectedYear={selectedYear}
         />
       </div>
       {/* Footer */}

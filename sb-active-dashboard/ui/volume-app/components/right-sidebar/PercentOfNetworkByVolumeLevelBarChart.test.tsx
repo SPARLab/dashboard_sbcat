@@ -1,119 +1,258 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import PercentOfNetworkByVolumeLevelBarChart from './PercentOfNetworkByVolumeLevelBarChart'
-import { createMockPolygonGeometry, createMockMapView } from '../../../../src/test-utils/factories'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import PercentOfNetworkByVolumeLevelBarChart from './PercentOfNetworkByVolumeLevelBarChart';
+import Polygon from '@arcgis/core/geometry/Polygon';
 
-// Mock the data service used inside the component to control returned values
-vi.mock('../../../../lib/data-services/ModeledVolumeChartDataService', () => {
-  return {
-    ModeledVolumeChartDataService: class {
-      async getTrafficLevelBreakdownData() {
-        return {
-          categories: ['Low', 'Medium', 'High'],
-          totalMiles: [20, 60, 20],
-          percentages: [20, 60, 20],
-          details: {
-            low: { miles: 20, percentage: 20, segments: 2 },
-            medium: { miles: 60, percentage: 60, segments: 6 },
-            high: { miles: 20, percentage: 20, segments: 2 },
-          },
-          totalNetworkMiles: 100,
-        }
-      }
-    }
-  }
-})
+// Mock the chart data service
+const mockGetTrafficLevelBreakdownData = vi.fn();
+vi.mock('../../../../lib/data-services/ModeledVolumeChartDataService', () => ({
+  ModeledVolumeChartDataService: vi.fn().mockImplementation(() => ({
+    getTrafficLevelBreakdownData: mockGetTrafficLevelBreakdownData
+  }))
+}));
+
+// Mock ReactECharts
+vi.mock('echarts-for-react', () => ({
+  default: vi.fn(({ option, onEvents }) => (
+    <div data-testid="echarts-mock">
+      <div data-testid="chart-data">{JSON.stringify(option.series[0].data)}</div>
+      <div data-testid="chart-categories">{JSON.stringify(option.xAxis.data)}</div>
+    </div>
+  ))
+}));
 
 describe('PercentOfNetworkByVolumeLevelBarChart', () => {
-  const baseProps = {
+  const mockMapView = {} as __esri.MapView;
+  const mockGeometry = new Polygon({
+    rings: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]
+  });
+
+  const defaultProps = {
     dataType: 'modeled-data',
     horizontalMargins: 'mx-4',
-    mapView: createMockMapView() as any,
+    mapView: mockMapView,
     showBicyclist: true,
     showPedestrian: true,
     modelCountsBy: 'cost-benefit',
     year: 2023,
-    selectedGeometry: createMockPolygonGeometry() as any,
-  }
+    selectedGeometry: mockGeometry
+  };
 
-  it('renders title and description for percent view', async () => {
-    render(<PercentOfNetworkByVolumeLevelBarChart {...baseProps} />)
+  beforeEach(() => {
+    mockGetTrafficLevelBreakdownData.mockResolvedValue({
+      categories: ['Low', 'Medium', 'High'],
+      totalMiles: [10, 20, 30],
+      percentages: [16.7, 33.3, 50.0],
+      details: {
+        low: { miles: 10, percentage: 16.7, segments: 5 },
+        medium: { miles: 20, percentage: 33.3, segments: 10 },
+        high: { miles: 30, percentage: 50.0, segments: 15 }
+      },
+      totalNetworkMiles: 60
+    });
+  });
 
-    expect(screen.getByText('Percent of Network by Volume Level')).toBeInTheDocument()
-    expect(screen.getByText(/Percent of network miles assigned to each category/)).toBeInTheDocument()
-  })
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
 
-  it('maps service percentages directly to chart data (sanity check)', async () => {
-    const { container } = render(<PercentOfNetworkByVolumeLevelBarChart {...baseProps} />)
+  it('should render without crashing', () => {
+    render(<PercentOfNetworkByVolumeLevelBarChart {...defaultProps} />);
+    expect(screen.getByText('Percent of Network by Volume Level')).toBeInTheDocument();
+  });
 
-    // Wait for the component to load and render the chart
-    await screen.findByText('Mocked ECharts Component')
+  it('should use dynamic year in data service call', async () => {
+    render(<PercentOfNetworkByVolumeLevelBarChart {...defaultProps} year={2020} />);
 
-    // Our echarts mock stores the provided option JSON on the element for inspection
-    const chartEl = container.querySelector('[data-testid="echarts-mock"]') as HTMLElement
-    expect(chartEl).toBeTruthy()
+    await waitFor(() => {
+      expect(mockGetTrafficLevelBreakdownData).toHaveBeenCalledWith(
+        mockMapView,
+        expect.objectContaining({
+          year: 2020,
+          dataSource: 'dillon'
+        }),
+        mockGeometry
+      );
+    });
+  });
 
-    const option = JSON.parse(chartEl.getAttribute('data-option') || '{}')
-    const seriesData = (option?.series?.[0]?.data || []).map((d: any) => d.value)
-    expect(seriesData).toEqual([20, 60, 20])
-  })
+  it('should pass correct count types when both bike and ped selected', async () => {
+    render(<PercentOfNetworkByVolumeLevelBarChart 
+      {...defaultProps} 
+      showBicyclist={true} 
+      showPedestrian={true}
+    />);
 
-  it('formats tooltip percent text when hovering (uses event wiring)', async () => {
-    // Import the mock to access the React component directly
-    const ReactECharts = await import('echarts-for-react')
-    const originalMock = ReactECharts.default as any
+    await waitFor(() => {
+      expect(mockGetTrafficLevelBreakdownData).toHaveBeenCalledWith(
+        mockMapView,
+        expect.objectContaining({
+          countTypes: ['bike', 'ped']
+        }),
+        mockGeometry
+      );
+    });
+  });
 
-    // Set up a custom mock that calls the onEvents.mouseover handler
-    let mockOnEvents: any = null
-    ReactECharts.default = vi.fn(({ onEvents, ...props }) => {
-      mockOnEvents = onEvents
-      return originalMock({ onEvents, ...props })
-    })
+  it('should pass only bike when pedestrian disabled', async () => {
+    render(<PercentOfNetworkByVolumeLevelBarChart 
+      {...defaultProps} 
+      showBicyclist={true} 
+      showPedestrian={false}
+    />);
 
-    render(<PercentOfNetworkByVolumeLevelBarChart {...baseProps} />)
+    await waitFor(() => {
+      expect(mockGetTrafficLevelBreakdownData).toHaveBeenCalledWith(
+        mockMapView,
+        expect.objectContaining({
+          countTypes: ['bike']
+        }),
+        mockGeometry
+      );
+    });
+  });
 
-    // Wait for the chart to load
-    await screen.findByText('Mocked ECharts Component')
+  it('should display chart data when loaded successfully', async () => {
+    render(<PercentOfNetworkByVolumeLevelBarChart {...defaultProps} />);
 
-    // Directly call the mouseover event handler with our test value
-    expect(mockOnEvents).toBeTruthy()
-    expect(mockOnEvents.mouseover).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByTestId('echarts-mock')).toBeInTheDocument();
+    });
+
+    // Verify chart displays correct percentages
+    const chartData = screen.getByTestId('chart-data');
+    expect(chartData).toHaveTextContent('16.7');
+    expect(chartData).toHaveTextContent('33.3');
+    expect(chartData).toHaveTextContent('50');
+  });
+
+  it('should show loading state during fetch', () => {
+    // Make the promise not resolve immediately
+    mockGetTrafficLevelBreakdownData.mockReturnValue(new Promise(() => {}));
     
-    mockOnEvents.mouseover({ value: 42.345 })
-
-    // Tooltip should show our formatted percentage value
-    expect(await screen.findByText('42.3% of Network')).toBeInTheDocument()
-
-    // Restore the original mock
-    ReactECharts.default = originalMock
-  })
-
-  it('drops trailing .0 for whole-number percentages', async () => {
-    // Import the mock to access the React component directly
-    const ReactECharts = await import('echarts-for-react')
-    const originalMock = ReactECharts.default as any
-
-    // Set up a custom mock that calls the onEvents.mouseover handler
-    let mockOnEvents: any = null
-    ReactECharts.default = vi.fn(({ onEvents, ...props }) => {
-      mockOnEvents = onEvents
-      return originalMock({ onEvents, ...props })
-    })
-
-    render(<PercentOfNetworkByVolumeLevelBarChart {...baseProps} />)
-
-    // Wait for the chart to load
-    await screen.findByText('Mocked ECharts Component')
-
-    // Directly call the mouseover event handler with a whole number value
-    expect(mockOnEvents).toBeTruthy()
-    expect(mockOnEvents.mouseover).toBeTruthy()
+    render(<PercentOfNetworkByVolumeLevelBarChart {...defaultProps} />);
     
-    mockOnEvents.mouseover({ value: 60.0 })
+    expect(screen.getByText('Loading network data...')).toBeInTheDocument();
+    expect(screen.getByText('Querying selected area')).toBeInTheDocument();
+  });
 
-    expect(await screen.findByText('60% of Network')).toBeInTheDocument()
+  it('should display error state on failure', async () => {
+    mockGetTrafficLevelBreakdownData.mockRejectedValue(new Error('Network error'));
+    
+    render(<PercentOfNetworkByVolumeLevelBarChart {...defaultProps} />);
 
-    // Restore the original mock
-    ReactECharts.default = originalMock
-  })
-})
+    await waitFor(() => {
+      expect(screen.getByText('⚠️ Failed to load traffic data')).toBeInTheDocument();
+    });
+  });
+
+  it('should only render for cost-benefit model', () => {
+    const { rerender } = render(<PercentOfNetworkByVolumeLevelBarChart 
+      {...defaultProps} 
+      modelCountsBy="strava-bias-corrected" 
+    />);
+    
+    expect(screen.queryByTestId('echarts-mock')).not.toBeInTheDocument();
+    
+    rerender(<PercentOfNetworkByVolumeLevelBarChart 
+      {...defaultProps} 
+      modelCountsBy="cost-benefit" 
+    />);
+    
+    // Should show loading at minimum since we have valid props
+    expect(screen.getByText('Loading network data...')).toBeInTheDocument();
+  });
+
+  it('should require selected geometry', () => {
+    render(<PercentOfNetworkByVolumeLevelBarChart 
+      {...defaultProps} 
+      selectedGeometry={null} 
+    />);
+    
+    expect(screen.queryByTestId('echarts-mock')).not.toBeInTheDocument();
+    expect(mockGetTrafficLevelBreakdownData).not.toHaveBeenCalled();
+  });
+
+  it('should show placeholder when no region selected', () => {
+    render(<PercentOfNetworkByVolumeLevelBarChart 
+      {...defaultProps} 
+      selectedGeometry={null} 
+    />);
+    
+    expect(screen.getByText('Please select an area on the map')).toBeInTheDocument();
+    expect(screen.getByText('Click on a boundary to see results')).toBeInTheDocument();
+  });
+
+  it('should require modeled-data type', () => {
+    render(<PercentOfNetworkByVolumeLevelBarChart 
+      {...defaultProps} 
+      dataType="raw-data" 
+    />);
+    
+    expect(screen.queryByTestId('echarts-mock')).not.toBeInTheDocument();
+    expect(mockGetTrafficLevelBreakdownData).not.toHaveBeenCalled();
+  });
+
+  it('should require at least one count type enabled', () => {
+    render(<PercentOfNetworkByVolumeLevelBarChart 
+      {...defaultProps} 
+      showBicyclist={false}
+      showPedestrian={false}
+    />);
+    
+    expect(screen.queryByTestId('echarts-mock')).not.toBeInTheDocument();
+    expect(mockGetTrafficLevelBreakdownData).not.toHaveBeenCalled();
+  });
+
+  it('should refetch data when year changes', async () => {
+    const { rerender } = render(<PercentOfNetworkByVolumeLevelBarChart 
+      {...defaultProps} 
+      year={2020} 
+    />);
+
+    await waitFor(() => {
+      expect(mockGetTrafficLevelBreakdownData).toHaveBeenCalledWith(
+        mockMapView,
+        expect.objectContaining({ year: 2020 }),
+        mockGeometry
+      );
+    });
+
+    mockGetTrafficLevelBreakdownData.mockClear();
+
+    rerender(<PercentOfNetworkByVolumeLevelBarChart 
+      {...defaultProps} 
+      year={2021} 
+    />);
+
+    await waitFor(() => {
+      expect(mockGetTrafficLevelBreakdownData).toHaveBeenCalledWith(
+        mockMapView,
+        expect.objectContaining({ year: 2021 }),
+        mockGeometry
+      );
+    });
+  });
+
+  it('should show no data state when total is zero', async () => {
+    mockGetTrafficLevelBreakdownData.mockResolvedValue({
+      categories: ['Low', 'Medium', 'High'],
+      totalMiles: [0, 0, 0],
+      percentages: [0, 0, 0],
+      details: {
+        low: { miles: 0, percentage: 0, segments: 0 },
+        medium: { miles: 0, percentage: 0, segments: 0 },
+        high: { miles: 0, percentage: 0, segments: 0 }
+      },
+      totalNetworkMiles: 0
+    });
+
+    render(<PercentOfNetworkByVolumeLevelBarChart {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No data available for selected area')).toBeInTheDocument();
+      expect(screen.getByText('Try selecting a different area')).toBeInTheDocument();
+    });
+  });
+});

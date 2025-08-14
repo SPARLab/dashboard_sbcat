@@ -31,6 +31,7 @@ interface TrafficLevelData {
 interface TrafficDataAttributes {
   network_id: string;
   aadt: number;
+  aadt_bin?: string; // For Strava Bias Corrected model
   count_type: string;
 }
 
@@ -56,7 +57,8 @@ export class ModeledVolumeDataService {
       outFields: ["edgeuid", "streetName"] // Use lowercase 'edgeuid'
     });
 
-    // Layer 4: CostBenefitAADTs (for data)
+    // For now, keep using the original working table configuration
+    // TODO: We need to determine the correct table structure for the 4 separate tables
     this.trafficDataTable = new FeatureLayer({
       url: `${BASE_URL}/4`,
       title: "Cost Benefit AADTs (Data)",
@@ -130,10 +132,10 @@ export class ModeledVolumeDataService {
         return "1=0";
     }
 
-    if (config.dataSource === 'dillon') {
-      clauses.push(`year = ${config.year}`);
-    }
+    // Add year filter
+    clauses.push(`year = ${config.year}`);
 
+    // Add count_type filter back since we're using a single table
     if (config.countTypes.length > 0) {
       const typeClause = config.countTypes.map(type => `'${type}'`).join(', ');
       clauses.push(`count_type IN (${typeClause})`);
@@ -172,19 +174,26 @@ export class ModeledVolumeDataService {
         return; 
       }
       
-      let segmentAADT = 0;
-      if (config.countTypes.length > 1) {
-        segmentAADT = trafficRecords.reduce((sum, record) => sum + (record.aadt || 0), 0) / trafficRecords.length;
+      // Calculate the maximum AADT value across all records for this segment
+      // This implements the requirement to use the maximum volume level when both bike and ped data exist
+      const aadtValues = trafficRecords.map(record => record.aadt || 0);
+      const maxAADT = Math.max(...aadtValues);
+      
+      let segmentVolumeLevel: 'low' | 'medium' | 'high';
+      if (maxAADT < 50) {
+        segmentVolumeLevel = 'low';
+      } else if (maxAADT < 200) {
+        segmentVolumeLevel = 'medium';
       } else {
-        segmentAADT = trafficRecords.reduce((sum, record) => sum + (record.aadt || 0), 0);
+        segmentVolumeLevel = 'high';
       }
 
       const segmentLength = geometryEngine.geodesicLength(networkFeature.geometry as Polyline, "miles");
 
-      if (segmentAADT < 50) {
+      if (segmentVolumeLevel === 'low') {
         lowMiles += segmentLength;
         lowSegments++;
-      } else if (segmentAADT < 200) {
+      } else if (segmentVolumeLevel === 'medium') {
         mediumMiles += segmentLength;
         mediumSegments++;
       } else {

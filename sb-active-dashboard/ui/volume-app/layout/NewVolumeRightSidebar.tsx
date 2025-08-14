@@ -48,6 +48,7 @@ interface NewVolumeRightSidebarProps {
   dateRange: DateRangeValue;
   selectedCountSite?: string | null;
   onCountSiteSelect?: (siteId: string | null) => void;
+  selectedYear: number;
 }
 
 export default function NewVolumeRightSidebar({ 
@@ -61,7 +62,8 @@ export default function NewVolumeRightSidebar({
   selectedAreaName,
   dateRange,
   selectedCountSite,
-  onCountSiteSelect
+  onCountSiteSelect,
+  selectedYear
 }: NewVolumeRightSidebarProps) {
   const horizontalMargins = "mx-4";
 
@@ -332,7 +334,7 @@ export default function NewVolumeRightSidebar({
             showBicyclist={showBicyclist}
             showPedestrian={showPedestrian}
             modelCountsBy={modelCountsBy}
-            year={2023}
+            year={selectedYear}
             selectedGeometry={selectedGeometry}
           />
         )}
