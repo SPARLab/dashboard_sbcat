@@ -7,6 +7,7 @@ import VectorTileLayer from "@arcgis/core/layers/VectorTileLayer";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import ColorVariable from "@arcgis/core/renderers/visualVariables/ColorVariable";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
+import { getVolumeLevelColor } from "../../ui/theme/volumeLevelColors";
 
 // Create AADT Feature Layer for count sites
 export async function createAADTLayer() {
@@ -170,9 +171,9 @@ export function createHexagonLayer(modelCountsBy: string = "cost-benefit", selec
             "fill-color": [
               "match",
               ["get", bikeFieldName],
-              "High", "#d7191c",
-              "Medium", "#fdae61", 
-              "Low", "#a6d96a",
+              "High", getVolumeLevelColor('high', true),
+              "Medium", getVolumeLevelColor('medium', true), 
+              "Low", getVolumeLevelColor('low', true),
               "#cccccc"  // fallback color if value doesn't match
             ],
             "fill-outline-color": "#6E6E6E",
@@ -206,9 +207,9 @@ export function createHexagonLayer(modelCountsBy: string = "cost-benefit", selec
             "fill-color": [
               "match",
               ["get", pedFieldName],
-              "High", "#d7191c",
-              "Medium", "#fdae61",
-              "Low", "#a6d96a", 
+              "High", getVolumeLevelColor('high', true),
+              "Medium", getVolumeLevelColor('medium', true),
+              "Low", getVolumeLevelColor('low', true), 
               "#cccccc"  // fallback color if value doesn't match
             ],
             "fill-outline-color": "#6E6E6E",

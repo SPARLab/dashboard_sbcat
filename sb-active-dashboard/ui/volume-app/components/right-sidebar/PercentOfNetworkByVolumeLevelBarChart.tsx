@@ -3,6 +3,7 @@ import Polygon from "@arcgis/core/geometry/Polygon";
 import ReactECharts from 'echarts-for-react';
 import { useEffect, useMemo, useState } from 'react';
 import { ModeledVolumeChartDataService } from '../../../../lib/data-services/ModeledVolumeChartDataService';
+import { getVolumeLevelColorArray } from '../../../theme/volumeLevelColors';
 
 interface ChartEventParams {
   value: number;
@@ -94,6 +95,9 @@ export default function PercentOfNetworkByVolumeLevelBarChart({
   const noRegionSelected = selectedGeometry === null;
 
   const option = useMemo(() => {
+    // Get consistent colors for volume levels (Low, Medium, High)
+    const volumeColors = getVolumeLevelColorArray();
+    
     const baseOption = {
       grid: { left: '12px', right: '0px', top: '20px', bottom: '0px', containLabel: true },
       xAxis: {
@@ -125,7 +129,7 @@ export default function PercentOfNetworkByVolumeLevelBarChart({
         data: chartData.map((item, index) => ({
           value: item.value,
           itemStyle: {
-            color: ['#ef4444', '#f97316', '#22c55e'][index],
+            color: volumeColors[index],
             borderRadius: [4, 4, 0, 0],
           },
         })),

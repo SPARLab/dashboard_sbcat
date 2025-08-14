@@ -11,6 +11,7 @@ import { GeographicBoundariesService } from "../../../../lib/data-services/Geogr
 import { ModeledVolumeDataService } from "../../../../lib/data-services/ModeledVolumeDataService";
 import { HourlyData, queryHourlyCounts } from "../../../../lib/volume-app/hourlyStats";
 import { createAADTLayer, createHexagonLayer } from "../../../../lib/volume-app/volumeLayers";
+import { VOLUME_LEVEL_CONFIG } from "../../../theme/volumeLevelColors";
 
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
@@ -405,15 +406,24 @@ export default function NewVolumeMap({
           </h4>
           <div className="flex items-center gap-4">
             <div id="legend-low" className="flex items-center gap-1">
-              <div className="w-4 h-4 bg-yellow-200 rounded"></div>
+              <div 
+                className="w-4 h-4 rounded" 
+                style={{ backgroundColor: VOLUME_LEVEL_CONFIG.low.color }}
+              ></div>
               <span className="text-xs text-gray-600">Low</span>
             </div>
             <div id="legend-medium" className="flex items-center gap-1">
-              <div className="w-4 h-4 bg-orange-400 rounded"></div>
+              <div 
+                className="w-4 h-4 rounded" 
+                style={{ backgroundColor: VOLUME_LEVEL_CONFIG.medium.color }}
+              ></div>
               <span className="text-xs text-gray-600">Medium</span>
             </div>
             <div id="legend-high" className="flex items-center gap-1">
-              <div className="w-4 h-4 bg-red-600 rounded"></div>
+              <div 
+                className="w-4 h-4 rounded" 
+                style={{ backgroundColor: VOLUME_LEVEL_CONFIG.high.color }}
+              ></div>
               <span className="text-xs text-gray-600">High</span>
             </div>
           </div>
