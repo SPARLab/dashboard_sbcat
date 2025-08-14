@@ -72,7 +72,7 @@ export class GeographicBoundariesService {
   });
 
   constructor() {
-    const createBoundaryLayer = (url: string, title: string) => {
+    const createBoundaryLayer = (url: string, title: string, whereClause?: string) => {
       return new FeatureLayer({
         url,
         title,
@@ -81,6 +81,7 @@ export class GeographicBoundariesService {
         outFields: ["OBJECTID", "NAME"],
         minScale: 0, // No minimum scale limit - visible at all zoom levels
         maxScale: 0, // No maximum scale limit - visible at all zoom levels
+        definitionExpression: whereClause,
         renderer: new SimpleRenderer({
           symbol: new SimpleFillSymbol({
             color: [0, 0, 0, 0],
@@ -92,7 +93,12 @@ export class GeographicBoundariesService {
     
     this.cityLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.CITIES, "Cities & Towns");
     this.serviceAreaLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.SERVICE_AREAS, "Census Designated Places");
-    this.countyLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.COUNTIES, "Counties");
+    // Filter counties to only show Santa Barbara and San Luis Obispo counties
+    this.countyLayer = createBoundaryLayer(
+      BOUNDARY_LAYER_URLS.COUNTIES, 
+      "Counties",
+      "NAME IN ('Santa Barbara County', 'San Luis Obispo County') OR NAME LIKE '%Santa Barbara%' OR NAME LIKE '%San Luis Obispo%'"
+    );
     this.censusTractLayer = createBoundaryLayer(BOUNDARY_LAYER_URLS.CENSUS_TRACTS, "Census Tracts");
 
     this.highlightLayer = new GraphicsLayer({
