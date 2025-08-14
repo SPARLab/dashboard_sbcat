@@ -28,6 +28,9 @@ export default function NewVolumeApp() {
     endDate: new Date(2025, 6, 16),   // 7/16/2025
   });
 
+  // Year selection state for modeled data
+  const [selectedYear, setSelectedYear] = useState(2023);
+
   // Note: Removed auto-switch to City/Service Area restriction
   // Users can now select any geographic level (including county and census tract) for all tabs
 
@@ -53,12 +56,15 @@ export default function NewVolumeApp() {
           onGeographicLevelChange={setGeographicLevel}
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
         />
         <NewVolumeMap 
           activeTab={activeTab}
           showBicyclist={showBicyclist}
           showPedestrian={showPedestrian}
           modelCountsBy={modelCountsBy}
+          selectedYear={selectedYear}
           onMapViewReady={handleMapViewReady}
           onAadtLayerReady={setAadtLayer}
           geographicLevel={geographicLevel}
