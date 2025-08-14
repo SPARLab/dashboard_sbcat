@@ -137,13 +137,25 @@ export async function createAADTLayer() {
 }
 
 // Create Hexagon Vector Tile Layer for modeled volumes
-export function createHexagonLayer() {
+export function createHexagonLayer(modelCountsBy: string = "cost-benefit", selectedYear: number = 2023) {
+  // Determine field names based on model type and year
+  const getFieldName = (countType: 'bike' | 'ped') => {
+    if (modelCountsBy === "cost-benefit") {
+      return `cos_${selectedYear}_${countType}`;
+    } else if (modelCountsBy === "strava-bias") {
+      return `str_${selectedYear}_${countType}`;
+    }
+    return `cos_${selectedYear}_${countType}`; // fallback
+  };
+
+  const bikeFieldName = getFieldName("bike");
+  const pedFieldName = getFieldName("ped");
   const bikeHexagonTile = new VectorTileLayer({
     style: {
       version: 8,
       sources: {
         esri: {
-          url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/ModeledVolumes/VectorTileServer",
+          url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/HexagonModeledVolumes/VectorTileServer",
           type: "vector",
         },
       },
@@ -156,25 +168,22 @@ export function createHexagonLayer() {
           layout: {},
           paint: {
             "fill-color": [
-              "step",
-              ["get", "aadt_2023_bike"],
-              "#ffffb2",
-              100,
-              "#fecc5c",
-              300,
-              "#fd8d3c",
-              600,
-              "#e31a1c",
+              "match",
+              ["get", bikeFieldName],
+              "High", "#d7191c",
+              "Medium", "#fdae61", 
+              "Low", "#a6d96a",
+              "#cccccc"  // fallback color if value doesn't match
             ],
             "fill-outline-color": "#6E6E6E",
-            "fill-opacity": 0.6,
+            "fill-opacity": 0.7,
           },
         },
       ],
     },
     title: "Modeled Biking Volumes",
     visible: true,
-    opacity: 0.5,
+    opacity: 1,
   });
 
   const pedHexagonTile = new VectorTileLayer({
@@ -182,7 +191,7 @@ export function createHexagonLayer() {
       version: 8,
       sources: {
         esri: {
-          url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/ModeledVolumes/VectorTileServer",
+          url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/HexagonModeledVolumes/VectorTileServer",
           type: "vector",
         },
       },
@@ -195,18 +204,15 @@ export function createHexagonLayer() {
           layout: {},
           paint: {
             "fill-color": [
-              "step",
-              ["get", "aadt_2023_ped"],
-              "#ffffb2",
-              100,
-              "#fecc5c",
-              300,
-              "#fd8d3c",
-              600,
-              "#e31a1c",
+              "match",
+              ["get", pedFieldName],
+              "High", "#d7191c",
+              "Medium", "#fdae61",
+              "Low", "#a6d96a", 
+              "#cccccc"  // fallback color if value doesn't match
             ],
             "fill-outline-color": "#6E6E6E",
-            "fill-opacity": 0.6,
+            "fill-opacity": 0.7,
           },
         },
       ],

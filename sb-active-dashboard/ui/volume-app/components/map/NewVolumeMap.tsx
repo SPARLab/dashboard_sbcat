@@ -21,6 +21,7 @@ interface NewVolumeMapProps {
   showBicyclist: boolean;
   showPedestrian: boolean;
   modelCountsBy: string;
+  selectedYear: number;
   onMapViewReady?: (mapView: __esri.MapView) => void;
   onAadtLayerReady?: (layer: FeatureLayer) => void;
   geographicLevel: string;
@@ -33,6 +34,7 @@ export default function NewVolumeMap({
   showBicyclist, 
   showPedestrian, 
   modelCountsBy,
+  selectedYear,
   onMapViewReady,
   onAadtLayerReady,
   geographicLevel,
@@ -105,7 +107,7 @@ export default function NewVolumeMap({
       const loadLayers = async () => {
         try {
           const aadt = await createAADTLayer();
-          const hexagon = createHexagonLayer();
+          const hexagon = createHexagonLayer(modelCountsBy, selectedYear);
           
           // Add volume layers to map
           mapViewRef.current.map.add(aadt);
@@ -145,6 +147,21 @@ export default function NewVolumeMap({
       loadLayers();
     }
   }, [viewReady, boundaryService, modeledVolumeService]);
+
+  // Update hexagon layer when model type or year changes
+  useEffect(() => {
+    if (viewReady && mapViewRef.current && hexagonLayer && activeTab === 'modeled-data') {
+      // Remove existing hexagon layer
+      mapViewRef.current.map.remove(hexagonLayer);
+      
+      // Create new hexagon layer with updated parameters  
+      const newHexagonLayer = createHexagonLayer(modelCountsBy, selectedYear);
+      mapViewRef.current.map.add(newHexagonLayer);
+      
+      // Update the layer reference
+      setHexagonLayer(newHexagonLayer);
+    }
+  }, [modelCountsBy, selectedYear, activeTab, viewReady]); // Removed hexagonLayer from dependencies
 
     useEffect(() => {
     if (viewReady && boundaryService && geographicLevel && mapViewRef.current) {

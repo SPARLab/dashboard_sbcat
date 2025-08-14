@@ -1,4 +1,5 @@
 import DateRangeSection from "../../components/filters/DateRangeSection";
+import YearSelector from "../../components/filters/YearSelector";
 import GeographicLevelSection from "../../components/filters/GeographicLevelSection";
 import ModelCountTypeSection from "../components/left-sidebar/ModelCountTypeSection";
 import RoadUserSection from "../components/left-sidebar/RoadUserSection";
@@ -21,6 +22,8 @@ interface NewVolumeLeftSidebarProps {
   onGeographicLevelChange: (level: string) => void;
   dateRange: DateRangeValue;
   onDateRangeChange: (dateRange: DateRangeValue) => void;
+  selectedYear: number;
+  onYearChange: (year: number) => void;
 }
 
 export default function NewVolumeLeftSidebar({ 
@@ -35,6 +38,8 @@ export default function NewVolumeLeftSidebar({
   onGeographicLevelChange,
   dateRange,
   onDateRangeChange,
+  selectedYear,
+  onYearChange,
 }: NewVolumeLeftSidebarProps) {
   return (
     <div id="volume-filters-sidebar" className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
@@ -56,10 +61,18 @@ export default function NewVolumeLeftSidebar({
         setShowPedestrian={setShowPedestrian}
       />
       <hr className="border-gray-200" />
-      <DateRangeSection 
-        dateRange={dateRange}
-        onDateRangeChange={onDateRangeChange}
-      />
+      {activeTab === 'modeled-data' ? (
+        <YearSelector 
+          selectedYear={selectedYear}
+          onYearChange={onYearChange}
+          modelType={modelCountsBy}
+        />
+      ) : (
+        <DateRangeSection 
+          dateRange={dateRange}
+          onDateRangeChange={onDateRangeChange}
+        />
+      )}
       <GeographicLevelSection 
         geographicLevel={geographicLevel}
         onGeographicLevelChange={onGeographicLevelChange}
