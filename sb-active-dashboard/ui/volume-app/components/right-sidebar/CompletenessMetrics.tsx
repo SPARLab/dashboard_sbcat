@@ -1,6 +1,8 @@
 import { useState } from "react";
 import SharedTimelineChart, { type SiteData } from "../right-sidebar/SharedTimelineChart";
 import SelectRegionPlaceholder from "../../../components/SelectRegionPlaceholder";
+import { calculateConfidenceData, formatSparklineDateRange, getConfidenceMessage } from "../../utils/sparklineUtils";
+import { LoadingSpinner, WarningIcon } from "../shared/SparklineIcons";
 
 interface CompletenessMetricsProps {
   horizontalMargins: string;
@@ -26,13 +28,9 @@ export default function CompletenessMetrics({
   // Use real data from props, fallback to empty if no data
   const sitesData = timelineData || [];
   
-  // Use timeline data as source of truth for site counts to ensure sync
-  const totalSites = sitesData.length;
-  const activeSites = sitesData.filter(site => site.dataPeriods && site.dataPeriods.length > 0).length;
-  
-  // Calculate if we should show low confidence warning (less than 50% of sites contributing)
-  const contributionRatio = totalSites > 0 ? activeSites / totalSites : 0;
-  const showLowConfidenceWarning = contributionRatio < 0.5 && totalSites > 0;
+  // Calculate confidence data using shared utility
+  const confidenceData = calculateConfidenceData(sitesData);
+  const { totalSites, activeSites, showLowConfidenceWarning } = confidenceData;
 
   return (
     <div id="data-completeness-container" className="w-[calc(100%-2rem)] bg-white border border-gray-200 rounded-md overflow-hidden mx-4">
@@ -95,31 +93,14 @@ export default function CompletenessMetrics({
            >
              <div className="flex items-center gap-2">
                {isLoading ? (
-                 <div id="loading-spinner" className="w-4 h-4 flex-shrink-0">
-                   <div className="animate-spin rounded-full w-full h-full border-b-2 border-blue-500"></div>
-                 </div>
+                 <LoadingSpinner />
                ) : showLowConfidenceWarning && (
-                 <div id="warning-icon" className="w-4 h-4 flex-shrink-0">
-                   <svg 
-                     viewBox="0 0 16 16" 
-                     className="w-full h-full text-red-600"
-                   >
-                     <path
-                       fill="currentColor"
-                       d="M8.982 1.566a1.13 1.13 0 0 0-1.964 0L.165 13.233c-.457.778.091 1.767.982 1.767h13.706c.89 0 1.439-.99.982-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"
-                     />
-                   </svg>
-                 </div>
+                 <WarningIcon />
                )}
                <p className={`ml-1 text-sm font-semibold leading-tight ${
                  showLowConfidenceWarning ? 'text-red-800' : 'text-gray-700'
                }`}>
-                 {isLoading 
-                   ? 'Loading count sites...'
-                   : showLowConfidenceWarning 
-                     ? `Low confidence - ${activeSites} out of ${totalSites} sites contributing data for given timeframe`
-                     : `${totalSites} count sites within selected region`
-                 }
+                 {getConfidenceMessage(isLoading, confidenceData)}
                </p>
              </div>
              <div id="expand-icon" className={`transform transition-transform ${isConfidenceExpanded ? 'rotate-180' : ''}`}>
@@ -143,7 +124,7 @@ export default function CompletenessMetrics({
               <div className="text-center mb-4">
                 <h3 className="text-sm font-medium text-gray-600">Timeline of available data per site</h3>
                 <p className="text-xs text-gray-500 mt-1">
-                  ({dateRange.startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} – {dateRange.endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })})
+                  ({formatSparklineDateRange(dateRange.startDate, dateRange.endDate)})
                 </p>
               </div>
               

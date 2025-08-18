@@ -4,6 +4,8 @@ import TimelineSparklineChart from "./TimelineSparklineChart";
 import { type SiteData } from "./SharedTimelineChart";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import SelectRegionPlaceholder from "../../../components/SelectRegionPlaceholder";
+import { calculateConfidenceData, getConfidenceMessage } from "../../utils/sparklineUtils";
+import { LoadingSpinner, WarningIcon, MapSelectionIcon } from "../shared/SparklineIcons";
 
 interface TimelineSparklineProps {
   sites: SiteData[];
