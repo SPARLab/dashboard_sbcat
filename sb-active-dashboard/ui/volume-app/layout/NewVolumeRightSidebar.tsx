@@ -369,7 +369,7 @@ export default function NewVolumeRightSidebar({
                 sites={timelineData}
                 startDate={dateRange.startDate}
                 endDate={dateRange.endDate}
-                dateRange={`${dateRange.startDate.toLocaleDateString()} - ${dateRange.endDate.toLocaleDateString()}`}
+                dateRange={`${dateRange.startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} - ${dateRange.endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`}
                 selectedSiteId={selectedCountSite}
                 onSiteSelect={onCountSiteSelect}
                 onConfidenceUpdate={handleConfidenceUpdate}

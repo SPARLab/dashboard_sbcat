@@ -58,7 +58,7 @@ export default function TimelineSparkline({
     onConfidenceUpdate?.(data);
   }, [onConfidenceUpdate]);
 
-  // Create header data based on state
+  // Create header data based on state - simplified confidence logic
   const getHeaderProps = () => {
     if (!selectedGeometry) {
       return {
@@ -88,29 +88,63 @@ export default function TimelineSparkline({
       return {
         confidence: {
           level: 'high' as const,
-          color: 'text-blue-700',
-          bgColor: 'bg-blue-50',
-          borderColor: 'border-blue-200',
+          color: 'text-gray-700',
+          bgColor: 'bg-gray-50',
+          borderColor: 'border-gray-200',
           icon: (
             <div className="animate-spin rounded-full w-full h-full border-b-2 border-blue-500"></div>
           )
         },
         contributingSites: 0,
         totalSites: 0,
-        customMessage: 'Loading timeline data...'
+        customMessage: 'Loading count sites...'
       };
     }
     
-    if (confidenceData) {
+    // Calculate confidence based on site contribution (simplified logic)
+    const totalSites = sites.length;
+    const activeSites = sites.filter(site => site.dataPeriods && site.dataPeriods.length > 0).length;
+    const contributionRatio = totalSites > 0 ? activeSites / totalSites : 0;
+    const showLowConfidenceWarning = contributionRatio < 0.5 && totalSites > 0;
+    
+    if (showLowConfidenceWarning) {
       return {
-        confidence: confidenceData.confidence,
-        contributingSites: confidenceData.contributingSites,
-        totalSites: confidenceData.totalSites,
-        customMessage: undefined
+        confidence: {
+          level: 'low' as const,
+          color: 'text-red-800',
+          bgColor: 'bg-red-50',
+          borderColor: 'border-red-200',
+          icon: (
+            <svg 
+              viewBox="0 0 16 16" 
+              className="w-full h-full text-red-600"
+            >
+              <path
+                fill="currentColor"
+                d="M8.982 1.566a1.13 1.13 0 0 0-1.964 0L.165 13.233c-.457.778.091 1.767.982 1.767h13.706c.89 0 1.439-.99.982-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"
+              />
+            </svg>
+          )
+        },
+        contributingSites: activeSites,
+        totalSites: totalSites,
+        customMessage: `Low confidence - ${activeSites} out of ${totalSites} sites contributing data for given timeframe`
       };
     }
     
-    return null;
+    // No confidence warning - just show count
+    return {
+      confidence: {
+        level: 'high' as const,
+        color: 'text-gray-700',
+        bgColor: 'bg-gray-50',
+        borderColor: 'border-gray-200',
+        icon: null
+      },
+      contributingSites: activeSites,
+      totalSites: totalSites,
+      customMessage: `${totalSites} count sites within selected region`
+    };
   };
 
   const headerProps = getHeaderProps();

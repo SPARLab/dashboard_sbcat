@@ -94,7 +94,11 @@ export default function CompletenessMetrics({
              onClick={() => setIsConfidenceExpanded(!isConfidenceExpanded)}
            >
              <div className="flex items-center gap-2">
-               {showLowConfidenceWarning && (
+               {isLoading ? (
+                 <div id="loading-spinner" className="w-4 h-4 flex-shrink-0">
+                   <div className="animate-spin rounded-full w-full h-full border-b-2 border-blue-500"></div>
+                 </div>
+               ) : showLowConfidenceWarning && (
                  <div id="warning-icon" className="w-4 h-4 flex-shrink-0">
                    <svg 
                      viewBox="0 0 16 16" 
@@ -107,7 +111,7 @@ export default function CompletenessMetrics({
                    </svg>
                  </div>
                )}
-               <p className={`text-sm leading-tight font-medium ${
+               <p className={`ml-1 text-sm font-semibold leading-tight ${
                  showLowConfidenceWarning ? 'text-red-800' : 'text-gray-700'
                }`}>
                  {isLoading 
