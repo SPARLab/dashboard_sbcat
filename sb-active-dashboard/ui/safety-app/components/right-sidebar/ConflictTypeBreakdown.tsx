@@ -72,6 +72,7 @@ export default function ConflictTypeBreakdown({
 }: ConflictTypeBreakdownProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [chartData, setChartData] = useState<ConflictTypeBreakdownData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,9 +119,11 @@ export default function ConflictTypeBreakdown({
         // Use the full name for the tooltip
         const fullName = chartData?.data.find(item => getAbbreviatedLabel(item.name) === params.name)?.name || params.name;
         setHoveredBar({ value: params.value, name: fullName });
+        setHoveredIndex(params.dataIndex);
       },
       mouseout: () => {
         setHoveredBar(null);
+        setHoveredIndex(null);
       },
     }),
     [chartData]
@@ -132,40 +135,70 @@ export default function ConflictTypeBreakdown({
       return { chartData: [], colors: [] };
     }
 
-    // Define colors for different conflict types
-    const conflictColors = [
-      '#dc2626', // Red - Bike vs car
-      '#ea580c', // Orange-red - Bike vs bike
-      '#f59e0b', // Orange - Bike vs ped
-      '#eab308', // Yellow - Bike vs infra
-      '#84cc16', // Light green - Bike vs other
-      '#22c55e', // Green - Ped vs car
-      '#14b8a6', // Teal - Ped vs ped
-      '#06b6d4', // Cyan - Ped vs other
-      '#3b82f6', // Blue - Other types
-      '#8b5cf6'  // Purple - Unknown
-    ];
+    // Map conflict types to distinct colorblind-friendly colors (each type gets unique color)
+    const getConflictColor = (conflictType: string): string => {
+      const normalizedType = conflictType.toLowerCase();
+      
+      // Assign each conflict type a unique, distinct color from Okabe-Ito palette
+      if (normalizedType.includes('bike') && (normalizedType.includes('car') || normalizedType.includes('vehicle'))) {
+        return '#D55E00'; // Vermilion - Most dangerous (bike vs vehicle)
+      }
+      if (normalizedType.includes('ped') && (normalizedType.includes('car') || normalizedType.includes('vehicle'))) {
+        return '#CC79A7'; // Reddish purple - Very dangerous (ped vs vehicle)
+      }
+      if (normalizedType.includes('bike') && normalizedType.includes('bike')) {
+        return '#009E73'; // Bluish green - Bike vs bike
+      }
+      if (normalizedType.includes('bike') && normalizedType.includes('ped')) {
+        return '#56B4E9'; // Sky blue - Bike vs pedestrian
+      }
+      if (normalizedType.includes('infra')) {
+        return '#F0E442'; // Yellow - Infrastructure conflicts
+      }
+      if (normalizedType.includes('ped') && normalizedType.includes('ped')) {
+        return '#E69F00'; // Orange - Pedestrian vs pedestrian
+      }
+      if (normalizedType.includes('bike') && normalizedType.includes('other')) {
+        return '#0072B2'; // Blue - Bike vs other
+      }
+      if (normalizedType.includes('ped') && normalizedType.includes('other')) {
+        return '#000000'; // Black - Pedestrian vs other
+      }
+      
+      // Fallback for any unmatched types
+      return '#999999'; // Gray - unknown/other
+    };
 
-    const transformedData = chartData.data.map((item, index) => ({
-      name: getAbbreviatedLabel(item.name), // Use abbreviated label for display
-      value: item.value,
-      itemStyle: {
-        color: conflictColors[index % conflictColors.length],
-        borderRadius: [3, 3, 0, 0],
-      },
-    }));
+    const conflictColors = chartData.data.map(item => getConflictColor(item.name));
+
+    const transformedData = chartData.data.map((item, index) => {
+      // Determine opacity based on hover state
+      const isHovered = hoveredIndex === index;
+      const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
+      const opacity = isOtherHovered ? 0.3 : 1.0;
+      
+      return {
+        name: getAbbreviatedLabel(item.name), // Use abbreviated label for display
+        value: item.value,
+        itemStyle: {
+          color: conflictColors[index],
+          borderRadius: [3, 3, 0, 0],
+          opacity: opacity,
+        },
+      };
+    });
 
     return { chartData: transformedData, colors: conflictColors };
-  }, [chartData]);
+  }, [chartData, hoveredIndex]);
 
   const option = useMemo(
     () => ({
         grid: {
-          left: '25px',
+          left: '3px',
           right: '15px',
           top: '15px',
           bottom: '40px',
-          containLabel: false,
+          containLabel: true,
         },
         xAxis: {
           type: 'category',
@@ -220,6 +253,8 @@ export default function ConflictTypeBreakdown({
           data: transformedData,
           type: 'bar',
           barWidth: '80%',
+          animation: true,
+          animationDuration: 200,
           emphasis: {
             itemStyle: {
               borderColor: '#3b82f6',
@@ -316,19 +351,33 @@ export default function ConflictTypeBreakdown({
 
                   {/* Legend */}
                   <div id="safety-conflict-type-legend" className="grid grid-cols-2 gap-1.5">
-                    {chartData.data.map((conflict, index) => (
-                      <div 
-                        key={index} 
-                        id={`safety-conflict-type-legend-item-${index}`}
-                        className="flex items-center gap-1.5"
-                      >
+                    {chartData.data.map((conflict, index) => {
+                      const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
+                      const opacity = isOtherHovered ? 0.3 : 1.0;
+                      
+                      return (
                         <div 
-                          className="w-2.5 h-2.5 rounded-full" 
-                          style={{ backgroundColor: colors[index % colors.length] }}
-                        ></div>
-                        <span className="text-xs text-gray-900">{getFullName(conflict.name)}</span>
-                      </div>
-                    ))}
+                          key={index} 
+                          id={`safety-conflict-type-legend-item-${index}`}
+                          className="flex items-center gap-1.5 cursor-pointer transition-opacity duration-200"
+                          style={{ opacity }}
+                          onMouseEnter={() => {
+                            setHoveredIndex(index);
+                            setHoveredBar({ value: conflict.value, name: conflict.name });
+                          }}
+                          onMouseLeave={() => {
+                            setHoveredIndex(null);
+                            setHoveredBar(null);
+                          }}
+                        >
+                          <div 
+                            className="w-2.5 h-2.5 rounded-full" 
+                            style={{ backgroundColor: colors[index % colors.length] }}
+                          ></div>
+                          <span className="text-xs text-gray-900">{getFullName(conflict.name)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                   </>
                 ) : error ? (
