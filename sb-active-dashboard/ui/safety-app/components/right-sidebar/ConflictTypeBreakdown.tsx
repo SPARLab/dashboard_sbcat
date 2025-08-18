@@ -135,41 +135,23 @@ export default function ConflictTypeBreakdown({
       return { chartData: [], colors: [] };
     }
 
-    // Map conflict types to distinct colorblind-friendly colors (each type gets unique color)
-    const getConflictColor = (conflictType: string): string => {
-      const normalizedType = conflictType.toLowerCase();
-      
-      // Assign each conflict type a unique, distinct color from Okabe-Ito palette
-      if (normalizedType.includes('bike') && (normalizedType.includes('car') || normalizedType.includes('vehicle'))) {
-        return '#D55E00'; // Vermilion - Most dangerous (bike vs vehicle)
-      }
-      if (normalizedType.includes('ped') && (normalizedType.includes('car') || normalizedType.includes('vehicle'))) {
-        return '#CC79A7'; // Reddish purple - Very dangerous (ped vs vehicle)
-      }
-      if (normalizedType.includes('bike') && normalizedType.includes('bike')) {
-        return '#009E73'; // Bluish green - Bike vs bike
-      }
-      if (normalizedType.includes('bike') && normalizedType.includes('ped')) {
-        return '#56B4E9'; // Sky blue - Bike vs pedestrian
-      }
-      if (normalizedType.includes('infra')) {
-        return '#F0E442'; // Yellow - Infrastructure conflicts
-      }
-      if (normalizedType.includes('ped') && normalizedType.includes('ped')) {
-        return '#E69F00'; // Orange - Pedestrian vs pedestrian
-      }
-      if (normalizedType.includes('bike') && normalizedType.includes('other')) {
-        return '#0072B2'; // Blue - Bike vs other
-      }
-      if (normalizedType.includes('ped') && normalizedType.includes('other')) {
-        return '#000000'; // Black - Pedestrian vs other
-      }
-      
-      // Fallback for any unmatched types
-      return '#999999'; // Gray - unknown/other
-    };
+    // Complete Okabe-Ito colorblind-friendly palette (8 distinct colors)
+    const okabeItoColors = [
+      '#D55E00', // Vermilion
+      '#CC79A7', // Reddish purple  
+      '#009E73', // Bluish green
+      '#56B4E9', // Sky blue
+      '#F0E442', // Yellow
+      '#0072B2', // Blue
+      '#E69F00', // Orange
+      '#000000', // Black
+    ];
 
-    const conflictColors = chartData.data.map(item => getConflictColor(item.name));
+    // Assign colors systematically to ensure each conflict type gets a unique color
+    const conflictColors = chartData.data.map((item, index) => {
+      // Use modulo to cycle through colors if we have more than 8 conflict types
+      return okabeItoColors[index % okabeItoColors.length];
+    });
 
     const transformedData = chartData.data.map((item, index) => {
       // Determine opacity based on hover state
