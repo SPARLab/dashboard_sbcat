@@ -16,6 +16,7 @@ interface ModeledDataConfig {
   countTypes: ('bike' | 'ped')[];
   dateRange: { start: Date; end: Date };
   year: number;
+  modelCountsBy?: 'cost-benefit' | 'strava-bias';
 }
 
 interface TrafficLevelData {
@@ -39,7 +40,10 @@ const BASE_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hoste
 
 export class ModeledVolumeDataService {
   private lineSegmentLayer: FeatureLayer | null = null;
-  private trafficDataTable: FeatureLayer | null = null;
+  private costBenefitBikesTable: FeatureLayer | null = null;
+  private costBenefitPedsTable: FeatureLayer | null = null;
+  private stravaBiasBikesTable: FeatureLayer | null = null;
+  private stravaBiasPedsTable: FeatureLayer | null = null;
   
   constructor() {
     this.initializeLayers();
@@ -57,11 +61,33 @@ export class ModeledVolumeDataService {
       outFields: ["edgeuid", "streetName"] // Use lowercase 'edgeuid'
     });
 
-    // For now, keep using the original working table configuration
-    // TODO: We need to determine the correct table structure for the 4 separate tables
-    this.trafficDataTable = new FeatureLayer({
+    // For now, use the existing working table configuration for cost-benefit
+    // We'll need to determine the correct table numbers for the separate tables
+    this.costBenefitBikesTable = new FeatureLayer({
       url: `${BASE_URL}/4`,
       title: "Cost Benefit AADTs (Data)",
+      visible: false,
+      outFields: ["strava_id", "aadt", "year", "count_type", "network_id"]
+    });
+
+    this.costBenefitPedsTable = new FeatureLayer({
+      url: `${BASE_URL}/4`,
+      title: "Cost Benefit AADTs (Data)",
+      visible: false,
+      outFields: ["strava_id", "aadt", "year", "count_type", "network_id"]
+    });
+
+    // TODO: Update these URLs once we know the correct table numbers for Strava bias corrected data
+    this.stravaBiasBikesTable = new FeatureLayer({
+      url: `${BASE_URL}/4`,
+      title: "Strava Bias Corrected AADTs (Data)",
+      visible: false,
+      outFields: ["strava_id", "aadt", "year", "count_type", "network_id"]
+    });
+
+    this.stravaBiasPedsTable = new FeatureLayer({
+      url: `${BASE_URL}/4`,
+      title: "Strava Bias Corrected AADTs (Data)",
       visible: false,
       outFields: ["strava_id", "aadt", "year", "count_type", "network_id"]
     });
@@ -73,8 +99,51 @@ export class ModeledVolumeDataService {
     return layers;
   }
 
+  /**
+   * Get the appropriate data tables based on model type and count types
+   */
+  private getDataTablesForConfig(config: ModeledDataConfig): FeatureLayer[] {
+    const tables: FeatureLayer[] = [];
+    const modelType = config.modelCountsBy || 'cost-benefit';
+    
+    if (config.countTypes.includes('bike')) {
+      if (modelType === 'cost-benefit' && this.costBenefitBikesTable) {
+        tables.push(this.costBenefitBikesTable);
+      } else if (modelType === 'strava-bias' && this.stravaBiasBikesTable) {
+        tables.push(this.stravaBiasBikesTable);
+      }
+    }
+    
+    if (config.countTypes.includes('ped')) {
+      if (modelType === 'cost-benefit' && this.costBenefitPedsTable) {
+        tables.push(this.costBenefitPedsTable);
+      } else if (modelType === 'strava-bias' && this.stravaBiasPedsTable) {
+        tables.push(this.stravaBiasPedsTable);
+      }
+    }
+    
+    return tables;
+  }
+
   setVisibility(visible: boolean) {
     if (this.lineSegmentLayer) this.lineSegmentLayer.visible = visible;
+  }
+
+  /**
+   * Check if data is available for the given year and data source
+   */
+  isDataAvailable(year: number, dataSource: 'dillon' | 'lily'): boolean {
+    // Dillon's data (both cost-benefit and strava-bias) available for 2019-2023
+    if (dataSource === 'dillon') {
+      return year >= 2019 && year <= 2023;
+    }
+    
+    // Lily's data only available for 2023
+    if (dataSource === 'lily') {
+      return year === 2023;
+    }
+    
+    return false;
   }
 
   async getTrafficLevelData(mapView: MapView, config: ModeledDataConfig): Promise<TrafficLevelData> {
@@ -82,8 +151,14 @@ export class ModeledVolumeDataService {
   }
 
   async getTrafficLevelDataWithGeometry(mapView: MapView, config: ModeledDataConfig, geometry: Geometry): Promise<TrafficLevelData> {
-    if (!this.lineSegmentLayer || !this.trafficDataTable) {
-      console.warn('⚠️ Required layers not available - using simulation data');
+    if (!this.lineSegmentLayer) {
+      console.warn('⚠️ Line segment layer not available - using simulation data');
+      return this.generateSimulatedTrafficLevelData(mapView, config);
+    }
+
+    const dataTables = this.getDataTablesForConfig(config);
+    if (dataTables.length === 0) {
+      console.warn('⚠️ No appropriate data tables available - using simulation data');
       return this.generateSimulatedTrafficLevelData(mapView, config);
     }
 
@@ -106,13 +181,16 @@ export class ModeledVolumeDataService {
         return this.generateSimulatedTrafficLevelData(mapView, config, true);
       }
 
-      const dataQuery = this.trafficDataTable.createQuery();
+      // Since we're using the same table for all data types for now, just query once
+      // TODO: Update this logic when we have separate tables
+      const dataQuery = dataTables[0].createQuery();
       dataQuery.where = this.buildTrafficDataWhereClause(edgeuids, config);
       dataQuery.outFields = ["network_id", "aadt", "count_type"];
 
-      const dataResult = await this.trafficDataTable.queryFeatures(dataQuery as __esri.QueryProperties);
+      const dataResult = await dataTables[0].queryFeatures(dataQuery as __esri.QueryProperties);
+      const allDataFeatures = dataResult.features;
       
-      return this.processJoinedTrafficData(networkResult.features, dataResult.features, config);
+      return this.processJoinedTrafficData(networkResult.features, allDataFeatures, config);
 
     } catch (error) {
       console.error("ModeledVolumeDataService: Error processing traffic data.", error);
@@ -135,7 +213,7 @@ export class ModeledVolumeDataService {
     // Add year filter
     clauses.push(`year = ${config.year}`);
 
-    // Add count_type filter back since we're using a single table
+    // Add count_type filter since we're using the same table for all data for now
     if (config.countTypes.length > 0) {
       const typeClause = config.countTypes.map(type => `'${type}'`).join(', ');
       clauses.push(`count_type IN (${typeClause})`);

@@ -42,7 +42,7 @@ export default function PercentOfNetworkByVolumeLevelBarChart({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!selectedGeometry || dataType !== 'modeled-data' || !mapView || modelCountsBy !== 'cost-benefit' || (!showBicyclist && !showPedestrian)) {
+    if (!selectedGeometry || dataType !== 'modeled-data' || !mapView || (modelCountsBy !== 'cost-benefit' && modelCountsBy !== 'strava-bias') || (!showBicyclist && !showPedestrian)) {
       setChartData([]);
       setIsLoading(false);
       return;
@@ -62,7 +62,8 @@ export default function PercentOfNetworkByVolumeLevelBarChart({
           ],
           dateRange: { start: new Date(year, 0, 1), end: new Date(year, 11, 31) },
           year,
-          detailLevel: 'overview'
+          detailLevel: 'overview',
+          modelCountsBy: modelCountsBy as 'cost-benefit' | 'strava-bias'
         }, selectedGeometry);
         
         const newChartData = trafficData.categories.map((category, index) => ({
