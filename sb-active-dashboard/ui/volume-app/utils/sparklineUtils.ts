@@ -62,8 +62,8 @@ export function getConfidenceMessage(
   }
   
   if (confidenceData.showLowConfidenceWarning) {
-    return `Low confidence - ${confidenceData.activeSites} out of ${confidenceData.totalSites} sites contributing data for given timeframe`;
+    return `Low confidence - ${confidenceData.activeSites} out of ${confidenceData.totalSites} active count sites within selected region`;
   }
   
-  return `${confidenceData.totalSites} count sites within selected region`;
+  return `${confidenceData.activeSites} out of ${confidenceData.totalSites} active count sites within selected region`;
 }

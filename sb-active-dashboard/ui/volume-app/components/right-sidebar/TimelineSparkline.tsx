@@ -103,11 +103,13 @@ export default function TimelineSparkline({
       };
     }
     
-    // Calculate confidence based on site contribution (simplified logic)
-    const totalSites = sites.length;
+    // Calculate confidence based on site contribution 
+    // sites.length = all sites in region (including those with no data)
+    // activeSites = sites that have data within the selected timeframe
+    const totalSitesInRegionFromData = sites.length;
     const activeSites = sites.filter(site => site.dataPeriods && site.dataPeriods.length > 0).length;
-    const contributionRatio = totalSites > 0 ? activeSites / totalSites : 0;
-    const showLowConfidenceWarning = contributionRatio < 0.5 && totalSites > 0;
+    const contributionRatio = totalSitesInRegionFromData > 0 ? activeSites / totalSitesInRegionFromData : 0;
+    const showLowConfidenceWarning = contributionRatio < 0.5 && totalSitesInRegionFromData > 0;
     
     if (showLowConfidenceWarning) {
       return {
@@ -129,8 +131,8 @@ export default function TimelineSparkline({
           )
         },
         contributingSites: activeSites,
-        totalSites: totalSites,
-        customMessage: `Low confidence - ${activeSites} out of ${totalSites} sites contributing data for given timeframe`
+        totalSites: totalSitesInRegionFromData,
+        customMessage: `Low confidence - ${activeSites} out of ${totalSitesInRegionFromData} active count sites within selected region`
       };
     }
     
@@ -144,8 +146,8 @@ export default function TimelineSparkline({
         icon: null
       },
       contributingSites: activeSites,
-      totalSites: totalSites,
-      customMessage: `${totalSites} count sites within selected region`
+      totalSites: totalSitesInRegionFromData,
+      customMessage: `${activeSites} out of ${totalSitesInRegionFromData} active count sites within selected region`
     };
   };
 
