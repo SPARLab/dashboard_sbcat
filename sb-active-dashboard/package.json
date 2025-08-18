@@ -21,6 +21,7 @@
     "@arcgis/core": "^4.33.0",
     "@arcgis/map-components": "^4.33.1",
     "@arcgis/map-components-react": "^4.33.1",
+    "@emotion/babel-plugin": "^11.13.5",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@esri/calcite-components": "^3.2.1",

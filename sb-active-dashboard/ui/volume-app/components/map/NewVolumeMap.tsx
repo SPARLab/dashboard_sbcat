@@ -239,8 +239,8 @@ export default function NewVolumeMap({
         hexagonLayer.visible = false;
       } else { // 'modeled-data' tab
         aadtLayer.visible = false;
-        // Visibility of hexagon layer depends on the modeled data source
-        hexagonLayer.visible = modelCountsBy === 'cost-benefit';
+        // Show hexagon layer for modeled data tab regardless of model type
+        hexagonLayer.visible = true;
       }
     }
   }, [activeTab, modelCountsBy, aadtLayer, hexagonLayer]);

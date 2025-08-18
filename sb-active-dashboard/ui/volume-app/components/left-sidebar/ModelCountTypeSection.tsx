@@ -20,8 +20,8 @@ export default function ModelCountTypeSection({
             id="strava-bias-correction-radio"
             type="radio"
             name="modelCountType"
-            value="strava"
-            checked={modelCountsBy === 'strava'}
+            value="strava-bias"
+            checked={modelCountsBy === 'strava-bias'}
             onChange={(e) => setModelCountsBy(e.target.value)}
             className="sr-only"
           />
@@ -38,11 +38,11 @@ export default function ModelCountTypeSection({
           {/* Strava Bias Correction */}
           <label htmlFor="strava-bias-correction-radio" className="flex items-center cursor-pointer">
             <div className={`relative size-3.5 rounded-full ${
-              modelCountsBy === 'strava' 
+              modelCountsBy === 'strava-bias' 
                 ? 'bg-blue-500 border-[0.5px] border-blue-500' 
                 : 'bg-transparent border border-gray-700'
             }`}>
-              {modelCountsBy === 'strava' && (
+              {modelCountsBy === 'strava-bias' && (
                 <div 
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-transparent border border-white w-2.5 h-2.5 rounded-full"
                   style={{ boxSizing: 'border-box' }}
