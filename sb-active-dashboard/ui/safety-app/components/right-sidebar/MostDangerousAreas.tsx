@@ -211,7 +211,7 @@ export default function MostDangerousAreas({
           {selectedGeometry && (
             <>
               <hr className="border-gray-200 mb-2" />
-              <p id="safety-dangerous-areas-description" className="w-full text-sm text-gray-600 mb-4">
+              <p id="safety-dangerous-areas-description" className="w-full text-sm text-gray-600 mb-1">
                 Locations with the highest incident counts and severity scores
                 <span id="safety-dangerous-areas-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon />
@@ -262,7 +262,7 @@ export default function MostDangerousAreas({
                       <div
                         key={`${area.location}-${index}`}
                         id={`safety-dangerous-area-${index}`}
-                        className={`px-3 py-2 cursor-pointer transition-colors duration-200 ${
+                        className={`px-3 py-1 cursor-pointer transition-colors duration-200 ${
                           hoveredArea === area.location 
                             ? 'bg-gray-100' 
                             : 'hover:bg-gray-50'

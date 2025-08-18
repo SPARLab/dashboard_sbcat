@@ -13,7 +13,6 @@ export default function GeographicLevelSection({
     { id: 'county', label: 'County', icon: '/icons/region-icon.svg' },
     { id: 'city-service-area', label: 'City / Service Area', icon: '/icons/city-service-area-icon.svg' },
     { id: 'census-tract', label: 'Census Tract', icon: '/icons/census-tract-icon.svg' },
-    { id: 'hexagons', label: 'Hexagons', icon: '/icons/hexagons-icon.svg' },
     { id: 'custom', label: 'Custom Draw Tool', icon: '/icons/custom-draw-tool-icon.svg' }
   ];
 
