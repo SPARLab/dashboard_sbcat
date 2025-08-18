@@ -56,34 +56,7 @@ export default function CompletenessMetrics({
         <div className="h-px bg-gray-200"></div>
       </div>
 
-      {/* Data Completeness Section */}
-      <div id="data-completeness-section" className="bg-white">
-        <div className={`py-2 space-y-1.5 ${horizontalMargins}`}>
-          <h4 id="data-completeness-title" className="text-sm font-medium text-gray-700">
-            Data Completeness
-          </h4>
-          
-          {/* Progress Bar */}
-          <div id="data-completeness-progress-container" className="flex items-center justify-between">
-            <div id="data-completeness-progress-bar" className="bg-gray-200 h-4 rounded-full flex-1 mr-4">
-              <div 
-                id="data-completeness-progress-fill"
-                className={`h-4 rounded-full ${
-                  confidenceLevel === 'high' ? 'bg-green-400' : 
-                  confidenceLevel === 'medium' ? 'bg-yellow-400' : 'bg-red-400'
-                }`}
-                style={{ width: `${confidencePercentage}%` }}
-              />
-            </div>
-            <span id="data-completeness-percentage" className="text-sm font-medium text-black">{confidencePercentage}%</span>
-          </div>
-          
-          <p id="data-completeness-confidence" className="text-xs text-gray-500">
-            {confidenceLevel.charAt(0).toUpperCase() + confidenceLevel.slice(1)} confidence level
-          </p>
-        </div>
-        <div className="h-px bg-gray-200"></div>
-      </div>
+
 
       {/* Data Breakdown Section */}
       <div id="data-breakdown-section" className="bg-white border-non">
