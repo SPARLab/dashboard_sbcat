@@ -17,7 +17,7 @@ export class RawIncidentRenderer {
       field: "maxSeverity", // This field is computed from joined parties data
       defaultSymbol: new SimpleMarkerSymbol({
         style: "circle",
-        color: [128, 128, 128, 1], // Gray for unknown severity
+        color: [153, 153, 153, 1], // Gray (#999999) for unknown severity
         size: 6,
         outline: {
           color: [255, 255, 255, 1],
@@ -29,7 +29,7 @@ export class RawIncidentRenderer {
           value: "Fatality",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [0, 0, 0, 1], // Black for fatalities
+            color: [0, 0, 0, 1], // Black (#000000) for fatalities
             size: 12,
             outline: { color: [255, 255, 255, 1], width: 2 }
           }),
@@ -39,7 +39,7 @@ export class RawIncidentRenderer {
           value: "Severe Injury",
           symbol: new SimpleMarkerSymbol({
             style: "circle", 
-            color: [255, 0, 0, 1], // Red for severe injury
+            color: [213, 94, 0, 1], // Vermilion (#D55E00) for severe injury
             size: 10,
             outline: { color: [255, 255, 255, 1], width: 1.5 }
           }),
@@ -49,7 +49,7 @@ export class RawIncidentRenderer {
           value: "Injury",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [255, 165, 0, 1], // Orange for injury
+            color: [230, 159, 0, 1], // Orange (#E69F00) for injury
             size: 8,
             outline: { color: [255, 255, 255, 1], width: 1 }
           }),
@@ -59,7 +59,7 @@ export class RawIncidentRenderer {
           value: "No Injury",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [34, 197, 94, 1], // Green for no injury
+            color: [0, 114, 178, 1], // Blue (#0072B2) for no injury
             size: 8,
             outline: { color: [255, 255, 255, 1], width: 1 }
           }),
@@ -69,7 +69,7 @@ export class RawIncidentRenderer {
           value: "Unknown",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [128, 128, 128, 1], // Gray for unknown
+            color: [153, 153, 153, 1], // Gray (#999999) for unknown
             size: 8,
             outline: { color: [255, 255, 255, 1], width: 1 }
           }),

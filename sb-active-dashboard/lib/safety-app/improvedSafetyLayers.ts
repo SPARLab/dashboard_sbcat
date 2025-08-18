@@ -203,7 +203,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     objectIdField: "OBJECTID",
     title: "Safety Incidents (Enriched)",
     renderer: RawIncidentRenderer.createSeverityRenderer(),
-    opacity: 0.8,
+    opacity: 1.0,
   });
 
 

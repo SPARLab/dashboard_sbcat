@@ -84,11 +84,11 @@ export default function SeverityBreakdown({
 
     // Define colors from most severe (dark) to least severe (light)
     const severityColors = [
-      '#dc2626', // Dark red - Fatality
-      '#ea580c', // Orange-red - Severe Injury
-      '#f59e0b', // Orange - Injury
-      '#eab308', // Yellow - No Injury
-      '#84cc16'  // Light green - Unknown
+      '#000000', // Black - Fatality
+      '#D55E00', // Vermilion - Severe Injury
+      '#E69F00', // Orange - Injury
+      '#0072B2', // Blue - No Injury
+      '#999999'  // Gray - Unknown
     ];
 
     const transformedData = chartData.categories.map((category, index) => ({

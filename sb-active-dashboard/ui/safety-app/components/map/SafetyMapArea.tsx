@@ -76,19 +76,19 @@ export default function SafetyMapArea({
               <span id="safety-legend-fatality-label" className="text-xs text-gray-700">Fatality</span>
             </div>
             <div id="safety-legend-severe-injury" className="flex items-center gap-2">
-              <div id="safety-legend-severe-injury-dot" className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <div id="safety-legend-severe-injury-dot" className="w-3 h-3 rounded-full" style={{backgroundColor: '#D55E00'}}></div>
               <span id="safety-legend-severe-injury-label" className="text-xs text-gray-700">Severe Injury</span>
             </div>
             <div id="safety-legend-injury" className="flex items-center gap-2">
-              <div id="safety-legend-injury-dot" className="w-3 h-3 bg-orange-500 rounded-full"></div>
+              <div id="safety-legend-injury-dot" className="w-3 h-3 rounded-full" style={{backgroundColor: '#E69F00'}}></div>
               <span id="safety-legend-injury-label" className="text-xs text-gray-700">Injury</span>
             </div>
             <div id="safety-legend-no-injury" className="flex items-center gap-2">
-              <div id="safety-legend-no-injury-dot" className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <div id="safety-legend-no-injury-dot" className="w-3 h-3 rounded-full" style={{backgroundColor: '#0072B2'}}></div>
               <span id="safety-legend-no-injury-label" className="text-xs text-gray-700">No Injury</span>
             </div>
             <div id="safety-legend-unknown" className="flex items-center gap-2">
-              <div id="safety-legend-unknown-dot" className="w-3 h-3 bg-gray-500 rounded-full"></div>
+              <div id="safety-legend-unknown-dot" className="w-3 h-3 rounded-full" style={{backgroundColor: '#999999'}}></div>
               <span id="safety-legend-unknown-label" className="text-xs text-gray-700">Unknown</span>
             </div>
           </div>

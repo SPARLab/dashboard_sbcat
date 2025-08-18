@@ -181,13 +181,15 @@ function getSeverityColor(severity: string): string {
   const normalizedSeverity = severity.toLowerCase();
   
   if (normalizedSeverity === 'fatality' || normalizedSeverity === 'fatal') {
-    return '#dc2626';
+    return '#000000'; // Black for fatality
   } else if (normalizedSeverity === 'severe injury' || normalizedSeverity === 'severe_injury') {
-    return '#ea580c';
+    return '#D55E00'; // Vermilion for severe injury
   } else if (normalizedSeverity === 'injury' || normalizedSeverity === 'other visible injury') {
-    return '#d97706';
+    return '#E69F00'; // Orange for injury
+  } else if (normalizedSeverity === 'no injury') {
+    return '#0072B2'; // Blue for no injury
   } else {
-    return '#65a30d';
+    return '#999999'; // Gray for unknown
   }
 }
 
