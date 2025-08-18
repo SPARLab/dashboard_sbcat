@@ -110,7 +110,7 @@ export default function NewVolumeMap({
           const aadt = await createAADTLayer();
           const hexagon = createHexagonLayer(modelCountsBy, selectedYear);
           
-          // Add volume layers to map
+          // Add volume layers to map (bottom layers)
           mapViewRef.current.map.add(aadt);
           mapViewRef.current.map.add(hexagon);
           
@@ -121,10 +121,11 @@ export default function NewVolumeMap({
             console.log(`✅ Added modeled volume layer: ${layer.title}`);
           });
           
-          // Add boundary layers to map
+          // Add boundary layers to map (these should render OVER the hexagon layers)
           const boundaryLayers = boundaryService.getBoundaryLayers();
           boundaryLayers.forEach(layer => mapViewRef.current.map.add(layer));
           
+          // Add graphics layer for custom drawing (top layer)
           const graphicsLayer = new GraphicsLayer();
           mapViewRef.current.map.add(graphicsLayer);
           setSketchLayer(graphicsLayer);
@@ -157,12 +158,29 @@ export default function NewVolumeMap({
       
       // Create new hexagon layer with updated parameters  
       const newHexagonLayer = createHexagonLayer(modelCountsBy, selectedYear);
-      mapViewRef.current.map.add(newHexagonLayer);
+      
+      // Find the position to insert the hexagon layer (before boundary layers)
+      // We want hexagons to be behind boundaries, so we need to find the first boundary layer
+      const allLayers = mapViewRef.current.map.layers;
+      const boundaryLayers = boundaryService.getBoundaryLayers();
+      let insertIndex = allLayers.length; // Default to end if no boundary layers found
+      
+      // Find the index of the first boundary layer
+      for (let i = 0; i < allLayers.length; i++) {
+        const layer = allLayers.getItemAt(i);
+        if (boundaryLayers.includes(layer)) {
+          insertIndex = i;
+          break;
+        }
+      }
+      
+      // Add the hexagon layer at the calculated index (before boundary layers)
+      mapViewRef.current.map.add(newHexagonLayer, insertIndex);
       
       // Update the layer reference
       setHexagonLayer(newHexagonLayer);
     }
-  }, [modelCountsBy, selectedYear, activeTab, viewReady]); // Removed hexagonLayer from dependencies
+  }, [modelCountsBy, selectedYear, activeTab, viewReady, boundaryService]); // Added boundaryService to dependencies
 
     useEffect(() => {
     if (viewReady && boundaryService && geographicLevel && mapViewRef.current) {
