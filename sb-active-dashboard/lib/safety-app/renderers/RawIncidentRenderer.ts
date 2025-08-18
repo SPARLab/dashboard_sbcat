@@ -59,11 +59,11 @@ export class RawIncidentRenderer {
           value: "No Injury",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [0, 114, 178, 1], // Blue (#0072B2) for no injury
+            color: [0, 114, 178, 1], // Blue (#0072B2) for near miss
             size: 8,
             outline: { color: [255, 255, 255, 1], width: 1 }
           }),
-          label: "No Injury"
+          label: "Near Miss"
         },
         {
           value: "Unknown",

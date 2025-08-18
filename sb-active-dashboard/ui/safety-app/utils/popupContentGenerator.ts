@@ -56,7 +56,8 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   const severity = incidentData.severity || incidentData.maxSeverity;
   if (severity) {
     const severityColor = getSeverityColor(severity);
-    popupContent += `<p style="margin: 0 !important;"><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${severity}</span></p>`;
+    const displayLabel = getSeverityDisplayLabel(severity);
+    popupContent += `<p style="margin: 0 !important;"><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${displayLabel}</span></p>`;
   }
 
   // Involvement flags
@@ -90,7 +91,8 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
       
       if (party.injury_severity) {
         const injuryColor = getSeverityColor(party.injury_severity);
-        popupContent += ` - <span style="color: ${injuryColor};">${party.injury_severity}</span>`;
+        const displayLabel = getSeverityDisplayLabel(party.injury_severity);
+        popupContent += ` - <span style="color: ${injuryColor};">${displayLabel}</span>`;
       }
       
       if (party.age) {
@@ -140,7 +142,8 @@ export function generateRawIncidentPopupContent(
   const severity = incidentData.severity || incidentData.maxSeverity;
   if (severity) {
     const severityColor = getSeverityColor(severity);
-    popupContent += `<p style="margin: 0 !important;"><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${severity}</span></p>`;
+    const displayLabel = getSeverityDisplayLabel(severity);
+    popupContent += `<p style="margin: 0 !important;"><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${displayLabel}</span></p>`;
   }
   
   // Involvement
@@ -162,7 +165,8 @@ export function generateRawIncidentPopupContent(
       }
       if (party.injury_severity) {
         const injuryColor = getSeverityColor(party.injury_severity);
-        popupContent += ` - <span style="color: ${injuryColor};">${party.injury_severity}</span>`;
+        const displayLabel = getSeverityDisplayLabel(party.injury_severity);
+        popupContent += ` - <span style="color: ${injuryColor};">${displayLabel}</span>`;
       }
       if (party.age) {
         popupContent += ` (Age: ${party.age})`;
@@ -187,10 +191,19 @@ function getSeverityColor(severity: string): string {
   } else if (normalizedSeverity === 'injury' || normalizedSeverity === 'other visible injury') {
     return '#E69F00'; // Orange for injury
   } else if (normalizedSeverity === 'no injury') {
-    return '#0072B2'; // Blue for no injury
+    return '#0072B2'; // Blue for near miss
   } else {
     return '#999999'; // Gray for unknown
   }
+}
+
+function getSeverityDisplayLabel(severity: string): string {
+  const normalizedSeverity = severity.toLowerCase();
+  
+  if (normalizedSeverity === 'no injury') {
+    return 'Near Miss';
+  }
+  return severity; // Return original label for all other cases
 }
 
 function getInvolvementText(incidentData: IncidentPopupData): string[] {

@@ -154,9 +154,9 @@ function SeverityOfIncidentSection({
             onChange={() => toggleSeverity('Injury')}
           />
         </div>
-        <div id="safety-severity-no-injury-container">
+        <div id="safety-severity-near-miss-container">
           <SeverityToggle 
-            label="No Injury" 
+            label="Near Miss" 
             checked={currentSeverityTypes.includes('No Injury')}
             onChange={() => toggleSeverity('No Injury')}
           />
