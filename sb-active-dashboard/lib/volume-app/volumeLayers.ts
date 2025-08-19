@@ -207,13 +207,13 @@ export function createHexagonLayer(modelCountsBy: string = "cost-benefit", selec
             "fill-color": [
               "match",
               ["get", fieldName],
-              "High", getVolumeLevelColor('high', true),
-              "Medium", getVolumeLevelColor('medium', true), 
-              "Low", getVolumeLevelColor('low', true),
+              "High", getVolumeLevelColor('high', false),
+              "Medium", getVolumeLevelColor('medium', false), 
+              "Low", getVolumeLevelColor('low', false),
               "#cccccc"  // fallback color if value doesn't match
             ],
             "fill-outline-color": "#6E6E6E",
-            "fill-opacity": 0.7,
+            "fill-opacity": 1.0,
           },
         },
       ],
