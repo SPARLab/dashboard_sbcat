@@ -14,6 +14,9 @@ export default function NewVolumeApp() {
   // Count site selection state
   const [selectedCountSite, setSelectedCountSite] = useState<string | null>(null);
   
+  // Highlighted bin sites state (for histogram bin highlighting)
+  const [highlightedBinSites, setHighlightedBinSites] = useState<string[]>([]);
+  
   // Map-related state to share between components
   const [showBicyclist, setShowBicyclist] = useState(true);
   const [showPedestrian, setShowPedestrian] = useState(true);
@@ -38,6 +41,23 @@ export default function NewVolumeApp() {
   const handleMapViewReady = (view: __esri.MapView) => {
     console.log('🗺️ MapView ready for chart integration');
     setMapView(view);
+  };
+
+  // Handle bin sites highlighting
+  const handleBinSitesHighlight = (siteNames: string[]) => {
+    // console.log('🔥 App received bin sites to highlight:', siteNames);
+    setHighlightedBinSites(siteNames);
+    // Clear individual site selection when highlighting bins
+    setSelectedCountSite(null);
+  };
+
+  // Clear highlighted sites when selecting individual sites
+  const handleCountSiteSelect = (siteId: string | null) => {
+    setSelectedCountSite(siteId);
+    // Clear bin highlighting when selecting individual sites
+    if (siteId !== null) {
+      setHighlightedBinSites([]);
+    }
   };
 
   return (
@@ -70,6 +90,7 @@ export default function NewVolumeApp() {
           geographicLevel={geographicLevel}
           onSelectionChange={onSelectionChange}
           selectedCountSite={selectedCountSite}
+          highlightedBinSites={highlightedBinSites}
         />
         <NewVolumeRightSidebar 
           activeTab={activeTab}
@@ -82,7 +103,9 @@ export default function NewVolumeApp() {
           selectedAreaName={selectedAreaName}
           dateRange={dateRange}
           selectedCountSite={selectedCountSite}
-          onCountSiteSelect={setSelectedCountSite}
+          onCountSiteSelect={handleCountSiteSelect}
+          onBinSitesHighlight={handleBinSitesHighlight}
+          highlightedBinSites={highlightedBinSites}
           selectedYear={selectedYear}
         />
       </div>

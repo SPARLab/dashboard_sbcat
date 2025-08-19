@@ -50,6 +50,8 @@ interface NewVolumeRightSidebarProps {
   dateRange: DateRangeValue;
   selectedCountSite?: string | null;
   onCountSiteSelect?: (siteId: string | null) => void;
+  onBinSitesHighlight?: (siteNames: string[]) => void;
+  highlightedBinSites?: string[];
   selectedYear: number;
 }
 
@@ -65,6 +67,8 @@ export default function NewVolumeRightSidebar({
   dateRange,
   selectedCountSite,
   onCountSiteSelect,
+  onBinSitesHighlight,
+  highlightedBinSites = [],
   selectedYear
 }: NewVolumeRightSidebarProps) {
   const horizontalMargins = "mx-4";
@@ -186,13 +190,65 @@ export default function NewVolumeRightSidebar({
           return;
         }
 
-        const arrayLiteral = `[${contributingIds.join(',')}]`;
-        const valueExpression = `IIF(IndexOf(${arrayLiteral}, Number($feature.id)) > -1, 1, 0)`;
+        // Query sites to get site names for highlighted bin sites
+        let highlightedSiteIds: number[] = [];
+        if (highlightedBinSites.length > 0) {
+          console.log('🟡 Processing highlighted bin sites:', highlightedBinSites.length, 'sites');
+          
+          try {
+            // Process sites in batches to avoid SQL query limits
+            const batchSize = 50; // Process 50 sites at a time
+            const batches = [];
+            
+            for (let i = 0; i < highlightedBinSites.length; i += batchSize) {
+              batches.push(highlightedBinSites.slice(i, i + batchSize));
+            }
+            
+            console.log('🟡 Processing', batches.length, 'batches of sites');
+            
+            for (const batch of batches) {
+              // Escape single quotes in site names for SQL
+              const escapedNames = batch.map(name => name.replace(/'/g, "''"));
+              const sitesQuery = sitesLayer.createQuery();
+              sitesQuery.where = `name IN ('${escapedNames.join("','")}')`;
+              sitesQuery.outFields = ["id", "name"];
+              sitesQuery.returnGeometry = false;
+              
+              const sitesResult = await sitesLayer.queryFeatures(sitesQuery);
+              const batchIds = sitesResult.features.map(f => Number(f.attributes.id)).filter(v => Number.isFinite(v));
+              highlightedSiteIds.push(...batchIds);
+              
+              console.log('🟡 Batch found', batchIds.length, 'site IDs');
+            }
+            
+            console.log('🟡 Total highlighted site IDs:', highlightedSiteIds.length);
+          } catch (err) {
+            console.error('Error querying highlighted sites:', err);
+          }
+        }
+
+        // Create value expression for three states:
+        // 2 = highlighted bin sites (yellow/orange)
+        // 1 = contributing sites (blue) 
+        // 0 = non-contributing sites (gray)
+        const contributingArray = `[${contributingIds.join(',')}]`;
+        const highlightedArray = highlightedSiteIds.length > 0 ? `[${highlightedSiteIds.join(',')}]` : '[]';
+        
+        const valueExpression = `IIF(IndexOf(${highlightedArray}, Number($feature.id)) > -1, 2, IIF(IndexOf(${contributingArray}, Number($feature.id)) > -1, 1, 0))`;
+        console.log('🎨 Value expression:', valueExpression);
+
         const filledBlue = new SimpleMarkerSymbol({
           size: 8,
           color: [0, 102, 255, 0.95],
           outline: { width: 1, color: [255, 255, 255, 1] },
         });
+        
+        const highlightedYellow = new SimpleMarkerSymbol({
+          size: 10,
+          color: [255, 193, 7, 0.9], // Bootstrap warning yellow
+          outline: { width: 2, color: [255, 255, 255, 1] },
+        });
+        
         const hollowGray = new SimpleMarkerSymbol({
           size: 8,
           color: [0, 0, 0, 0],
@@ -202,9 +258,10 @@ export default function NewVolumeRightSidebar({
         const uvRenderer = new UniqueValueRenderer({
           valueExpression,
           uniqueValueInfos: [
-            { value: 1, symbol: filledBlue },
+            { value: 2, symbol: highlightedYellow }, // Highlighted bin sites
+            { value: 1, symbol: filledBlue },        // Contributing sites
           ],
-          defaultSymbol: hollowGray,
+          defaultSymbol: hollowGray, // Non-contributing sites
         });
 
         aadtLayer.renderer = uvRenderer;
@@ -214,7 +271,7 @@ export default function NewVolumeRightSidebar({
     };
 
     applyStyling();
-  }, [aadtLayer, selectedGeometry, dateRange.startDate, dateRange.endDate, showBicyclist, showPedestrian, sitesLayer, countsLayer]);
+  }, [aadtLayer, selectedGeometry, dateRange.startDate, dateRange.endDate, showBicyclist, showPedestrian, sitesLayer, countsLayer, highlightedBinSites]);
 
   // (moved below state declarations)
 
@@ -388,6 +445,7 @@ export default function NewVolumeRightSidebar({
                 showPedestrian={showPedestrian}
                 selectedCountSite={selectedCountSite}
                 onCountSiteSelect={onCountSiteSelect}
+                onBinSitesHighlight={onBinSitesHighlight}
               />
               <HighestVolume 
                 mapView={mapView}

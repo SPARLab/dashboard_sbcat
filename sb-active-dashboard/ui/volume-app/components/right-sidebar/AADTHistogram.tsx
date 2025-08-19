@@ -30,6 +30,7 @@ interface AADTHistogramProps {
   showPedestrian?: boolean;
   selectedCountSite?: string | null;
   onCountSiteSelect?: (siteId: string | null) => void;
+  onBinSitesHighlight?: (siteNames: string[]) => void;
 }
 
 type VisualizationMode = 'histogram' | 'individual-bars' | 'density';
@@ -40,7 +41,8 @@ export default function AADTHistogram({
   showBicyclist = true,
   showPedestrian = true,
   selectedCountSite,
-  onCountSiteSelect
+  onCountSiteSelect,
+  onBinSitesHighlight
 }: AADTHistogramProps) {
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -122,12 +124,10 @@ export default function AADTHistogram({
 
   // Handle bar click to highlight sites on map
   const handleBarClick = useCallback((params: any) => {
-    if (!onCountSiteSelect) return;
-
     if (visualizationMode === 'individual-bars') {
       // Individual bars mode - each bar represents one site
       const siteIndex = params.dataIndex;
-      if (individualSitesData[siteIndex]) {
+      if (individualSitesData[siteIndex] && onCountSiteSelect) {
         const site = individualSitesData[siteIndex];
         onCountSiteSelect(site.siteName);
       }
@@ -140,28 +140,19 @@ export default function AADTHistogram({
       
       if (sitesInBin.length === 0) return;
       
-      if (sitesInBin.length === 1) {
-        // Single site - select it directly
-        onCountSiteSelect(sitesInBin[0].siteName);
-      } else {
-        // Multiple sites - cycle through them or select the one with highest AADT
-        const currentlySelected = sitesInBin.find(site => site.siteName === selectedCountSite);
-        
-        if (currentlySelected) {
-          // If a site in this bin is already selected, cycle to the next one
-          const currentIndex = sitesInBin.indexOf(currentlySelected);
-          const nextIndex = (currentIndex + 1) % sitesInBin.length;
-          onCountSiteSelect(sitesInBin[nextIndex].siteName);
-        } else {
-          // No site in this bin is selected, select the one with highest AADT
-          const highestAADTSite = sitesInBin.reduce((prev, current) => 
-            current.aadt > prev.aadt ? current : prev
-          );
-          onCountSiteSelect(highestAADTSite.siteName);
-        }
+      // Highlight all sites in the bin on the map
+      if (onBinSitesHighlight) {
+        const siteNames = sitesInBin.map(site => site.siteName);
+        // console.log('🎯 Highlighting bin sites:', siteNames);
+        onBinSitesHighlight(siteNames);
+      }
+      
+      // Clear individual site selection when highlighting bins
+      if (onCountSiteSelect) {
+        onCountSiteSelect(null);
       }
     }
-  }, [histogramData, individualSitesData, onCountSiteSelect, selectedCountSite, visualizationMode]);
+  }, [histogramData, individualSitesData, onCountSiteSelect, onBinSitesHighlight, selectedCountSite, visualizationMode]);
 
   const onEvents = useMemo(
     () => ({
@@ -570,7 +561,7 @@ export default function AADTHistogram({
                     <>
                       <div>{`${hoveredBar.count} sites with AADT ${hoveredBar.binLabel}`}</div>
                       {histogramData?.bins[hoveredBar.binIndex]?.sites && histogramData.bins[hoveredBar.binIndex].sites.length > 1 && (
-                        <div className="text-gray-300 mt-1">Click to cycle through sites</div>
+                        <div className="text-yellow-400 mt-1">Click to highlight all sites on map</div>
                       )}
                     </>
                   )}

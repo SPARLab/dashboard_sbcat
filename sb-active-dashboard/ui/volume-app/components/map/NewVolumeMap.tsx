@@ -28,6 +28,7 @@ interface NewVolumeMapProps {
   geographicLevel: string;
   onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void;
   selectedCountSite?: string | null;
+  highlightedBinSites?: string[];
 }
 
 export default function NewVolumeMap({ 
@@ -41,6 +42,7 @@ export default function NewVolumeMap({
   geographicLevel,
   onSelectionChange,
   selectedCountSite,
+  highlightedBinSites = [],
 }: NewVolumeMapProps) {
   const mapViewRef = useRef<any>(null);
   const [viewReady, setViewReady] = useState(false);
