@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSelection } from "../../lib/hooks/useSelection";
+import { useVolumeAppStore } from "../../lib/stores/volume-app-state";
 import NewVolumeMap from "./components/map/NewVolumeMap";
 import NewVolumeLeftSidebar from "./layout/NewVolumeLeftSidebar";
 import NewVolumeRightSidebar from "./layout/NewVolumeRightSidebar";
@@ -11,11 +12,14 @@ export default function NewVolumeApp() {
   // Selection hook for polygon selection
   const { selectedGeometry, selectedAreaName, onSelectionChange } = useSelection();
   
-  // Count site selection state
-  const [selectedCountSite, setSelectedCountSite] = useState<string | null>(null);
-  
-  // Highlighted bin sites state (for histogram bin highlighting)
-  const [highlightedBinSites, setHighlightedBinSites] = useState<string[]>([]);
+  // Use Zustand store for count site selection and bin highlighting
+  const { 
+    selectedCountSite, 
+    highlightedBinSites, 
+    setSelectedCountSite, 
+    setHighlightedBinSites,
+    setMapView: setStoreMapView 
+  } = useVolumeAppStore();
   
   // Map-related state to share between components
   const [showBicyclist, setShowBicyclist] = useState(true);
@@ -41,23 +45,19 @@ export default function NewVolumeApp() {
   const handleMapViewReady = (view: __esri.MapView) => {
     console.log('🗺️ MapView ready for chart integration');
     setMapView(view);
+    setStoreMapView(view); // Also update Zustand store
   };
 
-  // Handle bin sites highlighting
+  // Handle bin sites highlighting (now handled by Zustand store)
   const handleBinSitesHighlight = (siteNames: string[]) => {
-    // console.log('🔥 App received bin sites to highlight:', siteNames);
-    setHighlightedBinSites(siteNames);
-    // Clear individual site selection when highlighting bins
-    setSelectedCountSite(null);
+    // This is now handled directly by the Zustand store in AADTHistogram
+    // Keep this function for compatibility but it's no longer needed
   };
 
-  // Clear highlighted sites when selecting individual sites
+  // Clear highlighted sites when selecting individual sites (now handled by Zustand store)
   const handleCountSiteSelect = (siteId: string | null) => {
-    setSelectedCountSite(siteId);
-    // Clear bin highlighting when selecting individual sites
-    if (siteId !== null) {
-      setHighlightedBinSites([]);
-    }
+    // This is now handled directly by the Zustand store
+    // Keep this function for compatibility but it's no longer needed
   };
 
   return (

@@ -6,6 +6,7 @@ import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import React, { useCallback, useEffect, useState } from "react";
 import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDataService";
 import { useSpatialQuery, useVolumeSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
+import { useVolumeAppStore } from "../../../lib/stores/volume-app-state";
 import { formatSparklineDateRange } from "../utils/sparklineUtils";
 import AADTHistogram from "../components/right-sidebar/AADTHistogram";
 import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVolumeBreakdown";
@@ -65,12 +66,18 @@ export default function NewVolumeRightSidebar({
   selectedGeometry,
   selectedAreaName,
   dateRange,
-  selectedCountSite,
+  selectedCountSite: selectedCountSiteProp, // Rename to avoid conflict
   onCountSiteSelect,
   onBinSitesHighlight,
-  highlightedBinSites = [],
+  highlightedBinSites: highlightedBinSitesProp = [], // Rename to avoid conflict
   selectedYear
 }: NewVolumeRightSidebarProps) {
+  // Use Zustand store for state management
+  const { 
+    selectedCountSite, 
+    highlightedBinSites, 
+    setSelectedCountSite 
+  } = useVolumeAppStore();
   const horizontalMargins = "mx-4";
 
   // Initialize layers
@@ -430,7 +437,7 @@ export default function NewVolumeRightSidebar({
                 endDate={dateRange.endDate}
                 dateRange={formatSparklineDateRange(dateRange.startDate, dateRange.endDate)}
                 selectedSiteId={selectedCountSite}
-                onSiteSelect={onCountSiteSelect}
+                onSiteSelect={setSelectedCountSite}
                 onConfidenceUpdate={handleConfidenceUpdate}
                 selectedGeometry={selectedGeometry}
                 isLoading={timelineLoading}
@@ -443,9 +450,6 @@ export default function NewVolumeRightSidebar({
                 dateRange={dateRange}
                 showBicyclist={showBicyclist}
                 showPedestrian={showPedestrian}
-                selectedCountSite={selectedCountSite}
-                onCountSiteSelect={onCountSiteSelect}
-                onBinSitesHighlight={onBinSitesHighlight}
               />
               <HighestVolume 
                 mapView={mapView}
@@ -456,7 +460,7 @@ export default function NewVolumeRightSidebar({
                 showPedestrian={showPedestrian}
                 selectedGeometry={selectedGeometry}
                 selectedSiteId={selectedCountSite}
-                onSiteSelect={onCountSiteSelect}
+                onSiteSelect={setSelectedCountSite}
               />
               <ModeBreakdown 
                 selectedGeometry={selectedGeometry}
@@ -481,7 +485,7 @@ export default function NewVolumeRightSidebar({
               dateRange={dateRange}
               isLoading={timelineLoading}
               selectedSiteId={selectedCountSite}
-              onSiteSelect={onCountSiteSelect}
+              onSiteSelect={setSelectedCountSite}
             />
           </>
         )}

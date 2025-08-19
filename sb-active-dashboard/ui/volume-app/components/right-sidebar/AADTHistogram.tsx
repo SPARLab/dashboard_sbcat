@@ -1,7 +1,7 @@
 'use client';
 import Polygon from "@arcgis/core/geometry/Polygon";
 import ReactECharts from 'echarts-for-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { 
   AADTHistogramDataService, 
   AADTHistogramResult, 
@@ -11,6 +11,7 @@ import {
 import Tooltip from '../../../components/Tooltip';
 import CollapseExpandIcon from './CollapseExpandIcon';
 import SelectRegionPlaceholder from '../../../components/SelectRegionPlaceholder';
+import { useVolumeAppStore } from '../../../../lib/stores/volume-app-state';
 
 interface HoveredBarData {
   binLabel: string;
@@ -28,9 +29,6 @@ interface AADTHistogramProps {
   dateRange: DateRangeValue;
   showBicyclist?: boolean;
   showPedestrian?: boolean;
-  selectedCountSite?: string | null;
-  onCountSiteSelect?: (siteId: string | null) => void;
-  onBinSitesHighlight?: (siteNames: string[]) => void;
 }
 
 type VisualizationMode = 'histogram' | 'individual-bars' | 'density';
@@ -40,11 +38,18 @@ export default function AADTHistogram({
   dateRange,
   showBicyclist = true,
   showPedestrian = true,
-  selectedCountSite,
-  onCountSiteSelect,
-  onBinSitesHighlight
 }: AADTHistogramProps) {
+  const { 
+    setSelectedCountSite, 
+    setHighlightedBinSites,
+    selectedCountSite, // Renamed from the prop to avoid conflict
+  } = useVolumeAppStore();
+  
+  const isSelectionFromSelf = useRef(false);
+
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
+  const [selectedBarIndex, setSelectedBarIndex] = useState<number | null>(null);
+  const chartRef = useRef<ReactECharts>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [histogramData, setHistogramData] = useState<AADTHistogramResult | null>(null);
   const [individualSitesData, setIndividualSitesData] = useState<SiteAADTData[]>([]);
@@ -118,41 +123,50 @@ export default function AADTHistogram({
         setIsLoading(false);
       }
     };
-
     fetchData();
   }, [selectedGeometry, debouncedDateRange, showBicyclist, showPedestrian, numberOfBins, visualizationMode]);
 
-  // Handle bar click to highlight sites on map
+  // Effect to clear selection when data changes
+  useEffect(() => {
+    setSelectedBarIndex(null);
+  }, [histogramData, individualSitesData, visualizationMode]);
+
+  // Click handler: sets flag, updates store, and manages visual selection
   const handleBarClick = useCallback((params: any) => {
+    // Set the selected bar index for visual feedback
+    setSelectedBarIndex(params.dataIndex);
+    
+    // Set flag to prevent self-update loop
+    isSelectionFromSelf.current = true;
+    
+    // Update global state for other components (like the map)
     if (visualizationMode === 'individual-bars') {
-      // Individual bars mode - each bar represents one site
-      const siteIndex = params.dataIndex;
-      if (individualSitesData[siteIndex] && onCountSiteSelect) {
-        const site = individualSitesData[siteIndex];
-        onCountSiteSelect(site.siteName);
-      }
+      const site = individualSitesData[params.dataIndex];
+      if (site) setSelectedCountSite(site.siteName);
     } else {
-      // Histogram mode - each bar represents multiple sites
       if (!histogramData) return;
-      
-      const binIndex = params.dataIndex;
-      const sitesInBin = AADTHistogramDataService.getSitesInAADTRange(histogramData, binIndex);
-      
-      if (sitesInBin.length === 0) return;
-      
-      // Highlight all sites in the bin on the map
-      if (onBinSitesHighlight) {
-        const siteNames = sitesInBin.map(site => site.siteName);
-        // console.log('🎯 Highlighting bin sites:', siteNames);
-        onBinSitesHighlight(siteNames);
-      }
-      
-      // Clear individual site selection when highlighting bins
-      if (onCountSiteSelect) {
-        onCountSiteSelect(null);
+      const sitesInBin = AADTHistogramDataService.getSitesInAADTRange(histogramData, params.dataIndex);
+      if (sitesInBin.length > 0) {
+        setHighlightedBinSites(sitesInBin.map(site => site.siteName));
       }
     }
-  }, [histogramData, individualSitesData, onCountSiteSelect, onBinSitesHighlight, selectedCountSite, visualizationMode]);
+  }, [histogramData, individualSitesData, visualizationMode, setSelectedCountSite, setHighlightedBinSites]);
+
+  // Sync effect: listens for EXTERNAL changes from the store
+  useEffect(() => {
+    // If the selection came from this component, ignore the update and reset the flag.
+    if (isSelectionFromSelf.current) {
+      isSelectionFromSelf.current = false;
+      return;
+    }
+
+    // Clear selected bar index when external changes happen
+    setSelectedBarIndex(null);
+    
+    // Logic to find the correct bar and dispatch 'select' or 'unselect'
+    // This runs ONLY when the map (or another component) changes the state.
+    // ...
+  }, [selectedCountSite, histogramData, individualSitesData, visualizationMode]);
 
   const onEvents = useMemo(
     () => ({
@@ -249,6 +263,11 @@ export default function AADTHistogram({
       }
     }
     
+    // Yellow highlight for selected bar (clicked bar) - HIGHEST PRIORITY
+    if (selectedBarIndex === index) {
+      color = '#eab308'; // Yellow for selected bar - overrides all other colors
+    }
+    
     return color;
   };
 
@@ -327,25 +346,59 @@ export default function AADTHistogram({
             },
           },
         },
+        barCategoryGap: 0, // No gap between categories to ensure alignment
         series: [
+          // Invisible full-height bars for better hover/click targeting
           {
-            data: individualSitesData.map((site, index) => ({
-              value: site.aadt,
+            data: individualSitesData.map(() => ({
+              value: Math.max(...individualSitesData.map(s => s.aadt)), // Use max height
               itemStyle: {
-                color: getBarColor(index),
-                borderRadius: [2, 2, 0, 0],
+                color: 'transparent', // Invisible
+                borderColor: 'transparent',
               },
             })),
             type: 'bar',
-            barWidth: individualSitesData.length > 100 ? '95%' : individualSitesData.length > 50 ? '90%' : '80%',
+            barWidth: '98%', // Wide hover target
+            barGap: '-100%', // Overlap completely with visible bars
+            z: 10, // Above visible bars for click handling
             emphasis: {
               itemStyle: {
-                borderColor: '#1f2937',
+                color: 'transparent',
+                borderColor: 'transparent',
+              },
+            },
+            silent: false, // Enable interactions
+          },
+          // Visible bars
+          {
+            data: individualSitesData.map((site, index) => {
+              const isHovered = hoveredBar?.binIndex === index;
+              const isSelected = selectedBarIndex === index;
+              return {
+                value: site.aadt,
+                itemStyle: {
+                  color: isSelected ? '#eab308' : (isHovered ? '#1e40af' : getBarColor(index)),
+                  borderRadius: [2, 2, 0, 0],
+                },
+              };
+            }),
+            type: 'bar',
+            barWidth: individualSitesData.length > 100 ? '95%' : individualSitesData.length > 50 ? '90%' : '80%',
+            z: 5,
+            select: {
+              itemStyle: {
+                color: '#eab308'
+              }
+            },
+            emphasis: {
+              itemStyle: {
+                borderColor: '#1f2d37',
                 borderWidth: 1,
                 shadowBlur: 0,
                 shadowColor: 'transparent',
               },
             },
+            silent: false, // Enable selection on visible bars
           },
         ],
         tooltip: {
@@ -424,17 +477,50 @@ export default function AADTHistogram({
             },
           },
         },
+        barCategoryGap: 0, // No gap between categories to ensure alignment
         series: [
+          // Invisible full-height bars for better hover/click targeting
           {
-            data: histogramData?.bins.map((bin, index) => ({
-              value: bin.count,
+            data: histogramData?.bins.map(() => ({
+              value: Math.max(...(histogramData?.bins.map(b => b.count) || [0])), // Use max height
               itemStyle: {
-                color: getBarColor(index),
-                borderRadius: [4, 4, 0, 0],
+                color: 'transparent', // Invisible
+                borderColor: 'transparent',
               },
             })) || [],
             type: 'bar',
+            barWidth: '95%', // Wide hover target
+            barGap: '-100%', // Overlap completely with visible bars
+            z: 10, // Above visible bars for click handling
+            emphasis: {
+              itemStyle: {
+                color: 'transparent',
+                borderColor: 'transparent',
+              },
+            },
+            silent: false, // Enable interactions
+          },
+          // Visible bars
+          {
+            data: histogramData?.bins.map((bin, index) => {
+              const isHovered = hoveredBar?.binIndex === index;
+              const isSelected = selectedBarIndex === index;
+              return {
+                value: bin.count,
+                itemStyle: {
+                  color: isSelected ? '#eab308' : (isHovered ? '#1e40af' : getBarColor(index)),
+                  borderRadius: [4, 4, 0, 0],
+                },
+              };
+            }) || [],
+            type: 'bar',
             barWidth: '70%',
+            z: 5,
+            select: {
+              itemStyle: {
+                color: '#eab308'
+              }
+            },
             emphasis: {
               itemStyle: {
                 borderColor: '#1f2937',
@@ -443,6 +529,7 @@ export default function AADTHistogram({
                 shadowColor: 'transparent',
               },
             },
+            silent: false, // Enable selection on visible bars
           },
         ],
         tooltip: {
@@ -450,16 +537,21 @@ export default function AADTHistogram({
         },
       };
     }
-  }, [histogramData, individualSitesData, selectedCountSite, visualizationMode, hoveredBar]);
+  }, [histogramData, individualSitesData, selectedCountSite, visualizationMode, hoveredBar, selectedBarIndex]);
 
   // Memoize the chart component
   const chartComponent = useMemo(
     () => (
       <div id="aadt-histogram-chart">
         <ReactECharts
+          ref={chartRef}
           option={option}
           style={{ height: '300px', width: '100%' }}
-          opts={{ renderer: 'canvas' }}
+          opts={{
+            renderer: 'canvas'
+          }}
+          notMerge={false} 
+          lazyUpdate={true} 
           onEvents={onEvents}
         />
       </div>
@@ -593,10 +685,12 @@ export default function AADTHistogram({
                   className="flex justify-center items-center"
                   style={{ height: '300px', width: '100%' }}
                 >
-                  <div className="text-center">
-                    <div className="text-gray-400 text-sm">No AADT data available for selected area</div>
-                    <div className="text-gray-300 text-xs mt-1">Try selecting a different area or adjusting the date range</div>
-                  </div>
+                  {!isLoading && (
+                    <div className="text-center">
+                      <div className="text-gray-400 text-sm">No AADT data available for selected area</div>
+                      <div className="text-gray-300 text-xs mt-1">Try selecting a different area or adjusting the date range</div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

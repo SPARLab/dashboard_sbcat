@@ -9,6 +9,7 @@ import { Box as MuiBox } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { GeographicBoundariesService } from "../../../../lib/data-services/GeographicBoundariesService";
 import { ModeledVolumeDataService } from "../../../../lib/data-services/ModeledVolumeDataService";
+import { useVolumeAppStore } from "../../../../lib/stores/volume-app-state";
 import { HourlyData, queryHourlyCounts } from "../../../../lib/volume-app/hourlyStats";
 import { createAADTLayer, createHexagonLayer } from "../../../../lib/volume-app/volumeLayers";
 import { VOLUME_LEVEL_CONFIG } from "../../../theme/volumeLevelColors";
@@ -41,9 +42,11 @@ export default function NewVolumeMap({
   onAadtLayerReady,
   geographicLevel,
   onSelectionChange,
-  selectedCountSite,
-  highlightedBinSites = [],
+  selectedCountSite: selectedCountSiteProp, // Keep for compatibility
+  highlightedBinSites: highlightedBinSitesProp = [], // Keep for compatibility
 }: NewVolumeMapProps) {
+  // Use Zustand store for state management
+  const { selectedCountSite, setMapView: setStoreMapView } = useVolumeAppStore();
   const mapViewRef = useRef<any>(null);
   const [viewReady, setViewReady] = useState(false);
 
@@ -84,10 +87,11 @@ export default function NewVolumeMap({
         // Only mark as ready after the initial navigation completes
         setViewReady(true);
         
-        // Pass mapView back to parent component  
+        // Pass mapView back to parent component and update Zustand store
         if (onMapViewReady) {
           onMapViewReady(mapView);
         }
+        setStoreMapView(mapView);
         
 
       }).catch((error: Error) => {
@@ -97,6 +101,7 @@ export default function NewVolumeMap({
         if (onMapViewReady) {
           onMapViewReady(mapView);
         }
+        setStoreMapView(mapView);
       });
     }
   };

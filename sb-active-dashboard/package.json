@@ -39,7 +39,8 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
     "tailwind-safelist-generator": "^1.0.0",
-    "tremor": "^0.0.1"
+    "tremor": "^0.0.1",
+    "zustand": "^5.0.7"
   },
   "devDependencies": {
     "@arcgis/lumina": "^4.33.1",

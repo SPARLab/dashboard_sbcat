@@ -201,22 +201,6 @@ export class AADTHistogramDataService {
 
 
   /**
-   * Format numbers for concise display in axis labels
-   */
-  private static formatAxisNumber(value: number): string {
-    if (value >= 1000000) {
-      const millions = value / 1000000;
-      // For millions, show one decimal if needed, otherwise round
-      return millions % 1 === 0 ? `${millions}M` : `${millions.toFixed(1)}M`;
-    } else if (value >= 1000) {
-      const thousands = value / 1000;
-      // For thousands, show one decimal if needed, otherwise round
-      return thousands % 1 === 0 ? `${thousands}k` : `${thousands.toFixed(1)}k`;
-    }
-    return Math.round(value).toString();
-  }
-
-  /**
    * Create histogram bins from AADT data
    */
   private static createHistogramBins(
@@ -232,7 +216,7 @@ export class AADTHistogramDataService {
     // Handle edge case where all values are the same
     if (minAADT === maxAADT) {
       return [{
-        binLabel: this.formatAxisNumber(minAADT),
+        binLabel: `${minAADT}`,
         binMin: minAADT,
         binMax: maxAADT,
         count: siteAADTs.length,
@@ -256,8 +240,8 @@ export class AADTHistogramDataService {
         return site.aadt >= binMin && (i === numberOfBins - 1 ? site.aadt <= binMax : site.aadt < binMax);
       });
 
-      // Format bin label with concise formatting
-      const binLabel = `${this.formatAxisNumber(binMin)}-${this.formatAxisNumber(binMax)}`;
+      // Format bin label
+      const binLabel = `${Math.round(binMin)}-${Math.round(binMax)}`;
 
       bins.push({
         binLabel,
@@ -297,7 +281,7 @@ export class AADTHistogramDataService {
     if (!histogramResult.bins[binIndex]) {
       return [];
     }
-    return histogramResult.bins[binIndex].sites || [];
+    return histogramResult.bins[binIndex].sites;
   }
 
   /**
