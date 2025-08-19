@@ -46,6 +46,7 @@ export default function AADTHistogram({
   } = useVolumeAppStore();
   
   const isSelectionFromSelf = useRef(false);
+  const componentRef = useRef<HTMLDivElement>(null);
 
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
   const [selectedBarIndex, setSelectedBarIndex] = useState<number | null>(null);
@@ -130,6 +131,32 @@ export default function AADTHistogram({
   useEffect(() => {
     setSelectedBarIndex(null);
   }, [histogramData, individualSitesData, visualizationMode]);
+
+  // Click outside handler to clear selection
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (componentRef.current && !componentRef.current.contains(event.target as Node)) {
+        // Clear the selected bar index
+        setSelectedBarIndex(null);
+        
+        // Clear highlighted sites on the map
+        setHighlightedBinSites([]);
+        
+        // Clear selected count site if it was selected from this component
+        if (selectedBarIndex !== null) {
+          setSelectedCountSite(null);
+        }
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('mousedown', handleClickOutside);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [selectedBarIndex, setHighlightedBinSites, setSelectedCountSite]);
 
   // Click handler: sets flag, updates store, and manages visual selection
   const handleBarClick = useCallback((params: any) => {
@@ -222,12 +249,12 @@ export default function AADTHistogram({
       const sortedAADTs = [...aadtValues].sort((a, b) => a - b);
       const medianAADT = sortedAADTs[Math.floor(sortedAADTs.length / 2)];
       
-      return `${totalSites} sites • Mean: ${formatNumber(meanAADT)} • Median: ${formatNumber(medianAADT)} • Range: ${formatNumber(minAADT)}-${formatNumber(maxAADT)}`;
+      return `${totalSites} sites  • Mean: ${formatNumber(meanAADT)}  • Median: ${formatNumber(medianAADT)}  • Range: ${formatNumber(minAADT)}-${formatNumber(maxAADT)}`;
     } else {
       if (!histogramData || histogramData.totalSites === 0) return '';
       
       const { totalSites, meanAADT, medianAADT, minAADT, maxAADT } = histogramData;
-      return `${totalSites} sites • Mean: ${formatNumber(meanAADT)} • Median: ${formatNumber(medianAADT)} • Range: ${formatNumber(minAADT)}-${formatNumber(maxAADT)}`;
+      return `${totalSites} sites  • Mean: ${formatNumber(meanAADT)}  • Median: ${formatNumber(medianAADT)}  • Range: ${formatNumber(minAADT)}-${formatNumber(maxAADT)}`;
     }
   };
 
@@ -305,7 +332,7 @@ export default function AADTHistogram({
           axisLabel: {
             show: false, // Hide individual site labels
           },
-          name: `AADT Distribution (Min: ${formatNumber(minAADT)} • Mean: ${formatNumber(meanAADT)} • Max: ${formatNumber(maxAADT)})`,
+          name: `AADT Distribution (Min: ${formatNumber(minAADT)}  • Mean: ${formatNumber(meanAADT)}  • Max: ${formatNumber(maxAADT)})`,
           nameLocation: 'middle',
           nameGap: 40,
           nameTextStyle: {
@@ -562,7 +589,7 @@ export default function AADTHistogram({
   );
 
   return (
-    <div id="aadt-histogram-container" className="rounded-lg border border-gray-200 bg-white p-4">
+    <div ref={componentRef} id="aadt-histogram-container" className="rounded-lg border border-gray-200 bg-white p-4">
       <div id="aadt-histogram-header" className="flex justify-between items-center">
         <h3 id="aadt-histogram-title" className="text-lg font-medium text-gray-900">AADT Distribution</h3>
         <CollapseExpandIcon id="aadt-histogram-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
@@ -607,7 +634,7 @@ export default function AADTHistogram({
                   </div>
                 )}
               </div>
-              <div id="aadt-histogram-stats" className="text-xs text-gray-500 mt-2">
+              <div id="aadt-histogram-stats" className="text-xs text-gray-500 mt-2 whitespace-pre">
                 {getStatsText()}
               </div>
             </div>
