@@ -498,7 +498,7 @@ export default function YearToYearVolumeComparison({
             <label htmlFor="normalization-select" className="text-xs text-gray-500">Normalization</label>
             <select
               id="normalization-select"
-              className="text-xs border border-gray-300 rounded px-1 py-0.5"
+              className="text-xs border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={normalization}
               onChange={(e) => setNormalization(e.target.value as NormalizationMode)}
             >

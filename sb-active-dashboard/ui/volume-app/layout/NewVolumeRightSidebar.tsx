@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDataService";
 import { useSpatialQuery, useVolumeSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
 import { formatSparklineDateRange } from "../utils/sparklineUtils";
+import AADTHistogram from "../components/right-sidebar/AADTHistogram";
 import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVolumeBreakdown";
 import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
 import HighestVolume from "../components/right-sidebar/HighestVolume";
@@ -379,6 +380,14 @@ export default function NewVolumeRightSidebar({
                 showBicyclist={showBicyclist}
                 showPedestrian={showPedestrian}
                 modelCountsBy={modelCountsBy}
+              />
+              <AADTHistogram
+                selectedGeometry={selectedGeometry}
+                dateRange={dateRange}
+                showBicyclist={showBicyclist}
+                showPedestrian={showPedestrian}
+                selectedCountSite={selectedCountSite}
+                onCountSiteSelect={onCountSiteSelect}
               />
               <HighestVolume 
                 mapView={mapView}
