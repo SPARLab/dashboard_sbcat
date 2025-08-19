@@ -97,6 +97,14 @@ describe('AADTHistogram', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAADTHistogramDataService.queryAADTHistogram = vi.fn().mockResolvedValue(mockHistogramResult);
+    mockAADTHistogramDataService.queryIndividualSiteAADT = vi.fn().mockResolvedValue({
+      sites: [
+        { siteId: 1, siteName: 'Site A', aadt: 50, bikeAADT: 30, pedAADT: 20 },
+        { siteId: 2, siteName: 'Site B', aadt: 75, bikeAADT: 45, pedAADT: 30 },
+        { siteId: 3, siteName: 'Site C', aadt: 150, bikeAADT: 90, pedAADT: 60 }
+      ],
+      error: null
+    });
     mockAADTHistogramDataService.getSitesInAADTRange = vi.fn().mockImplementation((result, binIndex) => {
       return result.bins[binIndex]?.sites || [];
     });

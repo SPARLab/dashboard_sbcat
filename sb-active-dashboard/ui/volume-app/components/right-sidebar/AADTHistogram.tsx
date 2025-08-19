@@ -238,7 +238,7 @@ export default function AADTHistogram({
         }
       } else if (histogramData) {
         const bin = histogramData.bins[index];
-        const isSelectedSiteInBin = bin?.sites.some(site => site.siteName === selectedCountSite);
+        const isSelectedSiteInBin = bin?.sites?.some(site => site.siteName === selectedCountSite);
         if (isSelectedSiteInBin) {
           color = '#ef4444'; // Red for selected site
         }
@@ -569,7 +569,7 @@ export default function AADTHistogram({
                   ) : (
                     <>
                       <div>{`${hoveredBar.count} sites with AADT ${hoveredBar.binLabel}`}</div>
-                      {histogramData?.bins[hoveredBar.binIndex] && histogramData.bins[hoveredBar.binIndex].sites.length > 1 && (
+                      {histogramData?.bins[hoveredBar.binIndex]?.sites && histogramData.bins[hoveredBar.binIndex].sites.length > 1 && (
                         <div className="text-gray-300 mt-1">Click to cycle through sites</div>
                       )}
                     </>
