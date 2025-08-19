@@ -16,6 +16,8 @@ interface NewVolumeLeftSidebarProps {
   setShowBicyclist: (show: boolean) => void;
   showPedestrian: boolean;
   setShowPedestrian: (show: boolean) => void;
+  selectedMode: 'bike' | 'ped';
+  onModeChange: (mode: 'bike' | 'ped') => void;
   modelCountsBy: string;
   setModelCountsBy: (type: string) => void;
   geographicLevel: string;
@@ -32,6 +34,8 @@ export default function NewVolumeLeftSidebar({
   setShowBicyclist,
   showPedestrian,
   setShowPedestrian,
+  selectedMode,
+  onModeChange,
   modelCountsBy,
   setModelCountsBy,
   geographicLevel,
@@ -55,10 +59,13 @@ export default function NewVolumeLeftSidebar({
         </>
       )}
       <RoadUserSection 
+        activeTab={activeTab}
         showBicyclist={showBicyclist}
         setShowBicyclist={setShowBicyclist}
         showPedestrian={showPedestrian}
         setShowPedestrian={setShowPedestrian}
+        selectedMode={selectedMode}
+        onModeChange={onModeChange}
       />
       <hr className="border-gray-200" />
       {activeTab === 'modeled-data' ? (

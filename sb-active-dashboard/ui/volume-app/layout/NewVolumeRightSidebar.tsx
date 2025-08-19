@@ -40,6 +40,7 @@ interface NewVolumeRightSidebarProps {
   activeTab: string;
   showBicyclist: boolean;
   showPedestrian: boolean;
+  selectedMode: 'bike' | 'ped';
   modelCountsBy: string;
   mapView?: __esri.MapView | null;
   aadtLayer?: FeatureLayer | null;
@@ -55,6 +56,7 @@ export default function NewVolumeRightSidebar({
   activeTab,
   showBicyclist,
   showPedestrian,
+  selectedMode,
   modelCountsBy,
   mapView,
   aadtLayer: aadtLayerProp,
@@ -333,6 +335,7 @@ export default function NewVolumeRightSidebar({
             mapView={mapView || undefined}
             showBicyclist={showBicyclist}
             showPedestrian={showPedestrian}
+            selectedMode={selectedMode}
             modelCountsBy={modelCountsBy}
             year={selectedYear}
             selectedGeometry={selectedGeometry}

@@ -129,8 +129,7 @@ vi.mock('@arcgis/core/core/reactiveUtils', () => ({
 describe('NewVolumeMap - Zoom-Dependent Layer Switching', () => {
   const defaultProps = {
     activeTab: 'modeled-data' as const,
-    showBicyclist: true,
-    showPedestrian: true,
+    selectedMode: 'bike' as const,
     modelCountsBy: 'cost-benefit',
     selectedYear: 2023,
     geographicLevel: 'city',
@@ -204,22 +203,19 @@ describe('NewVolumeMap - Zoom-Dependent Layer Switching', () => {
     expect(screen.getByText(/High \(≥200\)/)).toBeInTheDocument();
   });
 
-  it('should handle road user visibility toggles', async () => {
-    const { rerender } = render(<NewVolumeMap {...defaultProps} showBicyclist={true} showPedestrian={true} />);
+  it('should handle road user mode selection', async () => {
+    const { rerender } = render(<NewVolumeMap {...defaultProps} selectedMode="bike" />);
     
-    // Initially both should be enabled
+    // Initially bike mode should be selected
     await waitFor(() => {
       expect(screen.getByTestId('arcgis-map')).toBeInTheDocument();
     });
     
-    // Test with only bike enabled
-    rerender(<NewVolumeMap {...defaultProps} showBicyclist={true} showPedestrian={false} />);
+    // Test switching to pedestrian mode
+    rerender(<NewVolumeMap {...defaultProps} selectedMode="ped" />);
     
-    // Test with only pedestrian enabled  
-    rerender(<NewVolumeMap {...defaultProps} showBicyclist={false} showPedestrian={true} />);
-    
-    // Test with both disabled
-    rerender(<NewVolumeMap {...defaultProps} showBicyclist={false} showPedestrian={false} />);
+    // Verify component handles mode changes without errors
+    expect(screen.getByTestId('arcgis-map')).toBeInTheDocument();
   });
 
   it('should handle tab switching correctly', async () => {

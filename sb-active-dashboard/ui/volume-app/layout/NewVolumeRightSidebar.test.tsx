@@ -59,8 +59,7 @@ describe('NewVolumeRightSidebar - AADT site highlighting', () => {
 
     const defaultProps: React.ComponentProps<typeof NewVolumeRightSidebar> = {
       activeTab: 'raw-data',
-      showBicyclist: true,
-      showPedestrian: true,
+      selectedMode: 'bike',
       modelCountsBy: 'cost-benefit',
       mapView: null,
       aadtLayer,
@@ -125,12 +124,17 @@ describe('NewVolumeRightSidebar - AADT site highlighting', () => {
     });
   });
 
-  it('resets to hollow when both toggles are off', async () => {
-    const { aadtLayer } = renderSidebar({ showBicyclist: false, showPedestrian: false });
-
+  it('handles different mode selections', async () => {
+    // Test bike mode
+    const { aadtLayer: bikeLayer } = renderSidebar({ selectedMode: 'bike' });
     await waitFor(() => {
-      expect(aadtLayer.renderer).toBeTruthy();
-      expect('valueExpression' in (aadtLayer.renderer || {})).toBe(false);
+      expect(bikeLayer.renderer).toBeTruthy();
+    });
+
+    // Test pedestrian mode
+    const { aadtLayer: pedLayer } = renderSidebar({ selectedMode: 'ped' });
+    await waitFor(() => {
+      expect(pedLayer.renderer).toBeTruthy();
     });
   });
 
@@ -211,8 +215,7 @@ describe('NewVolumeRightSidebar - selectedYear prop handling', () => {
 
     const defaultProps: React.ComponentProps<typeof NewVolumeRightSidebar> = {
       activeTab: 'modeled-data',
-      showBicyclist: true,
-      showPedestrian: true,
+      selectedMode: 'bike',
       modelCountsBy: 'cost-benefit',
       mapView: null,
       aadtLayer,
@@ -267,8 +270,7 @@ describe('NewVolumeRightSidebar - selectedYear prop handling', () => {
     const aadtLayer: any = { title: 'AADT Count Sites', renderer: null };
     const updatedProps: React.ComponentProps<typeof NewVolumeRightSidebar> = {
       activeTab: 'modeled-data',
-      showBicyclist: true,
-      showPedestrian: true,
+      selectedMode: 'bike',
       modelCountsBy: 'cost-benefit',
       mapView: null,
       aadtLayer,

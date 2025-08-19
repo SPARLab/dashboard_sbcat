@@ -10,7 +10,9 @@ import { useEffect, useRef, useState } from "react";
 import { GeographicBoundariesService } from "../../../../lib/data-services/GeographicBoundariesService";
 import { ModeledVolumeDataService } from "../../../../lib/data-services/ModeledVolumeDataService";
 import { HourlyData, queryHourlyCounts } from "../../../../lib/volume-app/hourlyStats";
-import { createAADTLayer, createHexagonLayer, createLineSegmentGroupLayer, shouldShowLineSegments, ZOOM_THRESHOLD_FOR_LINE_SEGMENTS, applyVolumeDataStyling } from "../../../../lib/volume-app/volumeLayers";
+import { createAADTLayer, createHexagonLayer, shouldShowLineSegments, ZOOM_THRESHOLD_FOR_LINE_SEGMENTS } from "../../../../lib/volume-app/volumeLayers";
+import { createDynamicLineLayer, applyDynamicLineRenderer, isConfigurationSupported } from "../../../../lib/volume-app/DynamicLineRenderer";
+import LoadingSpinner from "../../../components/LoadingSpinner";
 import { VOLUME_LEVEL_CONFIG } from "../../../theme/volumeLevelColors";
 
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
@@ -21,6 +23,7 @@ interface NewVolumeMapProps {
   activeTab: string;
   showBicyclist: boolean;
   showPedestrian: boolean;
+  selectedMode: 'bike' | 'ped';
   modelCountsBy: string;
   selectedYear: number;
   onMapViewReady?: (mapView: __esri.MapView) => void;
@@ -32,8 +35,9 @@ interface NewVolumeMapProps {
 
 export default function NewVolumeMap({ 
   activeTab, 
-  showBicyclist, 
-  showPedestrian, 
+  showBicyclist,
+  showPedestrian,
+  selectedMode,
   modelCountsBy,
   selectedYear,
   onMapViewReady,
@@ -48,7 +52,10 @@ export default function NewVolumeMap({
   // Layer state
   const [aadtLayer, setAadtLayer] = useState<FeatureLayer | null>(null);
   const [hexagonLayer, setHexagonLayer] = useState<GroupLayer | null>(null);
-  const [lineSegmentLayer, setLineSegmentLayer] = useState<GroupLayer | null>(null);
+  const [dynamicLineLayer, setDynamicLineLayer] = useState<FeatureLayer | null>(null);
+  
+  // Loading state for line layer
+  const [isLineLayerLoading, setIsLineLayerLoading] = useState<boolean>(false);
   
   // Zoom level state for layer switching
   const [currentZoomLevel, setCurrentZoomLevel] = useState<number>(9);
@@ -120,13 +127,19 @@ export default function NewVolumeMap({
       const loadLayers = async () => {
         try {
           const aadt = await createAADTLayer();
-          const hexagon = createHexagonLayer(modelCountsBy, selectedYear);
-          const lineSegments = createLineSegmentGroupLayer(modelCountsBy, selectedYear);
+          // For modeled data, use single mode; for raw data, default to bike
+          const modeForHexagon = activeTab === 'modeled-data' ? selectedMode : 'bike';
+          const hexagon = createHexagonLayer(modelCountsBy, selectedYear, modeForHexagon);
           
           // Add volume layers to map (bottom layers)
           mapViewRef.current.map.add(aadt);
           mapViewRef.current.map.add(hexagon);
-          mapViewRef.current.map.add(lineSegments);
+          
+          // Add dynamic line layer
+          const dynamicLines = createDynamicLineLayer();
+          mapViewRef.current.map.add(dynamicLines);
+          setDynamicLineLayer(dynamicLines);
+          console.log('✅ Added dynamic line layer');
           
           // Add modeled volume service layers for spatial querying (invisible but queryable)
           const modeledLayers = modeledVolumeService.getLayers();
@@ -147,7 +160,6 @@ export default function NewVolumeMap({
           // Store layer references
           setAadtLayer(aadt);
           setHexagonLayer(hexagon);
-          setLineSegmentLayer(lineSegments);
           if (onAadtLayerReady) {
             try {
               onAadtLayerReady(aadt);
@@ -165,19 +177,17 @@ export default function NewVolumeMap({
     }
   }, [viewReady, boundaryService, modeledVolumeService]);
 
-  // Update hexagon and line segment layers when model type or year changes
+  // Update hexagon layer when model type, year, or mode changes
   useEffect(() => {
-    if (viewReady && mapViewRef.current && hexagonLayer && lineSegmentLayer && activeTab === 'modeled-data') {
-      // Remove existing layers
+    if (viewReady && mapViewRef.current && hexagonLayer && activeTab === 'modeled-data') {
+      // Remove existing hexagon layer
       mapViewRef.current.map.remove(hexagonLayer);
-      mapViewRef.current.map.remove(lineSegmentLayer);
       
-      // Create new layers with updated parameters  
-      const newHexagonLayer = createHexagonLayer(modelCountsBy, selectedYear);
-      const newLineSegmentLayer = createLineSegmentGroupLayer(modelCountsBy, selectedYear);
+      // Create new hexagon layer with updated parameters
+      const modeForHexagon = activeTab === 'modeled-data' ? selectedMode : 'bike';
+      const newHexagonLayer = createHexagonLayer(modelCountsBy, selectedYear, modeForHexagon);
       
-      // Find the position to insert the layers (before boundary layers)
-      // We want these layers to be behind boundaries, so we need to find the first boundary layer
+      // Find the position to insert the layer (before boundary layers)
       const allLayers = mapViewRef.current.map.layers;
       const boundaryLayers = boundaryService.getBoundaryLayers();
       let insertIndex = allLayers.length; // Default to end if no boundary layers found
@@ -191,15 +201,16 @@ export default function NewVolumeMap({
         }
       }
       
-      // Add the layers at the calculated index (before boundary layers)
+      // Add the layer at the calculated index (before boundary layers)
       mapViewRef.current.map.add(newHexagonLayer, insertIndex);
-      mapViewRef.current.map.add(newLineSegmentLayer, insertIndex + 1);
       
-      // Update the layer references
+      // Update the layer reference
       setHexagonLayer(newHexagonLayer);
-      setLineSegmentLayer(newLineSegmentLayer);
+      
+      // Clear existing line segment graphics when model changes
+      // Dynamic line layer will update automatically
     }
-  }, [modelCountsBy, selectedYear, activeTab, viewReady, boundaryService]); // Added boundaryService to dependencies
+  }, [modelCountsBy, selectedYear, selectedMode, activeTab, viewReady, boundaryService]);
 
     useEffect(() => {
     if (viewReady && boundaryService && geographicLevel && mapViewRef.current) {
@@ -269,117 +280,105 @@ export default function NewVolumeMap({
 
   // Control layers based on tab and model counts selection
   useEffect(() => {
-    if (aadtLayer && hexagonLayer && lineSegmentLayer) {
+    if (aadtLayer && hexagonLayer) {
       if (activeTab === 'raw-data' || activeTab === 'data-completeness') {
         // Show raw AADT data for both Raw Data and Data Completeness tabs
         aadtLayer.visible = true;
         hexagonLayer.visible = false;
-        lineSegmentLayer.visible = false;
+        // Dynamic line layer visibility controlled by zoom effect
+        // Dynamic line layer will update automatically
       } else { // 'modeled-data' tab
         aadtLayer.visible = false;
         // Show appropriate layer based on zoom level
         const showLineSegments = shouldShowLineSegments(currentZoomLevel);
         hexagonLayer.visible = !showLineSegments;
-        lineSegmentLayer.visible = showLineSegments;
+        
+        if (showLineSegments) {
+          // Set visibility based on user toggles
+          // Dynamic line layer visibility controlled by zoom effect
+        } else {
+          // Hide line segments and clear graphics when showing hexagons
+          // Dynamic line layer visibility controlled by zoom effect
+          // Dynamic line layer will update automatically
+        }
       }
     }
-  }, [activeTab, modelCountsBy, aadtLayer, hexagonLayer, lineSegmentLayer, currentZoomLevel]);
+  }, [activeTab, modelCountsBy, aadtLayer, hexagonLayer, currentZoomLevel, selectedMode, showBicyclist, showPedestrian]);
 
-  // Zoom-dependent layer switching effect
+  // DYNAMIC STYLING: Instant switch between hexagon and line views
   useEffect(() => {
-    if (activeTab === 'modeled-data' && hexagonLayer && lineSegmentLayer && mapViewRef.current) {
+    if (activeTab === 'modeled-data' && hexagonLayer && dynamicLineLayer) {
       const showLineSegments = shouldShowLineSegments(currentZoomLevel);
       
-      // Smooth transition between hexagons and line segments
       if (showLineSegments) {
-        // Zoomed in: show line segments, hide hexagons
-        hexagonLayer.visible = false;
-        lineSegmentLayer.visible = true;
-        
-        // Apply data-driven styling to line segments when they become visible
-        const applyDataStyling = async () => {
+        // ZOOM 16+: Show line segments with dynamic styling
+        const applyDynamicStyling = async () => {
           try {
-            // Apply styling to bike layer if visible
-            if (showBicyclist && lineSegmentLayer.layers) {
-              const bikeLayer = lineSegmentLayer.layers.find(layer => 
-                layer.title?.includes("Biking Network")
-              );
-              if (bikeLayer) {
-                await applyVolumeDataStyling(
-                  bikeLayer as any,
-                  modeledVolumeService,
-                  modelCountsBy,
-                  selectedYear,
-                  'bike',
-                  mapViewRef.current
-                );
-              }
-            }
+            setIsLineLayerLoading(true);
             
-            // Apply styling to pedestrian layer if visible
-            if (showPedestrian && lineSegmentLayer.layers) {
-              const pedLayer = lineSegmentLayer.layers.find(layer => 
-                layer.title?.includes("Walking Network")
-              );
-              if (pedLayer) {
-                await applyVolumeDataStyling(
-                  pedLayer as any,
-                  modeledVolumeService,
-                  modelCountsBy,
-                  selectedYear,
-                  'ped',
-                  mapViewRef.current
-                );
+            // For modeled data, use single selected mode
+            // For raw data, determine based on toggles (default to bike if both or neither)
+            let countType: 'bike' | 'ped';
+            if (activeTab === 'modeled-data') {
+              countType = selectedMode;
+            } else {
+              // Raw data logic: prefer bike if both enabled, or use whichever is enabled
+              if (showBicyclist && !showPedestrian) {
+                countType = 'bike';
+              } else if (showPedestrian && !showBicyclist) {
+                countType = 'ped';
+              } else {
+                // Both enabled or neither enabled - default to bike
+                countType = 'bike';
               }
             }
+
+            const config = {
+              modelCountsBy: modelCountsBy as 'cost-benefit' | 'strava-bias',
+              selectedYear,
+              countType
+            };
+
+            // Check if configuration is supported
+            if (!isConfigurationSupported(config)) {
+              console.warn(`⚠️ Configuration not supported: ${JSON.stringify(config)}`);
+              hexagonLayer.visible = true;
+              dynamicLineLayer.visible = false;
+              setIsLineLayerLoading(false);
+              return;
+            }
+
+            // Apply dynamic styling instantly
+            await applyDynamicLineRenderer(dynamicLineLayer, config);
+            
+            // Switch visibility
+            hexagonLayer.visible = false;
+            dynamicLineLayer.visible = true;
+            
+            console.log(`⚡ INSTANT: Switched to ${countType} line view`);
+            
           } catch (error) {
-            console.warn('Failed to apply volume data styling:', error);
+            console.error('❌ Error applying dynamic styling:', error);
+          } finally {
+            setIsLineLayerLoading(false);
           }
         };
-        
-        // Debounce the styling application to avoid excessive requests
-        const timeoutId = setTimeout(applyDataStyling, 500);
-        return () => clearTimeout(timeoutId);
-      } else {
-        // Zoomed out: show hexagons, hide line segments
-        hexagonLayer.visible = true;
-        lineSegmentLayer.visible = false;
-      }
-    }
-  }, [currentZoomLevel, activeTab, hexagonLayer, lineSegmentLayer, modeledVolumeService, modelCountsBy, selectedYear, showBicyclist, showPedestrian]);
 
-  // Control layer visibility based on road user switches (both hexagon and line segment layers)
-  useEffect(() => {
-    // Control hexagon layer visibility
-    if (hexagonLayer) {
-      const bikeLayer = hexagonLayer.layers.find(layer => layer.title === "Modeled Biking Volumes");
-      const pedLayer = hexagonLayer.layers.find(layer => layer.title === "Modeled Walking Volumes");
-      
-      if (bikeLayer) {
-        bikeLayer.visible = showBicyclist;
-      }
-      if (pedLayer) {
-        pedLayer.visible = showPedestrian;
+        applyDynamicStyling();
+        
+      } else {
+        // ZOOM < 16: Show hexagons, hide line segments
+        hexagonLayer.visible = true;
+        dynamicLineLayer.visible = false;
+        setIsLineLayerLoading(false);
       }
     }
-    
-    // Control line segment layer visibility
-    if (lineSegmentLayer) {
-      const bikeLineLayer = lineSegmentLayer.layers.find(layer => 
-        layer.title?.includes("Biking Network")
-      );
-      const pedLineLayer = lineSegmentLayer.layers.find(layer => 
-        layer.title?.includes("Walking Network")
-      );
-      
-      if (bikeLineLayer) {
-        bikeLineLayer.visible = showBicyclist;
-      }
-      if (pedLineLayer) {
-        pedLineLayer.visible = showPedestrian;
-      }
-    }
-  }, [hexagonLayer, lineSegmentLayer, showBicyclist, showPedestrian]);
+  }, [currentZoomLevel, activeTab, hexagonLayer, dynamicLineLayer, modelCountsBy, selectedYear, selectedMode, showBicyclist, showPedestrian]);
+
+  // Note: Layer visibility is now controlled by the single mode selection
+  // The hexagon layer is recreated when mode changes, so no additional visibility control needed
+
+  // Dynamic line layer handles extent changes automatically via ArcGIS FeatureLayer
 
   // Listen to map view changes to query hourly data for raw count sites
   useEffect(() => {
@@ -525,11 +524,21 @@ export default function NewVolumeMap({
           <h4 id="legend-title" className="text-sm font-medium text-gray-700 mb-2">
             {modelCountsBy === "cost-benefit" ? "Cost Benefit Tool Legend" : "Volume Legend"}
           </h4>
-          <div className="text-xs text-gray-500 mb-2">
-            {shouldShowLineSegments(currentZoomLevel) ? 
-              `Line Segments (Zoom ${currentZoomLevel.toFixed(1)})` : 
-              `Hexagon Areas (Zoom ${currentZoomLevel.toFixed(1)})`
-            }
+          <div className="text-xs text-gray-500 mb-2 flex items-center gap-2">
+            {shouldShowLineSegments(currentZoomLevel) ? (
+              <>
+                {isLineLayerLoading ? (
+                  <>
+                    <LoadingSpinner size="small" message="" />
+                    <span>Loading Line Segments (Zoom {currentZoomLevel.toFixed(1)})</span>
+                  </>
+                ) : (
+                  <span>⚡ Line Segments (Zoom {currentZoomLevel.toFixed(1)})</span>
+                )}
+              </>
+            ) : (
+              <span>📊 Hexagon Areas (Zoom {currentZoomLevel.toFixed(1)})</span>
+            )}
           </div>
           <div className="flex items-center gap-4">
             <div id="legend-low" className="flex items-center gap-1">
