@@ -274,7 +274,7 @@ export default function AADTHistogram({
           left: '60px',
           right: '20px',
           top: '20px',
-          bottom: '60px',
+          bottom: '75px',
           containLabel: false,
         },
         xAxis: {
@@ -295,7 +295,7 @@ export default function AADTHistogram({
           },
           name: `AADT Distribution (Min: ${formatNumber(minAADT)} • Mean: ${formatNumber(meanAADT)} • Max: ${formatNumber(maxAADT)})`,
           nameLocation: 'middle',
-          nameGap: 25,
+          nameGap: 40,
           nameTextStyle: {
             color: '#6b7280',
             fontSize: 12,
@@ -368,7 +368,7 @@ export default function AADTHistogram({
           left: '60px',
           right: '20px',
           top: '20px',
-          bottom: '60px',
+          bottom: '75px',
           containLabel: false,
         },
         xAxis: {
@@ -392,7 +392,7 @@ export default function AADTHistogram({
           },
           name: 'AADT (Annual Average Daily Traffic)',
           nameLocation: 'middle',
-          nameGap: 45,
+          nameGap: 60,
           nameTextStyle: {
             color: '#6b7280',
             fontSize: 12,
