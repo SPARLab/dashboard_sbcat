@@ -200,9 +200,11 @@ export default function AADTHistogram({
   // Format numbers for display
   const formatNumber = (value: number): string => {
     if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M`;
+      const formatted = (value / 1000000);
+      return formatted % 1 === 0 ? `${formatted}M` : `${Math.round(formatted)}M`;
     } else if (value >= 1000) {
-      return `${(value / 1000).toFixed(0)}K`;
+      const formatted = (value / 1000);
+      return formatted % 1 === 0 ? `${formatted}K` : `${Math.round(formatted)}K`;
     }
     return Math.round(value).toString();
   };
@@ -571,7 +573,7 @@ export default function AADTHistogram({
         )}
         {selectedGeometry && (
           <>
-            <div id="aadt-histogram-controls" className="flex items-center justify-between mt-2 mb-2">
+            <div id="aadt-histogram-controls" className="mt-2 mb-2">
               <div id="aadt-histogram-mode-control" className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <label htmlFor="aadt-histogram-mode-select" className="text-sm text-gray-600">View:</label>
@@ -605,7 +607,7 @@ export default function AADTHistogram({
                   </div>
                 )}
               </div>
-              <div id="aadt-histogram-stats" className="text-xs text-gray-500">
+              <div id="aadt-histogram-stats" className="text-xs text-gray-500 mt-2">
                 {getStatsText()}
               </div>
             </div>

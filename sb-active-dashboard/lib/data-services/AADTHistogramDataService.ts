@@ -201,6 +201,20 @@ export class AADTHistogramDataService {
 
 
   /**
+   * Format numbers for display (same as in AADTHistogram component)
+   */
+  private static formatNumber(value: number): string {
+    if (value >= 1000000) {
+      const formatted = (value / 1000000);
+      return formatted % 1 === 0 ? `${formatted}M` : `${Math.round(formatted)}M`;
+    } else if (value >= 1000) {
+      const formatted = (value / 1000);
+      return formatted % 1 === 0 ? `${formatted}K` : `${Math.round(formatted)}K`;
+    }
+    return Math.round(value).toString();
+  }
+
+  /**
    * Create histogram bins from AADT data
    */
   private static createHistogramBins(
@@ -216,7 +230,7 @@ export class AADTHistogramDataService {
     // Handle edge case where all values are the same
     if (minAADT === maxAADT) {
       return [{
-        binLabel: `${minAADT}`,
+        binLabel: this.formatNumber(minAADT),
         binMin: minAADT,
         binMax: maxAADT,
         count: siteAADTs.length,
@@ -241,7 +255,7 @@ export class AADTHistogramDataService {
       });
 
       // Format bin label
-      const binLabel = `${Math.round(binMin)}-${Math.round(binMax)}`;
+      const binLabel = `${this.formatNumber(binMin)}-${this.formatNumber(binMax)}`;
 
       bins.push({
         binLabel,
