@@ -231,8 +231,6 @@ export class ModeledVolumeDataService {
     let lowMiles = 0, mediumMiles = 0, highMiles = 0;
     let lowSegments = 0, mediumSegments = 0, highSegments = 0;
 
-    console.log(`🔍 Processing ${networkFeatures.length} network features with config:`, config);
-
     networkFeatures.forEach(networkFeature => {
       const attributes = networkFeature.attributes;
       const segmentLength = attributes.SHAPE__Length ? 
@@ -291,8 +289,6 @@ export class ModeledVolumeDataService {
         highSegments++;
       }
     });
-
-    console.log(`📊 Processed results: Low=${lowMiles.toFixed(2)} mi (${lowSegments} segments), Medium=${mediumMiles.toFixed(2)} mi (${mediumSegments} segments), High=${highMiles.toFixed(2)} mi (${highSegments} segments)`);
 
     return {
       categories: ['Low', 'Medium', 'High'],

@@ -54,11 +54,8 @@ export async function applyDynamicLineRenderer(
   lineLayer: FeatureLayer,
   config: DynamicRenderConfig
 ): Promise<void> {
-  const startTime = performance.now();
-  
   try {
     const fieldName = getAttributeFieldName(config);
-    console.log(`⚡ DYNAMIC: Applying renderer for field ${fieldName}`);
 
     // Create unique value renderer
     const renderer = new UniqueValueRenderer({
@@ -92,9 +89,6 @@ export async function applyDynamicLineRenderer(
 
     // Apply renderer instantly
     lineLayer.renderer = renderer;
-
-    const endTime = performance.now();
-    console.log(`⚡ DYNAMIC: Applied renderer in ${Math.round(endTime - startTime)}ms`);
 
   } catch (error) {
     console.error('❌ Error applying dynamic renderer:', error);

@@ -139,13 +139,11 @@ export default function NewVolumeMap({
           const dynamicLines = createDynamicLineLayer();
           mapViewRef.current.map.add(dynamicLines);
           setDynamicLineLayer(dynamicLines);
-          console.log('✅ Added dynamic line layer');
           
           // Add modeled volume service layers for spatial querying (invisible but queryable)
           const modeledLayers = modeledVolumeService.getLayers();
           modeledLayers.forEach(layer => {
             mapViewRef.current.map.add(layer);
-            console.log(`✅ Added modeled volume layer: ${layer.title}`);
           });
           
           // Add boundary layers to map (these should render OVER the hexagon layers)
@@ -354,8 +352,6 @@ export default function NewVolumeMap({
             // Switch visibility
             hexagonLayer.visible = false;
             dynamicLineLayer.visible = true;
-            
-            console.log(`⚡ INSTANT: Switched to ${countType} line view`);
             
           } catch (error) {
             console.error('❌ Error applying dynamic styling:', error);
