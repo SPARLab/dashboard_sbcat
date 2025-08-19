@@ -22,8 +22,11 @@ export default function NewVolumeApp() {
   } = useVolumeAppStore();
   
   // Map-related state to share between components
+  // For Raw Data/Data Completeness: dual selection (showBicyclist, showPedestrian)
+  // For Modeled Data: single selection (selectedMode)
   const [showBicyclist, setShowBicyclist] = useState(true);
   const [showPedestrian, setShowPedestrian] = useState(true);
+  const [selectedMode, setSelectedMode] = useState<'bike' | 'ped'>('bike');
   const [modelCountsBy, setModelCountsBy] = useState<string>("cost-benefit");
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const [aadtLayer, setAadtLayer] = useState<__esri.FeatureLayer | null>(null);
@@ -70,6 +73,8 @@ export default function NewVolumeApp() {
           setShowBicyclist={setShowBicyclist}
           showPedestrian={showPedestrian}
           setShowPedestrian={setShowPedestrian}
+          selectedMode={selectedMode}
+          onModeChange={setSelectedMode}
           modelCountsBy={modelCountsBy}
           setModelCountsBy={setModelCountsBy}
           geographicLevel={geographicLevel}
@@ -83,6 +88,7 @@ export default function NewVolumeApp() {
           activeTab={activeTab}
           showBicyclist={showBicyclist}
           showPedestrian={showPedestrian}
+          selectedMode={selectedMode}
           modelCountsBy={modelCountsBy}
           selectedYear={selectedYear}
           onMapViewReady={handleMapViewReady}
@@ -96,6 +102,7 @@ export default function NewVolumeApp() {
           activeTab={activeTab}
           showBicyclist={showBicyclist}
           showPedestrian={showPedestrian}
+          selectedMode={selectedMode}
           modelCountsBy={modelCountsBy}
           mapView={mapView}
           aadtLayer={aadtLayer}

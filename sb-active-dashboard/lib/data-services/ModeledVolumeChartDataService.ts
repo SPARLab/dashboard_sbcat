@@ -13,6 +13,7 @@ interface ChartDataConfig {
   dateRange: { start: Date; end: Date };
   year: number;
   detailLevel: 'overview' | 'detailed';
+  modelCountsBy?: 'cost-benefit' | 'strava-bias';
 }
 
 interface TrafficLevelBreakdownData {

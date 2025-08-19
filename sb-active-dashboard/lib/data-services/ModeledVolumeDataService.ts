@@ -16,6 +16,7 @@ interface ModeledDataConfig {
   countTypes: ('bike' | 'ped')[];
   dateRange: { start: Date; end: Date };
   year: number;
+  modelCountsBy?: 'cost-benefit' | 'strava-bias';
 }
 
 interface TrafficLevelData {
@@ -35,11 +36,14 @@ interface TrafficDataAttributes {
   count_type: string;
 }
 
-const BASE_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Modeled_Volumes/FeatureServer";
+const BASE_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Segment_Bicycle_and_Pedestrian_Modeled_Volumes/FeatureServer";
 
 export class ModeledVolumeDataService {
   private lineSegmentLayer: FeatureLayer | null = null;
-  private trafficDataTable: FeatureLayer | null = null;
+  private costBenefitBikesTable: FeatureLayer | null = null;
+  private costBenefitPedsTable: FeatureLayer | null = null;
+  private stravaBiasBikesTable: FeatureLayer | null = null;
+  private stravaBiasPedsTable: FeatureLayer | null = null;
   
   constructor() {
     this.initializeLayers();
@@ -49,19 +53,49 @@ export class ModeledVolumeDataService {
     // Note: Hexagon visualization layer is handled separately by volumeLayers.ts
     // This service focuses on data layers for spatial querying only
 
-    // Layer 0: StravaNetwork (for geometry)
+    // Layer 0: StravaNetwork (for geometry) - now enriched with volume level attributes
     this.lineSegmentLayer = new FeatureLayer({
       url: `${BASE_URL}/0`,
       title: "Strava Network (Geometry)",
       visible: false,
-      outFields: ["edgeuid", "streetName"] // Use lowercase 'edgeuid'
+      outFields: [
+        "id", "street", "SHAPE__Length",
+        // Cost Benefit Tool attributes
+        "cos_2019_bike", "cos_2019_ped", "cos_2020_bike", "cos_2020_ped",
+        "cos_2021_bike", "cos_2021_ped", "cos_2022_bike", "cos_2022_ped", 
+        "cos_2023_bike", "cos_2023_ped",
+        // Strava Bias Corrected attributes  
+        "str_2023_bike", "str_2023_ped"
+      ]
     });
 
-    // For now, keep using the original working table configuration
-    // TODO: We need to determine the correct table structure for the 4 separate tables
-    this.trafficDataTable = new FeatureLayer({
+    // For now, use the existing working table configuration for cost-benefit
+    // We'll need to determine the correct table numbers for the separate tables
+    this.costBenefitBikesTable = new FeatureLayer({
       url: `${BASE_URL}/4`,
       title: "Cost Benefit AADTs (Data)",
+      visible: false,
+      outFields: ["strava_id", "aadt", "year", "count_type", "network_id"]
+    });
+
+    this.costBenefitPedsTable = new FeatureLayer({
+      url: `${BASE_URL}/4`,
+      title: "Cost Benefit AADTs (Data)",
+      visible: false,
+      outFields: ["strava_id", "aadt", "year", "count_type", "network_id"]
+    });
+
+    // TODO: Update these URLs once we know the correct table numbers for Strava bias corrected data
+    this.stravaBiasBikesTable = new FeatureLayer({
+      url: `${BASE_URL}/4`,
+      title: "Strava Bias Corrected AADTs (Data)",
+      visible: false,
+      outFields: ["strava_id", "aadt", "year", "count_type", "network_id"]
+    });
+
+    this.stravaBiasPedsTable = new FeatureLayer({
+      url: `${BASE_URL}/4`,
+      title: "Strava Bias Corrected AADTs (Data)",
       visible: false,
       outFields: ["strava_id", "aadt", "year", "count_type", "network_id"]
     });
@@ -73,8 +107,51 @@ export class ModeledVolumeDataService {
     return layers;
   }
 
+  /**
+   * Get the appropriate data tables based on model type and count types
+   */
+  private getDataTablesForConfig(config: ModeledDataConfig): FeatureLayer[] {
+    const tables: FeatureLayer[] = [];
+    const modelType = config.modelCountsBy || 'cost-benefit';
+    
+    if (config.countTypes.includes('bike')) {
+      if (modelType === 'cost-benefit' && this.costBenefitBikesTable) {
+        tables.push(this.costBenefitBikesTable);
+      } else if (modelType === 'strava-bias' && this.stravaBiasBikesTable) {
+        tables.push(this.stravaBiasBikesTable);
+      }
+    }
+    
+    if (config.countTypes.includes('ped')) {
+      if (modelType === 'cost-benefit' && this.costBenefitPedsTable) {
+        tables.push(this.costBenefitPedsTable);
+      } else if (modelType === 'strava-bias' && this.stravaBiasPedsTable) {
+        tables.push(this.stravaBiasPedsTable);
+      }
+    }
+    
+    return tables;
+  }
+
   setVisibility(visible: boolean) {
     if (this.lineSegmentLayer) this.lineSegmentLayer.visible = visible;
+  }
+
+  /**
+   * Check if data is available for the given year and data source
+   */
+  isDataAvailable(year: number, dataSource: 'dillon' | 'lily'): boolean {
+    // Dillon's data (both cost-benefit and strava-bias) available for 2019-2023
+    if (dataSource === 'dillon') {
+      return year >= 2019 && year <= 2023;
+    }
+    
+    // Lily's data only available for 2023
+    if (dataSource === 'lily') {
+      return year === 2023;
+    }
+    
+    return false;
   }
 
   async getTrafficLevelData(mapView: MapView, config: ModeledDataConfig): Promise<TrafficLevelData> {
@@ -82,17 +159,26 @@ export class ModeledVolumeDataService {
   }
 
   async getTrafficLevelDataWithGeometry(mapView: MapView, config: ModeledDataConfig, geometry: Geometry): Promise<TrafficLevelData> {
-    if (!this.lineSegmentLayer || !this.trafficDataTable) {
-      console.warn('⚠️ Required layers not available - using simulation data');
+    if (!this.lineSegmentLayer) {
+      console.warn('⚠️ Line segment layer not available - using simulation data');
       return this.generateSimulatedTrafficLevelData(mapView, config);
     }
 
     try {
+      // Query the enriched geometry layer directly
       const networkQuery = this.lineSegmentLayer.createQuery();
       networkQuery.geometry = geometry;
       networkQuery.spatialRelationship = "intersects";
       networkQuery.returnGeometry = true;
-      networkQuery.outFields = ["edgeuid"];
+      networkQuery.outFields = [
+        "id", "SHAPE__Length",
+        // Cost Benefit Tool attributes
+        "cos_2019_bike", "cos_2019_ped", "cos_2020_bike", "cos_2020_ped",
+        "cos_2021_bike", "cos_2021_ped", "cos_2022_bike", "cos_2022_ped", 
+        "cos_2023_bike", "cos_2023_ped",
+        // Strava Bias Corrected attributes  
+        "str_2023_bike", "str_2023_ped"
+      ];
 
       const networkResult = await this.lineSegmentLayer.queryFeatures(networkQuery as __esri.QueryProperties);
 
@@ -100,22 +186,11 @@ export class ModeledVolumeDataService {
         return this.generateSimulatedTrafficLevelData(mapView, config, true);
       }
 
-      const edgeuids = networkResult.features.map(f => f.attributes.edgeuid).filter(id => id != null);
-      
-      if (edgeuids.length === 0) {
-        return this.generateSimulatedTrafficLevelData(mapView, config, true);
-      }
-
-      const dataQuery = this.trafficDataTable.createQuery();
-      dataQuery.where = this.buildTrafficDataWhereClause(edgeuids, config);
-      dataQuery.outFields = ["network_id", "aadt", "count_type"];
-
-      const dataResult = await this.trafficDataTable.queryFeatures(dataQuery as __esri.QueryProperties);
-      
-      return this.processJoinedTrafficData(networkResult.features, dataResult.features, config);
+      // Process the enriched geometry data directly (no joins needed)
+      return this.processEnrichedGeometryData(networkResult.features, config);
 
     } catch (error) {
-      console.error("ModeledVolumeDataService: Error processing traffic data.", error);
+      console.error("ModeledVolumeDataService: Error processing enriched geometry data.", error);
       return this.generateSimulatedTrafficLevelData(mapView, config, true);
     }
   }
@@ -135,7 +210,7 @@ export class ModeledVolumeDataService {
     // Add year filter
     clauses.push(`year = ${config.year}`);
 
-    // Add count_type filter back since we're using a single table
+    // Add count_type filter since we're using the same table for all data for now
     if (config.countTypes.length > 0) {
       const typeClause = config.countTypes.map(type => `'${type}'`).join(', ');
       clauses.push(`count_type IN (${typeClause})`);
@@ -145,6 +220,87 @@ export class ModeledVolumeDataService {
     return clauses.join(" AND ");
   }
   
+  /**
+   * Process enriched geometry data directly from the line layer attributes
+   * Uses the cos_ and str_ attributes that contain "Low", "Medium", "High" values
+   */
+  private processEnrichedGeometryData(
+    networkFeatures: __esri.Graphic[], 
+    config: ModeledDataConfig
+  ): TrafficLevelData {
+    let lowMiles = 0, mediumMiles = 0, highMiles = 0;
+    let lowSegments = 0, mediumSegments = 0, highSegments = 0;
+
+    networkFeatures.forEach(networkFeature => {
+      const attributes = networkFeature.attributes;
+      const segmentLength = attributes.SHAPE__Length ? 
+        attributes.SHAPE__Length * 0.000621371 : // Convert meters to miles
+        1; // Fallback to 1 mile if length not available
+
+      // Determine the appropriate attribute field based on config
+      const modelType = config.modelCountsBy || 'cost-benefit';
+      const year = config.year;
+      
+      let volumeLevels: string[] = [];
+      
+      // Collect volume levels for all requested count types
+      config.countTypes.forEach(countType => {
+        let attributeField: string;
+        
+        if (modelType === 'cost-benefit') {
+          attributeField = `cos_${year}_${countType}`;
+        } else if (modelType === 'strava-bias') {
+          // Strava bias corrected data only available for 2023
+          attributeField = `str_2023_${countType}`;
+        } else {
+          return; // Skip unknown model types
+        }
+        
+        const volumeLevel = attributes[attributeField];
+        if (volumeLevel && ['Low', 'Medium', 'High'].includes(volumeLevel)) {
+          volumeLevels.push(volumeLevel);
+        }
+      });
+
+      if (volumeLevels.length === 0) {
+        return; // Skip segments with no valid volume data
+      }
+
+      // Use the highest volume level when multiple count types are selected
+      // This matches the logic used in the original processJoinedTrafficData method
+      let segmentVolumeLevel: 'low' | 'medium' | 'high';
+      if (volumeLevels.includes('High')) {
+        segmentVolumeLevel = 'high';
+      } else if (volumeLevels.includes('Medium')) {
+        segmentVolumeLevel = 'medium';
+      } else {
+        segmentVolumeLevel = 'low';
+      }
+
+      // Accumulate miles and segments by volume level
+      if (segmentVolumeLevel === 'low') {
+        lowMiles += segmentLength;
+        lowSegments++;
+      } else if (segmentVolumeLevel === 'medium') {
+        mediumMiles += segmentLength;
+        mediumSegments++;
+      } else {
+        highMiles += segmentLength;
+        highSegments++;
+      }
+    });
+
+    return {
+      categories: ['Low', 'Medium', 'High'],
+      totalMiles: [lowMiles, mediumMiles, highMiles],
+      details: {
+        low: { miles: lowMiles, segments: lowSegments },
+        medium: { miles: mediumMiles, segments: mediumSegments },
+        high: { miles: highMiles, segments: highSegments }
+      }
+    };
+  }
+
   private processJoinedTrafficData(
     networkFeatures: __esri.Graphic[], 
     dataFeatures: __esri.Graphic[], 

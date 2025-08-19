@@ -17,6 +17,7 @@ interface PercentOfNetworkByVolumeLevelBarChartProps {
   mapView?: __esri.MapView;
   showBicyclist?: boolean;
   showPedestrian?: boolean;
+  selectedMode?: 'bike' | 'ped';
   modelCountsBy?: string;
   year?: number;
   selectedGeometry?: Polygon | null;
@@ -32,6 +33,7 @@ export default function PercentOfNetworkByVolumeLevelBarChart({
   mapView,
   showBicyclist = true,
   showPedestrian = true,
+  selectedMode,
   modelCountsBy = 'cost-benefit',
   year = 2023,
   selectedGeometry
@@ -42,7 +44,26 @@ export default function PercentOfNetworkByVolumeLevelBarChart({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!selectedGeometry || dataType !== 'modeled-data' || !mapView || modelCountsBy !== 'cost-benefit' || (!showBicyclist && !showPedestrian)) {
+    if (!selectedGeometry || dataType !== 'modeled-data' || !mapView || (modelCountsBy !== 'cost-benefit' && modelCountsBy !== 'strava-bias')) {
+      setChartData([]);
+      setIsLoading(false);
+      return;
+    }
+
+    // Determine count types based on mode
+    let countTypes: ('bike' | 'ped')[];
+    if (selectedMode) {
+      // Single mode selection (for modeled data)
+      countTypes = [selectedMode];
+    } else {
+      // Dual mode selection (for raw data - though this chart is only for modeled data)
+      countTypes = [
+        ...(showBicyclist ? ['bike' as const] : []),
+        ...(showPedestrian ? ['ped' as const] : [])
+      ];
+    }
+
+    if (countTypes.length === 0) {
       setChartData([]);
       setIsLoading(false);
       return;
@@ -56,13 +77,11 @@ export default function PercentOfNetworkByVolumeLevelBarChart({
         const modeledService = new ModeledVolumeChartDataService();
         const trafficData = await modeledService.getTrafficLevelBreakdownData(mapView, {
           dataSource: 'dillon',
-          countTypes: [
-            ...(showBicyclist ? ['bike' as const] : []),
-            ...(showPedestrian ? ['ped' as const] : [])
-          ],
+          countTypes,
           dateRange: { start: new Date(year, 0, 1), end: new Date(year, 11, 31) },
           year,
-          detailLevel: 'overview'
+          detailLevel: 'overview',
+          modelCountsBy: modelCountsBy as 'cost-benefit' | 'strava-bias'
         }, selectedGeometry);
         
         const newChartData = trafficData.categories.map((category, index) => ({
@@ -83,7 +102,7 @@ export default function PercentOfNetworkByVolumeLevelBarChart({
 
     fetchTrafficLevelData();
     
-  }, [dataType, mapView, showBicyclist, showPedestrian, modelCountsBy, year, selectedGeometry]);
+  }, [dataType, mapView, showBicyclist, showPedestrian, selectedMode, modelCountsBy, year, selectedGeometry]);
 
   const onEvents = useMemo(() => ({
     mouseover: (params: ChartEventParams) => setHoveredBar({ value: params.value }),

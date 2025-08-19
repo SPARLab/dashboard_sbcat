@@ -5,9 +5,43 @@ import GroupLayer from "@arcgis/core/layers/GroupLayer";
 import Field from "@arcgis/core/layers/support/Field";
 import VectorTileLayer from "@arcgis/core/layers/VectorTileLayer";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
+import UniqueValueRenderer from "@arcgis/core/renderers/UniqueValueRenderer";
 import ColorVariable from "@arcgis/core/renderers/visualVariables/ColorVariable";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
+import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
+import CIMSymbol from "@arcgis/core/symbols/CIMSymbol";
 import { getVolumeLevelColor } from "../../ui/theme/volumeLevelColors";
+
+// ========================================
+// SMART VIEWPORT-BASED LOADING SYSTEM
+// ========================================
+
+// Viewport-specific cache for line segments and volume data
+const viewportLineCache = new Map<string, Map<number, __esri.Graphic>>();
+const viewportVolumeCache = new Map<string, Map<number, string>>();
+let isViewportLoadingActive = false;
+
+// Track current viewport extent for cache management
+let lastViewportExtent: __esri.Extent | null = null;
+const VIEWPORT_CACHE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+interface ViewportCacheEntry {
+  data: Map<number, string> | Map<number, __esri.Graphic>;
+  timestamp: number;
+  extent: __esri.Extent;
+}
+
+// Create cache key for viewport-based data
+function createViewportCacheKey(
+  modelCountsBy: string, 
+  selectedYear: number, 
+  countType: 'bike' | 'ped', 
+  extent: __esri.Extent
+): string {
+  // Create a simplified extent key for caching
+  const extentKey = `${Math.round(extent.xmin)}_${Math.round(extent.ymin)}_${Math.round(extent.xmax)}_${Math.round(extent.ymax)}`;
+  return `${modelCountsBy}_${selectedYear}_${countType}_${extentKey}`;
+}
 
 // Create AADT Feature Layer for count sites
 export async function createAADTLayer() {
@@ -138,7 +172,7 @@ export async function createAADTLayer() {
 }
 
 // Create Hexagon Vector Tile Layer for modeled volumes
-export function createHexagonLayer(modelCountsBy: string = "cost-benefit", selectedYear: number = 2023) {
+export function createHexagonLayer(modelCountsBy: string = "cost-benefit", selectedYear: number = 2023, countType: 'bike' | 'ped' = 'bike') {
   // Determine field names based on model type and year
   const getFieldName = (countType: 'bike' | 'ped') => {
     if (modelCountsBy === "cost-benefit") {
@@ -149,9 +183,11 @@ export function createHexagonLayer(modelCountsBy: string = "cost-benefit", selec
     return `cos_${selectedYear}_${countType}`; // fallback
   };
 
-  const bikeFieldName = getFieldName("bike");
-  const pedFieldName = getFieldName("ped");
-  const bikeHexagonTile = new VectorTileLayer({
+  const fieldName = getFieldName(countType);
+  const title = countType === 'bike' ? "Modeled Biking Volumes" : "Modeled Walking Volumes";
+  const layerId = countType === 'bike' ? "AADBT" : "AADPT";
+  
+  const hexagonTile = new VectorTileLayer({
     style: {
       version: 8,
       sources: {
@@ -162,7 +198,7 @@ export function createHexagonLayer(modelCountsBy: string = "cost-benefit", selec
       },
       layers: [
         {
-          id: "AADBT",
+          id: layerId,
           type: "fill",
           source: "esri",
           "source-layer": "HexagonAADT",
@@ -170,67 +206,472 @@ export function createHexagonLayer(modelCountsBy: string = "cost-benefit", selec
           paint: {
             "fill-color": [
               "match",
-              ["get", bikeFieldName],
-              "High", getVolumeLevelColor('high', true),
-              "Medium", getVolumeLevelColor('medium', true), 
-              "Low", getVolumeLevelColor('low', true),
+              ["get", fieldName],
+              "High", getVolumeLevelColor('high', false),
+              "Medium", getVolumeLevelColor('medium', false), 
+              "Low", getVolumeLevelColor('low', false),
               "#cccccc"  // fallback color if value doesn't match
             ],
             "fill-outline-color": "#6E6E6E",
-            "fill-opacity": 0.7,
+            "fill-opacity": 1.0,
           },
         },
       ],
     },
-    title: "Modeled Biking Volumes",
+    title: title,
     visible: true,
     opacity: 1,
   });
 
-  const pedHexagonTile = new VectorTileLayer({
-    style: {
-      version: 8,
-      sources: {
-        esri: {
-          url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/HexagonModeledVolumes/VectorTileServer",
-          type: "vector",
-        },
-      },
-      layers: [
-        {
-          id: "AADPT",
-          type: "fill",
-          source: "esri",
-          "source-layer": "HexagonAADT",
-          layout: {},
-          paint: {
-            "fill-color": [
-              "match",
-              ["get", pedFieldName],
-              "High", getVolumeLevelColor('high', true),
-              "Medium", getVolumeLevelColor('medium', true),
-              "Low", getVolumeLevelColor('low', true), 
-              "#cccccc"  // fallback color if value doesn't match
-            ],
-            "fill-outline-color": "#6E6E6E",
-            "fill-opacity": 0.7,
-          },
-        },
-      ],
-    },
-    title: "Modeled Walking Volumes",
-    visible: true,
-    opacity: 0.5,
-  });
-
-  // Create a group layer for the hexagon layers
+  // Create a group layer for the single hexagon layer (for consistency with existing code)
   const hexagonGroupLayer = new GroupLayer({
-    layers: [bikeHexagonTile, pedHexagonTile],
+    layers: [hexagonTile],
     title: "Modeled Volumes",
     visibilityMode: "independent",
   });
 
   return hexagonGroupLayer;
+}
+
+/**
+ * Create line segment layers for modeled volume visualization
+ * Uses the StravaNetwork geometry layer with client-side data joining for styling
+ */
+export function createLineSegmentLayer(modelCountsBy: string = "cost-benefit", selectedYear: number = 2023, countType: 'bike' | 'ped' = 'bike') {
+  // Base URL for the modeled volumes service
+  const BASE_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Modeled_Volumes/FeatureServer";
+  
+  // Layer 0: StravaNetwork (geometry)
+  const geometryLayerUrl = `${BASE_URL}/0`;
+  
+  // Create the geometry layer title
+  const layerTitle = `Modeled ${countType === 'bike' ? 'Biking' : 'Walking'} Network (${modelCountsBy === 'cost-benefit' ? 'Cost Benefit' : 'Strava Bias'})`;
+  
+  // Create the layer with default styling (will be enhanced with data-driven styling)
+  const lineSegmentLayer = new FeatureLayer({
+    url: geometryLayerUrl,
+    title: layerTitle,
+    visible: true,
+    opacity: 0.8,
+    outFields: ["edgeuid", "streetName"],
+    popupTemplate: {
+      title: "Street Segment: {streetName}",
+      content: [
+        {
+          type: "fields",
+          fieldInfos: [
+            {
+              fieldName: "streetName",
+              label: "Street Name",
+            },
+            {
+              fieldName: "edgeuid",
+              label: "Edge ID",
+            }
+          ],
+        },
+        {
+          type: "text", 
+          text: `<p><em>Volume data for ${countType === 'bike' ? 'cycling' : 'walking'} in ${selectedYear} (${modelCountsBy === 'cost-benefit' ? 'Cost Benefit Tool' : 'Strava Bias Corrected'} model)</em></p>`
+        }
+      ],
+    },
+    // Start with a simple renderer (will be enhanced with data joins)
+    renderer: createBasicLineRenderer(),
+    // Performance optimization
+    maxScale: 0,
+    minScale: 0,
+    // Filter out null edge IDs for performance
+    definitionExpression: `edgeuid IS NOT NULL AND edgeuid > 0`,
+  });
+
+  return lineSegmentLayer;
+}
+
+/**
+ * Create a basic line renderer for the geometry layer
+ * This will be the fallback when no data is available
+ */
+function createBasicLineRenderer(): SimpleRenderer {
+  const symbol = new SimpleLineSymbol({
+    color: '#888888', // Gray fallback color
+    width: 2,
+    style: "solid",
+    cap: "round",
+    join: "round"
+  });
+
+  return new SimpleRenderer({
+    symbol: symbol
+  });
+}
+
+/**
+ * Create a line renderer that colors line segments based on volume levels
+ */
+function createVolumeLineRenderer(): SimpleRenderer {
+  // Create line symbols for each volume level
+  const createLineSymbol = (color: string, width: number = 3): SimpleLineSymbol => {
+    return new SimpleLineSymbol({
+      color: color,
+      width: width,
+      style: "solid",
+      cap: "round",
+      join: "round"
+    });
+  };
+
+  // For now, create a simple renderer that will be enhanced with data joins
+  // We'll use a ColorVariable to map AADT values to colors
+  const renderer = new SimpleRenderer({
+    symbol: createLineSymbol('#cccccc', 2), // Default fallback color
+    visualVariables: [
+      new ColorVariable({
+        field: "aadt", // This field will come from the joined data
+        stops: [
+          {
+            value: 0,
+            color: getVolumeLevelColor('low'), // Green for low volume
+            label: "Low Volume (< 50)"
+          },
+          {
+            value: 50,
+            color: getVolumeLevelColor('medium'), // Orange for medium volume  
+            label: "Medium Volume (50-200)"
+          },
+          {
+            value: 200,
+            color: getVolumeLevelColor('high'), // Red for high volume
+            label: "High Volume (≥ 200)"
+          }
+        ],
+        legendOptions: {
+          title: "Daily Volume (AADT)"
+        }
+      })
+    ]
+  });
+
+  return renderer;
+}
+
+/**
+ * Create line segment group layer containing both bike and pedestrian layers
+ */
+export function createLineSegmentGroupLayer(modelCountsBy: string = "cost-benefit", selectedYear: number = 2023): GroupLayer {
+  const bikeLayer = createLineSegmentLayer(modelCountsBy, selectedYear, 'bike');
+  const pedLayer = createLineSegmentLayer(modelCountsBy, selectedYear, 'ped');
+  
+  // Initially show both layers (visibility controlled by UI toggles)
+  bikeLayer.visible = true;
+  pedLayer.visible = true;
+
+  const groupLayer = new GroupLayer({
+    title: "Modeled Volume Line Segments",
+    layers: [bikeLayer, pedLayer],
+    visibilityMode: "independent",
+    visible: false, // Initially hidden, will be shown when zoomed in
+  });
+
+  return groupLayer;
+}
+
+/**
+ * Optimal zoom level threshold for switching between hexagons and line segments
+ * Based on analysis of typical street network density and visibility
+ */
+export const ZOOM_THRESHOLD_FOR_LINE_SEGMENTS = 16;
+export const ZOOM_PRELOAD_THRESHOLD = 13; // Start pre-loading at zoom 13
+
+/**
+ * SMART LOADING: Pre-load line segments for current viewport at zoom 13
+ * This ensures smooth experience when user reaches zoom 16
+ */
+export async function preloadViewportLines(
+  mapView: __esri.MapView,
+  modelCountsBy: string,
+  selectedYear: number,
+  countType: 'bike' | 'ped'
+): Promise<void> {
+  if (isViewportLoadingActive) {
+    console.log('🔄 Viewport loading already in progress...');
+    return;
+  }
+
+  const currentExtent = mapView.extent;
+  const cacheKey = createViewportCacheKey(modelCountsBy, selectedYear, countType, currentExtent);
+
+  // Check if we already have this viewport cached
+  if (viewportLineCache.has(cacheKey) && viewportVolumeCache.has(cacheKey)) {
+    console.log('📦 Viewport data already cached');
+    return;
+  }
+
+  isViewportLoadingActive = true;
+  console.log(`🎯 SMART LOADING: Pre-loading lines for viewport at zoom ${mapView.zoom}`);
+
+  try {
+    // Step 1: Query line segments within current viewport
+    const geometryLayer = new FeatureLayer({
+      url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Segment_Bicycle_and_Pedestrian_Modeled_Volumes/FeatureServer/0",
+      outFields: ["edgeuid"]
+    });
+
+    const geometryQuery = geometryLayer.createQuery();
+    geometryQuery.geometry = currentExtent;
+    geometryQuery.spatialRelationship = "intersects";
+    geometryQuery.where = "edgeuid IS NOT NULL AND edgeuid > 0";
+    geometryQuery.outFields = ["edgeuid"];
+    geometryQuery.returnGeometry = false;
+
+    const geometryResult = await geometryLayer.queryFeatures(geometryQuery);
+    console.log(`🎯 Found ${geometryResult.features.length} line segments in viewport`);
+
+    if (geometryResult.features.length === 0) {
+      isViewportLoadingActive = false;
+      return;
+    }
+
+    // Step 2: Get volume data for these specific segments
+    const BASE_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Segment_Bicycle_and_Pedestrian_Modeled_Volumes/FeatureServer";
+    const tableLayerNumber = modelCountsBy === 'cost-benefit' 
+      ? (countType === 'bike' ? 1 : 2) 
+      : (countType === 'bike' ? 3 : 4);
+
+    const dataTableLayer = new FeatureLayer({
+      url: `${BASE_URL}/${tableLayerNumber}`,
+      outFields: ["edge_uid", "aadt_bin", "model_year"]
+    });
+
+    // Create WHERE clause for only the segments in viewport
+    const edgeIds = geometryResult.features
+      .map(f => f.attributes.edgeuid)
+      .filter(id => id != null);
+
+    if (edgeIds.length === 0) {
+      isViewportLoadingActive = false;
+      return;
+    }
+
+    const whereClause = `model_year = ${selectedYear} AND aadt_bin IS NOT NULL AND edge_uid IN (${edgeIds.join(',')})`;
+
+    const volumeQuery = dataTableLayer.createQuery();
+    volumeQuery.where = whereClause;
+    volumeQuery.outFields = ["edge_uid", "aadt_bin"];
+    volumeQuery.returnGeometry = false;
+
+    const volumeResult = await dataTableLayer.queryFeatures(volumeQuery);
+
+    // Step 3: Cache the results
+    const lineSegmentMap = new Map<number, __esri.Graphic>();
+    geometryResult.features.forEach(feature => {
+      const edgeuid = feature.attributes.edgeuid;
+      if (edgeuid) {
+        lineSegmentMap.set(edgeuid, feature);
+      }
+    });
+
+    const volumeDataMap = new Map<number, string>();
+    volumeResult.features.forEach(feature => {
+      const edge_uid = feature.attributes.edge_uid;
+      const aadtBin = feature.attributes.aadt_bin;
+      if (edge_uid && aadtBin) {
+        volumeDataMap.set(edge_uid, aadtBin);
+      }
+    });
+
+    // Cache both datasets
+    viewportLineCache.set(cacheKey, lineSegmentMap);
+    viewportVolumeCache.set(cacheKey, volumeDataMap);
+    lastViewportExtent = currentExtent;
+
+    console.log(`✅ SMART LOADING: Cached ${lineSegmentMap.size} line segments and ${volumeDataMap.size} volume records for viewport`);
+
+  } catch (error) {
+    console.error('❌ Error pre-loading viewport lines:', error);
+  } finally {
+    isViewportLoadingActive = false;
+  }
+}
+
+/**
+ * INSTANT DISPLAY: Apply styling using pre-loaded viewport data
+ */
+export async function applyViewportStyling(
+  lineSegmentLayer: FeatureLayer,
+  mapView: __esri.MapView,
+  modelCountsBy: string,
+  selectedYear: number,
+  countType: 'bike' | 'ped'
+): Promise<void> {
+  const currentExtent = mapView.extent;
+  const cacheKey = createViewportCacheKey(modelCountsBy, selectedYear, countType, currentExtent);
+
+  // Check if we have cached data for this viewport
+  const cachedLines = viewportLineCache.get(cacheKey);
+  const cachedVolume = viewportVolumeCache.get(cacheKey);
+
+  if (!cachedLines || !cachedVolume) {
+    console.log('📥 No cached viewport data, loading now...');
+    await preloadViewportLines(mapView, modelCountsBy, selectedYear, countType);
+    return applyViewportStyling(lineSegmentLayer, mapView, modelCountsBy, selectedYear, countType);
+  }
+
+  console.log(`⚡ INSTANT: Applying styling from cached viewport data (${cachedLines.size} segments)`);
+  const startTime = performance.now();
+
+  try {
+    // Create unique value infos for renderer
+    const uniqueValueInfos: any[] = [];
+
+    cachedLines.forEach((feature, edgeuid) => {
+      const volumeLevel = cachedVolume.get(edgeuid);
+
+      if (volumeLevel) {
+        let color = '#888888';
+        let label = 'Unknown Volume';
+
+        switch (volumeLevel) {
+          case 'Low':
+            color = getVolumeLevelColor('low');
+            label = 'Low Volume (< 50)';
+            break;
+          case 'Medium':
+            color = getVolumeLevelColor('medium');
+            label = 'Medium Volume (50-200)';
+            break;
+          case 'High':
+            color = getVolumeLevelColor('high');
+            label = 'High Volume (≥ 200)';
+            break;
+        }
+
+        uniqueValueInfos.push({
+          value: edgeuid,
+          symbol: new SimpleLineSymbol({
+            color: color,
+            width: 3,
+            style: "solid",
+            cap: "round",
+            join: "round"
+          }),
+          label: label
+        });
+      }
+    });
+
+    // Apply the renderer
+    const renderer = new UniqueValueRenderer({
+      field: "edgeuid",
+      defaultSymbol: new SimpleLineSymbol({
+        color: '#cccccc',
+        width: 1,
+        style: "solid"
+      }),
+      uniqueValueInfos: uniqueValueInfos,
+      legendOptions: {
+        title: "Volume Level"
+      }
+    });
+
+    lineSegmentLayer.renderer = renderer;
+
+    const endTime = performance.now();
+    console.log(`⚡ INSTANT: Applied viewport styling in ${Math.round(endTime - startTime)}ms (${uniqueValueInfos.length} styled segments)`);
+
+  } catch (error) {
+    console.error('❌ Error applying viewport styling:', error);
+  }
+}
+
+/**
+ * Clear viewport cache (useful for debugging)
+ */
+export function clearViewportCache(): void {
+  viewportLineCache.clear();
+  viewportVolumeCache.clear();
+  lastViewportExtent = null;
+  console.log('🗑️ Cleared viewport cache');
+}
+
+/**
+ * Check if current zoom level should show line segments instead of hexagons
+ */
+export function shouldShowLineSegments(zoomLevel: number): boolean {
+  return zoomLevel >= ZOOM_THRESHOLD_FOR_LINE_SEGMENTS;
+}
+
+/**
+ * Apply data-driven styling to line segment layers using volume data
+ * This function queries the data service and applies appropriate renderers
+ */
+export async function applyVolumeDataStyling(
+  lineSegmentLayer: FeatureLayer, 
+  modeledVolumeService: any, 
+  modelCountsBy: string, 
+  selectedYear: number, 
+  countType: 'bike' | 'ped',
+  mapView: any
+): Promise<void> {
+  try {
+    // Create a configuration for the data service
+    const config = {
+      dataSource: 'dillon' as const,
+      countTypes: [countType],
+      dateRange: { start: new Date(selectedYear, 0, 1), end: new Date(selectedYear, 11, 31) },
+      year: selectedYear,
+      modelCountsBy: modelCountsBy as 'cost-benefit' | 'strava-bias'
+    };
+
+    // Get the volume data with current map extent
+    const volumeData = await modeledVolumeService.getTrafficLevelDataWithGeometry(
+      mapView, 
+      config, 
+      mapView.extent
+    );
+
+    // For now, apply a simple renderer based on the volume level distribution
+    // This will be enhanced when we have better data join capabilities
+    const renderer = createEnhancedLineRenderer(volumeData);
+    lineSegmentLayer.renderer = renderer;
+
+    console.log(`✅ Applied volume data styling to ${countType} line layer for ${modelCountsBy} model`);
+  } catch (error) {
+    console.warn(`⚠️ Could not apply volume data styling to line layer:`, error);
+    // Keep the basic renderer as fallback
+  }
+}
+
+/**
+ * Create an enhanced line renderer that incorporates volume data patterns
+ */
+function createEnhancedLineRenderer(volumeData: any): SimpleRenderer {
+  // Determine the dominant volume level based on the data
+  const { low, medium, high } = volumeData.details || { low: { miles: 0 }, medium: { miles: 0 }, high: { miles: 0 } };
+  const totalMiles = low.miles + medium.miles + high.miles;
+  
+  let dominantColor = getVolumeLevelColor('medium'); // Default to medium
+  
+  if (totalMiles > 0) {
+    if (high.miles / totalMiles > 0.4) {
+      dominantColor = getVolumeLevelColor('high');
+    } else if (low.miles / totalMiles > 0.6) {
+      dominantColor = getVolumeLevelColor('low');
+    }
+  }
+
+  // Create a graduated symbol renderer for line segments
+  const symbol = new SimpleLineSymbol({
+    color: dominantColor,
+    width: 3,
+    style: "solid",
+    cap: "round",
+    join: "round"
+  });
+
+  return new SimpleRenderer({
+    symbol: symbol
+  });
 }
 
 // Function to get AADT statistics for charts

@@ -31,8 +31,7 @@ describe('PercentOfNetworkByVolumeLevelBarChart', () => {
     dataType: 'modeled-data',
     horizontalMargins: 'mx-4',
     mapView: mockMapView,
-    showBicyclist: true,
-    showPedestrian: true,
+    selectedMode: 'bike' as const,
     modelCountsBy: 'cost-benefit',
     year: 2023,
     selectedGeometry: mockGeometry
@@ -77,29 +76,10 @@ describe('PercentOfNetworkByVolumeLevelBarChart', () => {
     });
   });
 
-  it('should pass correct count types when both bike and ped selected', async () => {
+  it('should pass correct count type for bike mode', async () => {
     render(<PercentOfNetworkByVolumeLevelBarChart 
       {...defaultProps} 
-      showBicyclist={true} 
-      showPedestrian={true}
-    />);
-
-    await waitFor(() => {
-      expect(mockGetTrafficLevelBreakdownData).toHaveBeenCalledWith(
-        mockMapView,
-        expect.objectContaining({
-          countTypes: ['bike', 'ped']
-        }),
-        mockGeometry
-      );
-    });
-  });
-
-  it('should pass only bike when pedestrian disabled', async () => {
-    render(<PercentOfNetworkByVolumeLevelBarChart 
-      {...defaultProps} 
-      showBicyclist={true} 
-      showPedestrian={false}
+      selectedMode="bike"
     />);
 
     await waitFor(() => {
@@ -107,6 +87,23 @@ describe('PercentOfNetworkByVolumeLevelBarChart', () => {
         mockMapView,
         expect.objectContaining({
           countTypes: ['bike']
+        }),
+        mockGeometry
+      );
+    });
+  });
+
+  it('should pass correct count type for pedestrian mode', async () => {
+    render(<PercentOfNetworkByVolumeLevelBarChart 
+      {...defaultProps} 
+      selectedMode="ped"
+    />);
+
+    await waitFor(() => {
+      expect(mockGetTrafficLevelBreakdownData).toHaveBeenCalledWith(
+        mockMapView,
+        expect.objectContaining({
+          countTypes: ['ped']
         }),
         mockGeometry
       );
@@ -194,15 +191,15 @@ describe('PercentOfNetworkByVolumeLevelBarChart', () => {
     expect(mockGetTrafficLevelBreakdownData).not.toHaveBeenCalled();
   });
 
-  it('should require at least one count type enabled', () => {
+  it('should always have a selected mode', () => {
+    // With the radio button implementation, there's always a selected mode
     render(<PercentOfNetworkByVolumeLevelBarChart 
       {...defaultProps} 
-      showBicyclist={false}
-      showPedestrian={false}
+      selectedMode="bike"
     />);
     
-    expect(screen.queryByTestId('echarts-mock')).not.toBeInTheDocument();
-    expect(mockGetTrafficLevelBreakdownData).not.toHaveBeenCalled();
+    expect(screen.getByTestId('echarts-mock')).toBeInTheDocument();
+    expect(mockGetTrafficLevelBreakdownData).toHaveBeenCalled();
   });
 
   it('should refetch data when year changes', async () => {
