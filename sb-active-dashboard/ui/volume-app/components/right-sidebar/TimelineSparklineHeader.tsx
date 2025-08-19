@@ -49,12 +49,14 @@ export default function TimelineSparklineHeader({
     >
       <div id="timeline-sparkline-header-content" className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div id="timeline-sparkline-header-icon-container" className="w-4 h-4 flex-shrink-0">
-            {displayIcon}
-          </div>
+          {displayIcon && (
+            <div id="timeline-sparkline-header-icon-container" className="w-4 h-4 flex-shrink-0">
+              {displayIcon}
+            </div>
+          )}
           <p
             id="timeline-sparkline-header-text"
-            className={`text-xs ${displayTextColor} leading-tight`}
+            className={`text-sm font-medium ${displayTextColor} leading-tight`}
           >
             {displayText}
           </p>

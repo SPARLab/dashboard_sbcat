@@ -6,6 +6,7 @@ import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import React, { useCallback, useEffect, useState } from "react";
 import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDataService";
 import { useSpatialQuery, useVolumeSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
+import { formatSparklineDateRange } from "../utils/sparklineUtils";
 import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVolumeBreakdown";
 import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
 import HighestVolume from "../components/right-sidebar/HighestVolume";
@@ -372,7 +373,7 @@ export default function NewVolumeRightSidebar({
                 sites={timelineData}
                 startDate={dateRange.startDate}
                 endDate={dateRange.endDate}
-                dateRange={`${dateRange.startDate.toLocaleDateString()} - ${dateRange.endDate.toLocaleDateString()}`}
+                dateRange={formatSparklineDateRange(dateRange.startDate, dateRange.endDate)}
                 selectedSiteId={selectedCountSite}
                 onSiteSelect={onCountSiteSelect}
                 onConfidenceUpdate={handleConfidenceUpdate}
