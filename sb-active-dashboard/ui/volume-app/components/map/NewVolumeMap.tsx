@@ -50,7 +50,7 @@ export default function NewVolumeMap({
   highlightedBinSites: highlightedBinSitesProp = [], // Keep for compatibility
 }: NewVolumeMapProps) {
   // Use Zustand store for state management
-  const { selectedCountSite, setMapView: setStoreMapView } = useVolumeAppStore();
+  const { selectedCountSite, highlightedBinSites, setMapView: setStoreMapView } = useVolumeAppStore();
   const mapViewRef = useRef<any>(null);
   const [viewReady, setViewReady] = useState(false);
 
@@ -83,6 +83,9 @@ export default function NewVolumeMap({
   
   // Ref for highlighting selected count site (using ref to avoid dependency issues)
   const highlightGraphicRef = useRef<Graphic | null>(null);
+  
+  // Ref for highlighting multiple bin sites (using ref to avoid dependency issues)
+  const highlightedBinGraphicsRef = useRef<Graphic[]>([]);
 
   // Handler to set map center/zoom when view is ready
   const handleArcgisViewReadyChange = (event: { target: { view: __esri.MapView } }) => {
@@ -435,6 +438,15 @@ export default function NewVolumeMap({
       mapViewRef.current.graphics.remove(highlightGraphicRef.current);
       highlightGraphicRef.current = null;
     }
+    
+    // Also clear any bin highlights when selecting individual sites
+    if (highlightedBinGraphicsRef.current.length > 0 && mapViewRef.current?.graphics) {
+      highlightedBinGraphicsRef.current.forEach(graphic => {
+        mapViewRef.current.graphics.remove(graphic);
+      });
+      highlightedBinGraphicsRef.current = [];
+    }
+    
     if (mapViewRef.current?.popup) {
       mapViewRef.current.popup.visible = false;
     }
@@ -502,7 +514,72 @@ export default function NewVolumeMap({
     };
 
     highlightCountSite();
-  }, [viewReady, aadtLayer, selectedCountSite]); // Removed highlightGraphic from dependencies to prevent infinite loop
+  }, [viewReady, aadtLayer, selectedCountSite]);
+
+  // Handle multiple bin sites highlighting
+  useEffect(() => {
+    // Clear any existing bin highlights
+    if (highlightedBinGraphicsRef.current.length > 0 && mapViewRef.current?.graphics) {
+      highlightedBinGraphicsRef.current.forEach(graphic => {
+        mapViewRef.current.graphics.remove(graphic);
+      });
+      highlightedBinGraphicsRef.current = [];
+    }
+
+    // If no sites to highlight or prerequisites not met, stop here
+    if (!viewReady || !mapViewRef.current || !aadtLayer || !highlightedBinSites || highlightedBinSites.length === 0) {
+      return;
+    }
+
+    const highlightBinSites = async () => {
+      try {
+        // Query the AADT layer for all highlighted sites
+        const siteNames = highlightedBinSites.map(name => `'${name}'`).join(',');
+        const query = aadtLayer.createQuery();
+        query.where = `name IN (${siteNames})`;
+        query.outFields = ["*"];
+        query.returnGeometry = true;
+
+        const results = await aadtLayer.queryFeatures(query);
+        
+        if (results.features.length > 0) {
+          console.log(`🗺️ Highlighting ${results.features.length} shared sites on map:`, results.features.map(f => f.attributes.name));
+          
+          // Create highlight graphics for each site
+          const newGraphics: Graphic[] = [];
+          
+          results.features.forEach(feature => {
+            const graphic = new Graphic({
+              geometry: feature.geometry,
+              symbol: new SimpleMarkerSymbol({
+                style: "circle",
+                color: [34, 197, 94, 0.8], // Green color for shared sites
+                size: "16px",
+                outline: {
+                  color: [22, 163, 74, 1], // Darker green outline
+                  width: 2
+                }
+              })
+            });
+            
+            newGraphics.push(graphic);
+            if (mapViewRef.current?.graphics) {
+              mapViewRef.current.graphics.add(graphic);
+            }
+          });
+          
+          // Store references for cleanup
+          highlightedBinGraphicsRef.current = newGraphics;
+        } else {
+          console.log('🗺️ No sites found to highlight for:', highlightedBinSites);
+        }
+      } catch (error) {
+        console.error('Error highlighting bin sites:', error);
+      }
+    };
+
+    highlightBinSites();
+  }, [viewReady, aadtLayer, highlightedBinSites]); // Removed highlightGraphic from dependencies to prevent infinite loop
 
   return (
     <div id="volume-map-container" className="flex-1 bg-gray-200 relative">
