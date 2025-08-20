@@ -219,6 +219,11 @@ export default function NewVolumeMap({
 
     useEffect(() => {
     if (viewReady && boundaryService && geographicLevel && mapViewRef.current) {
+      // Clear any existing selection when switching geographic levels
+      if (onSelectionChange) {
+        onSelectionChange(null);
+      }
+      
       if (geographicLevel === 'custom' && sketchLayer) {
         // Disable boundary service interactivity and hide its layers
         boundaryService.cleanupInteractivity();
@@ -249,7 +254,11 @@ export default function NewVolumeMap({
         sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
           if (event.state === 'complete') {
             if (onSelectionChange) {
-              onSelectionChange(event.graphic.geometry as Polygon);
+              // Provide both geometry and area name for custom selections
+              onSelectionChange({
+                geometry: event.graphic.geometry as Polygon,
+                areaName: 'Custom Selected Area'
+              });
             }
           }
         });
@@ -274,7 +283,7 @@ export default function NewVolumeMap({
         setSketchViewModel(null);
       }
     };
-  }, [geographicLevel, sketchLayer]);
+  }, [geographicLevel, sketchLayer, onSelectionChange]);
 
   // Update selection callback when it changes
   useEffect(() => {
