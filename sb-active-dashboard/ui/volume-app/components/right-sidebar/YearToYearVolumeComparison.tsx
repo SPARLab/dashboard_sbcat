@@ -2,7 +2,7 @@
 import Polygon from "@arcgis/core/geometry/Polygon";
 import { useEffect, useState, useRef } from 'react';
 import { YearToYearComparisonDataService } from '../../../../lib/data-services/YearToYearComparisonDataService';
-import { SiteYear, listYears, computeSharedSiteYoY } from '../../../../src/lib/panel';
+import { SiteYear, listYears, computeSharedSiteYoY } from '../../../../src/lib/year-over-year';
 import CollapseExpandIcon from './CollapseExpandIcon';
 import SelectRegionPlaceholder from '../../../components/SelectRegionPlaceholder';
 import { useVolumeAppStore } from '../../../../lib/stores/volume-app-state';
@@ -323,7 +323,7 @@ export default function YearToYearVolumeComparison({
                 
                 {/* Simple Bar Chart */}
                 <div className="space-y-3">
-                  <div className="text-sm text-gray-600 mb-2">Average {useNbpdExpansion ? 'AADX' : 'Daily Volume'} (Based on {comparisonResult.sharedCount} shared sites)</div>
+                  <div className="text-sm text-gray-600 mb-2">Average {useNbpdExpansion ? 'AADV' : 'Daily Volume'} (Based on {comparisonResult.sharedCount} shared sites)</div>
                   
                   {/* Earlier Year Bar */}
                   <div className="flex items-center gap-3">

@@ -1,4 +1,4 @@
-export type SiteYear = { siteId: string; year: number; aadx: number };
+export type SiteYear = { siteId: string; year: number; aadv: number };
 
 export function listYears(rows: SiteYear[]): number[] {
   return Array.from(new Set(rows.map(r => r.year))).sort((a,b)=>a-b);
@@ -32,7 +32,7 @@ export function overlapSites(rows: SiteYear[], y0: number, y1: number) {
 }
 
 export function sharedSiteMean(rows: SiteYear[], year: number, sharedSites: string[]): number {
-  const xs = rows.filter(r => r.year === year && sharedSites.includes(r.siteId)).map(r => r.aadx);
+  const xs = rows.filter(r => r.year === year && sharedSites.includes(r.siteId)).map(r => r.aadv);
   if (!xs.length) return NaN;
   return xs.reduce((a,b)=>a+b,0) / xs.length;
 }

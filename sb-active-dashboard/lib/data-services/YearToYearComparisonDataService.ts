@@ -2,7 +2,8 @@ import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import { loadProfiles, ProfilesIndex } from "../../src/lib/factors";
 import { expandToAADX, ShortRecord, HourObs } from "../../src/lib/nbpdExpand";
-import { SiteYear } from "../../src/lib/panel";
+import { SiteYear } from "../../src/lib/year-over-year";
+import { AADVCalculationService, RawCountRecord } from "../../src/lib/aadv-calculations";
 
 /**
  * Interface for year-to-year comparison data by different time scales
@@ -1124,8 +1125,8 @@ export class YearToYearComparisonDataService {
   }
 
   /**
-   * Get SiteYear data for panel analysis
-   * This method returns the AADX data per site per year for panel-based comparisons
+   * Get SiteYear data for year-over-year analysis
+   * This method returns the AADV data per site per year using centralized AADV calculations
    */
   static async getSiteYearData(
     selectedGeometry: Polygon | null,
@@ -1146,60 +1147,40 @@ export class YearToYearComparisonDataService {
         return [];
       }
 
-      // Build count type filter
-      const countTypeConditions: string[] = [];
-      if (showBicyclist) countTypeConditions.push("count_type = 'bike'");
-      if (showPedestrian) countTypeConditions.push("count_type = 'ped'");
-      
-      if (countTypeConditions.length === 0) {
-        return [];
-      }
-
-      // Query data for all years
-      const allSiteYearData: SiteYear[] = [];
+      // Query raw count data for all years
+      const allRawCountData: RawCountRecord[] = [];
       
       for (const year of years) {
         const yearData = await this.queryCountsForSitesAndYear(siteIds, year, showBicyclist, showPedestrian);
         
-        if (nbpdProfileKey && yearData.length > 0) {
-          // Use NBPD expansion
-          const shortRecords = this.convertToShortRecords(yearData, showBicyclist, showPedestrian);
-          const aadxData = await this.mapRecordsToAADX(shortRecords, nbpdProfileKey);
-          
-          // Convert to SiteYear format
-          aadxData.forEach(record => {
-            allSiteYearData.push({
-              siteId: record.siteId,
-              year: record.year,
-              aadx: record.aadx
-            });
-          });
-        } else {
-          // Use raw data aggregation (fallback when no NBPD profile)
-          const siteAggregation: { [siteId: string]: { total: number, count: number } } = {};
-          
-          yearData.forEach(record => {
-            const siteId = record.site_id.toString();
-            if (!siteAggregation[siteId]) {
-              siteAggregation[siteId] = { total: 0, count: 0 };
-            }
-            siteAggregation[siteId].total += record.counts || 0;
-            siteAggregation[siteId].count += 1;
-          });
-
-          // Convert to SiteYear format with average daily counts
-          Object.entries(siteAggregation).forEach(([siteId, data]) => {
-            const avgDaily = data.count > 0 ? data.total / data.count : 0;
-            allSiteYearData.push({
-              siteId,
-              year,
-              aadx: avgDaily * 24 // Scale to daily estimate
-            });
-          });
-        }
+        // Convert to RawCountRecord format
+        const rawCountRecords: RawCountRecord[] = yearData.map(record => ({
+          site_id: record.site_id,
+          timestamp: record.timestamp,
+          counts: record.counts || 0,
+          count_type: record.count_type as 'bike' | 'ped'
+        }));
+        
+        allRawCountData.push(...rawCountRecords);
       }
 
-      return allSiteYearData;
+      // Use centralized AADV calculation service
+      const aadvResults = await AADVCalculationService.calculateAADV(allRawCountData, {
+        nbpdProfileKey,
+        showBicyclist,
+        showPedestrian,
+        scalingFactor: 24
+      });
+
+      // Log any warnings from AADV calculations
+      const allWarnings = aadvResults.flatMap(result => result.warnings);
+      if (allWarnings.length > 0) {
+        console.warn('AADV Calculation Warnings:', allWarnings);
+      }
+
+      // Return just the SiteYear data
+      return aadvResults.map(result => result.siteYear);
+      
     } catch (error) {
       console.error('Error getting SiteYear data:', error);
       return [];
