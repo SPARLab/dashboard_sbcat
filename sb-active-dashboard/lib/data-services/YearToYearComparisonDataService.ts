@@ -170,11 +170,8 @@ export class YearToYearComparisonDataService {
   ): Promise<{ name: string; value: number }[]> {
     // If NBPD profile is provided, use NBPD expansion instead of raw aggregation
     if (nbpdProfileKey) {
-      console.log(`YearToYearComparisonDataService: Using NBPD expansion with profile ${nbpdProfileKey} for ${countsData.length} records`);
       const shortRecords = this.convertToShortRecords(countsData, showBicyclist, showPedestrian);
-      console.log(`YearToYearComparisonDataService: Converted to ${shortRecords.length} short records`);
       const aadxData = await this.mapRecordsToAADX(shortRecords, nbpdProfileKey);
-      console.log(`YearToYearComparisonDataService: Generated ${aadxData.length} AADX records`);
       
       // Log warnings from NBPD expansion
       const allWarnings = aadxData.flatMap(record => record.warnings);
@@ -183,7 +180,6 @@ export class YearToYearComparisonDataService {
       }
       
       const result = this.aggregateAADXByTimeScale(aadxData, timeScale, normalization);
-      console.log(`YearToYearComparisonDataService: NBPD aggregation result:`, result);
       return result;
     }
 
@@ -1094,6 +1090,40 @@ export class YearToYearComparisonDataService {
   }
 
   /**
+   * Get site names for given site IDs, but only for sites within the specified geometry
+   */
+  static async getSiteNamesInGeometry(siteIds: number[], geometry: Polygon): Promise<Map<number, string>> {
+    if (siteIds.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const sitesLayer = new FeatureLayer({ url: this.SITES_URL });
+      
+      const query = sitesLayer.createQuery();
+      query.where = `id IN (${siteIds.join(',')})`;
+      query.geometry = geometry;
+      query.spatialRelationship = "intersects";
+      query.outFields = ["id", "name"];
+      query.returnGeometry = false;
+
+      const results = await sitesLayer.queryFeatures(query);
+      
+      const siteNameMap = new Map<number, string>();
+      results.features.forEach(feature => {
+        const siteId = feature.attributes.id;
+        const siteName = feature.attributes.name || `Site ${siteId}`;
+        siteNameMap.set(siteId, siteName);
+      });
+      
+      return siteNameMap;
+    } catch (error) {
+      console.error('Error fetching site names in geometry:', error);
+      return new Map();
+    }
+  }
+
+  /**
    * Get SiteYear data for panel analysis
    * This method returns the AADX data per site per year for panel-based comparisons
    */
@@ -1176,42 +1206,4 @@ export class YearToYearComparisonDataService {
     }
   }
 
-  /**
-   * Query counts for specific sites and year
-   */
-  private static async queryCountsForSitesAndYear(
-    siteIds: number[],
-    year: number,
-    showBicyclist: boolean,
-    showPedestrian: boolean
-  ): Promise<any[]> {
-    if (siteIds.length === 0) return [];
-
-    // Build count type filter
-    const countTypeConditions: string[] = [];
-    if (showBicyclist) countTypeConditions.push("count_type = 'bike'");
-    if (showPedestrian) countTypeConditions.push("count_type = 'ped'");
-    
-    if (countTypeConditions.length === 0) return [];
-
-    const countsLayer = new FeatureLayer({ url: this.COUNTS_URL });
-    
-    // Build site ID filter
-    const siteIdFilter = siteIds.map(id => `site_id = ${id}`).join(' OR ');
-    
-    const whereClause = `(${siteIdFilter}) AND (${countTypeConditions.join(' OR ')}) AND EXTRACT(YEAR FROM timestamp) = ${year}`;
-    
-    const query = countsLayer.createQuery();
-    query.where = whereClause;
-    query.outFields = ['*'];
-    query.returnGeometry = false;
-
-    try {
-      const result = await countsLayer.queryFeatures(query);
-      return result.features.map(feature => feature.attributes);
-    } catch (error) {
-      console.error('Error querying counts for sites and year:', error);
-      return [];
-    }
-  }
 }

@@ -73,7 +73,6 @@ export default function YearToYearVolumeComparison({
           years.push(year);
         }
 
-        console.log('YoY Panel: Loading SiteYear data for years:', years, 'NBPD:', useNbpdExpansion);
         
         const data = await YearToYearComparisonDataService.getSiteYearData(
           selectedGeometry,
@@ -83,8 +82,6 @@ export default function YearToYearVolumeComparison({
           useNbpdExpansion ? nbpdProfileKey : undefined
         );
 
-        console.log('YoY Panel: Loaded', data.length, 'site-year records');
-        console.log('YoY Panel: Sample site IDs:', data.slice(0, 5).map(d => d.siteId));
         
         setSiteYearData(data);
         const availYears = listYears(data);
@@ -121,24 +118,32 @@ export default function YearToYearVolumeComparison({
     const computeAndHighlight = async () => {
       if (selectedYearA && selectedYearB && siteYearData.length > 0) {
         const result = computeSharedSiteYoY(siteYearData, selectedYearA, selectedYearB);
-        console.log('YoY Shared Sites: Computed result:', result);
         setComparisonResult(result);
         
         // Highlight shared sites on the map
-        if (result.sharedCount > 0) {
+        if (result.sharedCount > 0 && selectedGeometry) {
           try {
-            // Get actual site names from database using site IDs
+            // Get actual site names from database using site IDs, but filter by current geometry
             const siteIds = result.sharedSites.map(siteId => parseInt(siteId));
-            const siteNameMap = await YearToYearComparisonDataService.getSiteNames(siteIds);
-            const sharedSiteNames = siteIds.map(id => siteNameMap.get(id) || `Site ${id}`);
+            const siteNameMap = await YearToYearComparisonDataService.getSiteNamesInGeometry(siteIds, selectedGeometry);
+            const sharedSiteNames = siteIds
+              .filter(id => siteNameMap.has(id)) // Only include sites that are actually in the geometry
+              .map(id => siteNameMap.get(id) || `Site ${id}`);
             
-            console.log('YoY: Highlighting shared sites on map:', sharedSiteNames);
             setHighlightedBinSites(sharedSiteNames);
           } catch (error) {
             console.error('Error getting site names for highlighting:', error);
-            // Fallback to Site X format
-            const fallbackNames = result.sharedSites.map(siteId => `Site ${siteId}`);
-            setHighlightedBinSites(fallbackNames);
+            // Fallback: try the original method
+            try {
+              const siteIds = result.sharedSites.map(siteId => parseInt(siteId));
+              const siteNameMap = await YearToYearComparisonDataService.getSiteNames(siteIds);
+              const sharedSiteNames = siteIds.map(id => siteNameMap.get(id) || `Site ${id}`);
+              setHighlightedBinSites(sharedSiteNames);
+            } catch (fallbackError) {
+              console.error('Fallback highlighting also failed:', fallbackError);
+              const fallbackNames = result.sharedSites.map(siteId => `Site ${siteId}`);
+              setHighlightedBinSites(fallbackNames);
+            }
           }
         } else {
           setHighlightedBinSites([]);
@@ -168,20 +173,29 @@ export default function YearToYearVolumeComparison({
 
   // Handle Compare button click to re-highlight shared sites
   const handleCompareClick = async () => {
-    if (comparisonResult && comparisonResult.sharedCount > 0) {
+    if (comparisonResult && comparisonResult.sharedCount > 0 && selectedGeometry) {
       try {
-        // Get actual site names from database using site IDs
+        // Get actual site names from database using site IDs, but filter by current geometry
         const siteIds = comparisonResult.sharedSites.map((siteId: any) => parseInt(siteId));
-        const siteNameMap = await YearToYearComparisonDataService.getSiteNames(siteIds);
-        const sharedSiteNames = siteIds.map((id: number) => siteNameMap.get(id) || `Site ${id}`);
+        const siteNameMap = await YearToYearComparisonDataService.getSiteNamesInGeometry(siteIds, selectedGeometry);
+        const sharedSiteNames = siteIds
+          .filter((id: number) => siteNameMap.has(id)) // Only include sites that are actually in the geometry
+          .map((id: number) => siteNameMap.get(id) || `Site ${id}`);
         
-        console.log('YoY Compare Button: Re-highlighting shared sites on map:', sharedSiteNames);
         setHighlightedBinSites(sharedSiteNames);
       } catch (error) {
         console.error('Error getting site names for re-highlighting:', error);
-        // Fallback to Site X format
-        const fallbackNames = comparisonResult.sharedSites.map((siteId: any) => `Site ${siteId}`);
-        setHighlightedBinSites(fallbackNames);
+        // Fallback: try the original method
+        try {
+          const siteIds = comparisonResult.sharedSites.map((siteId: any) => parseInt(siteId));
+          const siteNameMap = await YearToYearComparisonDataService.getSiteNames(siteIds);
+          const sharedSiteNames = siteIds.map((id: number) => siteNameMap.get(id) || `Site ${id}`);
+          setHighlightedBinSites(sharedSiteNames);
+        } catch (fallbackError) {
+          console.error('Fallback highlighting also failed:', fallbackError);
+          const fallbackNames = comparisonResult.sharedSites.map((siteId: any) => `Site ${siteId}`);
+          setHighlightedBinSites(fallbackNames);
+        }
       }
     }
   };
