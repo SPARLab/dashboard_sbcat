@@ -166,6 +166,26 @@ export default function YearToYearVolumeComparison({
     return `${sign}${percent.toFixed(1)}%`;
   };
 
+  // Handle Compare button click to re-highlight shared sites
+  const handleCompareClick = async () => {
+    if (comparisonResult && comparisonResult.sharedCount > 0) {
+      try {
+        // Get actual site names from database using site IDs
+        const siteIds = comparisonResult.sharedSites.map((siteId: any) => parseInt(siteId));
+        const siteNameMap = await YearToYearComparisonDataService.getSiteNames(siteIds);
+        const sharedSiteNames = siteIds.map((id: number) => siteNameMap.get(id) || `Site ${id}`);
+        
+        console.log('YoY Compare Button: Re-highlighting shared sites on map:', sharedSiteNames);
+        setHighlightedBinSites(sharedSiteNames);
+      } catch (error) {
+        console.error('Error getting site names for re-highlighting:', error);
+        // Fallback to Site X format
+        const fallbackNames = comparisonResult.sharedSites.map((siteId: any) => `Site ${siteId}`);
+        setHighlightedBinSites(fallbackNames);
+      }
+    }
+  };
+
   return (
     <div id="year-to-year-volume-comparison-container" className={`rounded-lg border border-gray-200 bg-white p-4`}>
       <div id="year-to-year-volume-comparison-header" className="flex justify-between items-center">
@@ -247,6 +267,7 @@ export default function YearToYearVolumeComparison({
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
               disabled={!selectedYearA || !selectedYearB || !comparisonResult || comparisonResult.sharedCount === 0}
+              onClick={handleCompareClick}
             >
               Compare
             </button>
@@ -324,7 +345,7 @@ export default function YearToYearVolumeComparison({
                   comparisonResult.yoy > 0 ? 'text-green-700' : comparisonResult.yoy < 0 ? 'text-red-700' : 'text-gray-700'
                 }`}>
                   {comparisonResult.yoy > 0 ? '↗' : comparisonResult.yoy < 0 ? '↘' : '→'} 
-                  {comparisonResult.yoy > 0 ? 'Increase' : comparisonResult.yoy < 0 ? 'Decrease' : 'No Change'} 
+                  {comparisonResult.yoy > 0 ? ' Increase ' : comparisonResult.yoy < 0 ? ' Decrease ' : 'No Change'} 
                   of {Math.abs(comparisonResult.yoy * 100).toFixed(1)}%
                 </div>
               </div>
