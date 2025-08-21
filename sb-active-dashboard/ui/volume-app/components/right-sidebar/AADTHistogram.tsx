@@ -488,8 +488,9 @@ export default function AADTHistogram({
             color: '#6b7280',
             fontSize: 12,
             margin: 8,
+            formatter: (value: number) => `${value}%`,
           },
-          name: 'Number of Sites',
+          name: 'Percentage of Sites',
           nameLocation: 'middle',
           nameGap: 45,
           nameTextStyle: {
@@ -510,13 +511,17 @@ export default function AADTHistogram({
         series: [
           // Invisible full-height bars for better hover/click targeting
           {
-            data: histogramData?.bins.map(() => ({
-              value: Math.max(...(histogramData?.bins.map(b => b.count) || [0])), // Use max height
-              itemStyle: {
-                color: 'transparent', // Invisible
-                borderColor: 'transparent',
-              },
-            })) || [],
+            data: histogramData?.bins.map(() => {
+              const totalSites = histogramData?.totalSites || 1;
+              const maxPercentage = Math.max(...(histogramData?.bins.map(b => (b.count / totalSites) * 100) || [0]));
+              return {
+                value: maxPercentage, // Use max percentage height
+                itemStyle: {
+                  color: 'transparent', // Invisible
+                  borderColor: 'transparent',
+                },
+              };
+            }) || [],
             type: 'bar',
             barWidth: '95%', // Wide hover target
             barGap: '-100%', // Overlap completely with visible bars
@@ -534,8 +539,10 @@ export default function AADTHistogram({
             data: histogramData?.bins.map((bin, index) => {
               const isHovered = hoveredBar?.binIndex === index;
               const isSelected = selectedBarIndex === index;
+              const totalSites = histogramData?.totalSites || 1;
+              const percentage = (bin.count / totalSites) * 100;
               return {
-                value: bin.count,
+                value: percentage,
                 itemStyle: {
                   color: isSelected ? '#eab308' : (isHovered ? '#1e40af' : getBarColor(index)),
                   borderRadius: [4, 4, 0, 0],
