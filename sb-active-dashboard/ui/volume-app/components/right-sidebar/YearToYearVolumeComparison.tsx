@@ -26,9 +26,10 @@ export default function YearToYearVolumeComparison({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Santa Cruz expansion - always enabled
-  const nbpdProfileKey = 'SantaCruz_citywide_v1';
-  const useNbpdExpansion = true;
+  // Enhanced AADV calculation using both Santa Cruz and NBPD factors - always enabled
+  const santaCruzProfileKey = 'SantaCruz_citywide_v1';
+  const nbpdProfileKey = 'NBPD_PATH_moderate_2009';
+  const useEnhancedExpansion = true;
   
   // Shared site YoY state
   const [siteYearData, setSiteYearData] = useState<SiteYear[]>([]);
@@ -79,7 +80,7 @@ export default function YearToYearVolumeComparison({
           years,
           showBicyclist,
           showPedestrian,
-          useNbpdExpansion ? nbpdProfileKey : undefined
+          useEnhancedExpansion ? nbpdProfileKey : undefined
         );
 
         
@@ -206,16 +207,22 @@ export default function YearToYearVolumeComparison({
         <h3 id="year-to-year-volume-comparison-title" className="text-lg font-medium text-gray-900">Year to Year Volume Comparison</h3>
         <CollapseExpandIcon id="year-to-year-volume-comparison-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
       </div>
-      <div id="year-to-year-volume-comparison-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'max-h-0' : 'max-h-[600px]'}`}>
+      <div id="year-to-year-volume-comparison-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'max-h-0' : 'max-h-[700px]'}`}>
         {!selectedGeometry && (
           <SelectRegionPlaceholder id="year-to-year-volume-comparison-no-selection" subtext="Use the polygon tool or click on a boundary to see the year-to-year comparison for that area" />
         )}
         {selectedGeometry && (
         <>
-        {/* Data Normalization Info */}
+        {/* Enhanced Data Normalization Info */}
         <div id="yoy-normalization-info" className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
           <div className="text-xs text-blue-900">
-            <strong>Data Normalization:</strong> Count data is normalized using Santa Cruz expansion factors to account for seasonal and day-of-week variations, enabling approximate year-to-year comparisons across different time periods.
+            <strong>Enhanced Data Normalization:</strong> Count data is normalized using a comprehensive approach:
+            <ul className="mt-1 ml-3 list-disc">
+              <li><strong>Hourly variations:</strong> NBPD factors normalize time-of-day fluctuations</li>
+              <li><strong>Daily variations:</strong> Santa Cruz factors normalize day-of-week patterns</li>
+              <li><strong>Monthly variations:</strong> Santa Cruz factors normalize seasonal patterns</li>
+            </ul>
+            This multi-layered approach provides the most accurate Average Annual Daily Volume (AADV) calculations for year-to-year comparisons.
           </div>
         </div>
 
@@ -323,7 +330,7 @@ export default function YearToYearVolumeComparison({
                 
                 {/* Simple Bar Chart */}
                 <div className="space-y-3">
-                  <div className="text-sm text-gray-600 mb-2">Average {useNbpdExpansion ? 'AADV' : 'Daily Volume'} (Based on {comparisonResult.sharedCount} shared sites)</div>
+                  <div className="text-sm text-gray-600 mb-2">Average Annual Daily Volume (AADV) (Based on {comparisonResult.sharedCount} shared sites)</div>
                   
                   {/* Earlier Year Bar */}
                   <div className="flex items-center gap-3">

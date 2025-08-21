@@ -4,6 +4,7 @@ import { loadProfiles, ProfilesIndex } from "../../src/lib/factors";
 import { expandToAADX, ShortRecord, HourObs } from "../../src/lib/nbpdExpand";
 import { SiteYear } from "../../src/lib/year-over-year";
 import { AADVCalculationService, RawCountRecord } from "../../src/lib/aadv-calculations";
+import { EnhancedAADVCalculationService, RawCountRecord as EnhancedRawCountRecord, EnhancedAADVConfig } from "../../src/lib/enhanced-aadv-calculations";
 
 /**
  * Interface for year-to-year comparison data by different time scales
@@ -1126,7 +1127,8 @@ export class YearToYearComparisonDataService {
 
   /**
    * Get SiteYear data for year-over-year analysis
-   * This method returns the AADV data per site per year using centralized AADV calculations
+   * This method returns the AADV data per site per year using enhanced AADV calculations
+   * that combine Santa Cruz (monthly/daily) and NBPD (hourly) expansion factors
    */
   static async getSiteYearData(
     selectedGeometry: Polygon | null,
@@ -1148,13 +1150,13 @@ export class YearToYearComparisonDataService {
       }
 
       // Query raw count data for all years
-      const allRawCountData: RawCountRecord[] = [];
+      const allRawCountData: EnhancedRawCountRecord[] = [];
       
       for (const year of years) {
         const yearData = await this.queryCountsForSitesAndYear(siteIds, year, showBicyclist, showPedestrian);
         
-        // Convert to RawCountRecord format
-        const rawCountRecords: RawCountRecord[] = yearData.map(record => ({
+        // Convert to EnhancedRawCountRecord format
+        const rawCountRecords: EnhancedRawCountRecord[] = yearData.map(record => ({
           site_id: record.site_id,
           timestamp: record.timestamp,
           counts: record.counts || 0,
@@ -1164,19 +1166,36 @@ export class YearToYearComparisonDataService {
         allRawCountData.push(...rawCountRecords);
       }
 
-      // Use centralized AADV calculation service
-      const aadvResults = await AADVCalculationService.calculateAADV(allRawCountData, {
-        nbpdProfileKey,
+      // Use enhanced AADV calculation service with both Santa Cruz and NBPD factors
+      const enhancedConfig: EnhancedAADVConfig = {
         showBicyclist,
         showPedestrian,
-        scalingFactor: 24
-      });
+        santaCruzProfileKey: 'SantaCruz_citywide_v1',
+        nbpdProfileKey: nbpdProfileKey || 'NBPD_PATH_moderate_2009'
+      };
+
+      const aadvResults = await EnhancedAADVCalculationService.calculateEnhancedAADV(
+        allRawCountData, 
+        enhancedConfig
+      );
 
       // Log any warnings from AADV calculations
       const allWarnings = aadvResults.flatMap(result => result.warnings);
       if (allWarnings.length > 0) {
-        console.warn('AADV Calculation Warnings:', allWarnings);
+        console.warn('Enhanced AADV Calculation Warnings:', allWarnings);
       }
+
+      // Log factors usage summary
+      const factorsSummary = aadvResults.reduce((acc, result) => {
+        acc.santaCruzUsed = acc.santaCruzUsed || result.factorsUsed.santaCruz;
+        acc.nbpdUsed = acc.nbpdUsed || result.factorsUsed.nbpd;
+        acc.totalHourlyFactors += result.factorsUsed.hourlyFactorsApplied;
+        acc.totalDailyFactors += result.factorsUsed.dailyFactorsApplied;
+        acc.totalMonthlyFactors += result.factorsUsed.monthlyFactorsApplied;
+        return acc;
+      }, { santaCruzUsed: false, nbpdUsed: false, totalHourlyFactors: 0, totalDailyFactors: 0, totalMonthlyFactors: 0 });
+
+      console.log('Enhanced AADV Factors Summary:', factorsSummary);
 
       // Return just the SiteYear data
       return aadvResults.map(result => result.siteYear);
@@ -1184,6 +1203,68 @@ export class YearToYearComparisonDataService {
     } catch (error) {
       console.error('Error getting SiteYear data:', error);
       return [];
+    }
+  }
+
+  /**
+   * Get aggregated AADV totals for year-to-year comparison
+   * This method provides the total AADV for all sites in a geometry for each year
+   */
+  static async getAggregatedAADVByYear(
+    selectedGeometry: Polygon | null,
+    years: number[],
+    showBicyclist: boolean = true,
+    showPedestrian: boolean = true,
+    nbpdProfileKey?: string
+  ): Promise<Record<number, { totalAADV: number; siteCount: number; warnings: string[] }>> {
+    try {
+      if (!selectedGeometry || years.length === 0) {
+        return {};
+      }
+
+      // Get site IDs within the selected geometry
+      const siteIds = await this.getSiteIdsInPolygon(selectedGeometry);
+      
+      if (siteIds.length === 0) {
+        return {};
+      }
+
+      const results: Record<number, { totalAADV: number; siteCount: number; warnings: string[] }> = {};
+
+      // Process each year separately for better performance and clearer results
+      for (const year of years) {
+        const yearData = await this.queryCountsForSitesAndYear(siteIds, year, showBicyclist, showPedestrian);
+        
+        // Convert to EnhancedRawCountRecord format
+        const rawCountRecords: EnhancedRawCountRecord[] = yearData.map(record => ({
+          site_id: record.site_id,
+          timestamp: record.timestamp,
+          counts: record.counts || 0,
+          count_type: record.count_type as 'bike' | 'ped'
+        }));
+
+        // Use enhanced AADV calculation service
+        const enhancedConfig: EnhancedAADVConfig = {
+          showBicyclist,
+          showPedestrian,
+          santaCruzProfileKey: 'SantaCruz_citywide_v1',
+          nbpdProfileKey: nbpdProfileKey || 'NBPD_PATH_moderate_2009'
+        };
+
+        const yearResult = await EnhancedAADVCalculationService.calculateAggregatedAADVForYear(
+          rawCountRecords,
+          year,
+          enhancedConfig
+        );
+
+        results[year] = yearResult;
+      }
+
+      return results;
+      
+    } catch (error) {
+      console.error('Error getting aggregated AADV by year:', error);
+      return {};
     }
   }
 
