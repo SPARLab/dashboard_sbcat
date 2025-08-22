@@ -1,5 +1,6 @@
 'use client';
 import ReactECharts from 'echarts-for-react';
+import * as echarts from 'echarts';
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
@@ -274,13 +275,7 @@ export default function IncidentsVsTrafficRatios({
       animation: true,
       animationDuration: 1000,
       animationEasing: 'cubicOut',
-      grid: {
-        left: '64px',
-        right: '20px',
-        top: '40px',
-        bottom: '60px',
-        containLabel: false,
-      },
+
       xAxis: {
         type: 'value',
         name: 'Volume Level',
@@ -354,6 +349,13 @@ export default function IncidentsVsTrafficRatios({
             type: [3, 3],
           },
         },
+      },
+      grid: {
+        left: '64px',
+        right: '20px',
+        top: '40px',
+        bottom: '60px',
+        containLabel: false,
       },
       series: [
         {
@@ -468,10 +470,21 @@ export default function IncidentsVsTrafficRatios({
                 {/* Data content */}
                 <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'} min-h-[320px]`}>
                   {hasData && !hasError ? (
-                    <div id="safety-incidents-vs-traffic-chart">
+                    <div id="safety-incidents-vs-traffic-chart" className="relative">
+                      {/* CSS Gradient Overlay */}
+                      <div 
+                        className="absolute pointer-events-none z-0"
+                        style={{
+                          left: '64px',
+                          top: '40px',
+                          right: '20px',
+                          bottom: '60px',
+                          background: 'linear-gradient(140deg, rgba(239, 68, 68, 0.8) 0%, rgba(239, 68, 68, 0) 51%)'
+                        }}
+                      />
                       <ReactECharts
                         option={option}
-                        style={{ height: '320px', width: '100%' }}
+                        style={{ height: '320px', width: '100%', position: 'relative', zIndex: 1 }}
                         opts={{ renderer: 'canvas' }}
                         onEvents={onEvents}
                       />
