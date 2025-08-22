@@ -8,7 +8,7 @@ import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDa
 import { useSpatialQuery, useVolumeSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
 import { useVolumeAppStore } from "../../../lib/stores/volume-app-state";
 import { formatSparklineDateRange } from "../utils/sparklineUtils";
-import AADTHistogram from "../components/right-sidebar/AADTHistogram";
+import AADVHistogram from "../components/right-sidebar/AADTHistogram";
 import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVolumeBreakdown";
 import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
 import HighestVolume from "../components/right-sidebar/HighestVolume";
@@ -448,7 +448,7 @@ export default function NewVolumeRightSidebar({
                 showPedestrian={showPedestrian}
                 modelCountsBy={modelCountsBy}
               />
-              <AADTHistogram
+                            <AADVHistogram 
                 selectedGeometry={selectedGeometry}
                 dateRange={dateRange}
                 showBicyclist={showBicyclist}

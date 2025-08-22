@@ -304,23 +304,53 @@ export class EnhancedAADVCalculationService {
           warnings.push(`No Santa Cruz daily factor for month=${month}, dayName=${dayName}`);
         }
       } else {
-        // Case B: Partial hours - use hourly factors then monthly factor
-        // AADV = (∑ C_h × H_hjt) × M_j
+        // Case B: Partial hours - use proper traffic engineering methodology with p-values
+        // Standard method: ADT = ∑(counts) / ∑(p_values) where p = 1/H
+        // Then apply day-of-week and monthly factors to get AADV
+        let totalCounts = 0;
+        let totalPValues = 0;
+        let validHours = 0;
+        
         for (const [hourStr, hourRecords] of Object.entries(hourlyTotals)) {
           const hour = parseInt(hourStr);
           const hourlyCount = hourRecords.reduce((sum, record) => sum + (record.counts || 0), 0);
           
-          // Apply NBPD hourly factor (H_hjt)
-          const hourlyFactor = nbpdProfile.hours?.[month]?.[dayType]?.[hour];
-          if (hourlyFactor != null) {
-            dailyTotal += hourlyCount * hourlyFactor;
+          // Get NBPD hourly expansion factor (H)
+          const hourlyExpansionFactor = nbpdProfile.hours?.[month]?.[dayType]?.[hour];
+          if (hourlyExpansionFactor != null && hourlyExpansionFactor > 0) {
+            // Calculate p-value: p = 1/H
+            const pValue = 1.0 / hourlyExpansionFactor;
+            
+            totalCounts += hourlyCount;
+            totalPValues += pValue;
+            validHours++;
             factorsUsed.nbpd = true;
             factorsUsed.hourlyFactorsApplied++;
           } else {
-            // No hourly factor available, use raw count
-            dailyTotal += hourlyCount;
-            warnings.push(`No NBPD hourly factor for month=${month}, dayType=${dayType}, hour=${hour}`);
+            // No hourly factor available or invalid factor
+            warnings.push(`No valid NBPD hourly factor for month=${month}, dayType=${dayType}, hour=${hour} (factor=${hourlyExpansionFactor})`);
           }
+        }
+        
+        // Calculate ADT using proper methodology
+        if (validHours > 0 && totalPValues > 0) {
+          // ADT = ∑counts / ∑p_values
+          const adt = totalCounts / totalPValues;
+          
+          // Apply Santa Cruz daily factor to convert ADT to MADT (Month's Average Daily Traffic)
+          const dailyFactor = santaCruzProfile.days?.[month]?.[dayName];
+          if (dailyFactor != null) {
+            dailyTotal = adt * dailyFactor;
+            factorsUsed.santaCruz = true;
+            factorsUsed.dailyFactorsApplied++;
+          } else {
+            dailyTotal = adt;
+            warnings.push(`No Santa Cruz daily factor for month=${month}, dayName=${dayName}`);
+          }
+        } else {
+          // Fallback: if no hourly factors available, sum raw counts (not ideal)
+          dailyTotal = Object.values(hourlyTotals).flat().reduce((sum, record) => sum + (record.counts || 0), 0);
+          warnings.push(`Fallback to raw count sum due to missing hourly factors (validHours=${validHours}, totalPValues=${totalPValues})`);
         }
       }
 
@@ -425,7 +455,7 @@ export class EnhancedAADVCalculationService {
     const groups: Record<string, RawCountRecord[]> = {};
     
     records.forEach(record => {
-      const hour = new Date(record.timestamp).getHours().toString();
+      const hour = new Date(record.timestamp).getUTCHours().toString();
       
       if (!groups[hour]) {
         groups[hour] = [];

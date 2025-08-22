@@ -6,8 +6,12 @@
 import { AggregationUtilService } from "../shared/aggregation";
 import { SpatialUtilService } from "../shared/spatial";
 import { processAndRankSites, type RawSiteRecord, type SiteMetadata } from "./site-ranking";
+import { EnhancedAADVCalculationService, RawCountRecord as EnhancedRawCountRecord, EnhancedAADVConfig } from "../../src/lib/enhanced-aadv-calculations";
+import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 
 export class CountSiteProcessingService {
+  private static readonly COUNTS_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/1";
+  private static readonly SITES_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/0";
   /**
    * Get summary statistics for count sites in current view
    * Used by: VolumeRightSidebar -> SummaryStatistics
