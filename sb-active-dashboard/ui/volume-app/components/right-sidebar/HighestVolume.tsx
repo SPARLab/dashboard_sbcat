@@ -11,6 +11,7 @@ interface HighestVolumeProps {
   sitesLayer?: FeatureLayer | null;
   countsLayer?: FeatureLayer | null;
   aadtTable?: FeatureLayer | null;
+  dateRange: { startDate: Date; endDate: Date };
   showBicyclist?: boolean;
   showPedestrian?: boolean;
   selectedGeometry?: Polygon | null;
@@ -21,9 +22,9 @@ interface HighestVolumeProps {
 interface HighestVolumeSite {
   siteId: number;
   siteName: string;
-  bikeAADT: number;
-  pedAADT: number;
-  totalAADT: number;
+  bikeAADV: number;
+  pedAADV: number;
+  totalAADV: number;
 }
 
 export default function HighestVolume({
@@ -31,6 +32,7 @@ export default function HighestVolume({
   sitesLayer,
   countsLayer,
   aadtTable,
+  dateRange,
   showBicyclist = true,
   showPedestrian = true,
   selectedGeometry,
@@ -67,6 +69,7 @@ export default function HighestVolume({
                 const result = await volumeService.getHighestVolumeData(
                     mapView,
                     filters,
+                    dateRange,
                     5, // limit to top 5
                     selectedGeometry
                 );
@@ -82,7 +85,7 @@ export default function HighestVolume({
         };
 
         fetchHighestVolumeData();
-    }, [mapView, sitesLayer, countsLayer, aadtTable, showBicyclist, showPedestrian, selectedGeometry]);
+    }, [mapView, sitesLayer, countsLayer, aadtTable, dateRange, showBicyclist, showPedestrian, selectedGeometry]);
 
   return (
     <div
@@ -101,6 +104,19 @@ export default function HighestVolume({
       <div id="highest-volume-collapsible-content" data-testid="highest-volume-collapsible-content" className={`transition-all duration-400 ease-in-out overflow-y-hidden ${isCollapsed ? 'max-h-0' : 'max-h-96'}`}>
           {!selectedGeometry && (
             <SelectRegionPlaceholder id="highest-volume-no-selection" subtext="Use the polygon tool or click on a boundary to see highest volume areas for that region" />
+          )}
+          {selectedGeometry && (
+            <div id="highest-volume-normalization-info" className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="text-xs text-blue-900">
+                <strong>Enhanced Data Normalization:</strong> Volume data is normalized using a comprehensive approach:
+                <ul className="mt-1 ml-3 list-disc">
+                  <li><strong>Hourly variations:</strong> NBPD factors normalize time-of-day fluctuations</li>
+                  <li><strong>Daily variations:</strong> Santa Cruz factors normalize day-of-week patterns</li>
+                  <li><strong>Monthly variations:</strong> Santa Cruz factors normalize seasonal patterns</li>
+                </ul>
+                This multi-layered approach provides the most accurate Average Annual Daily Volume (AADV) calculations.
+              </div>
+            </div>
           )}
           {selectedGeometry && isLoading && (
               <div id="highest-volume-loading" className="text-sm text-gray-500 text-center py-4">
@@ -133,7 +149,7 @@ export default function HighestVolume({
                               {index + 1}. {site.siteName}
                           </p>
                           <p id={`highest-volume-item-${index + 1}-value`} className="text-gray-800 font-medium">
-                              {site.totalAADT.toLocaleString()}
+                              {site.totalAADV.toLocaleString()}
                           </p>
                         </li>
                       );

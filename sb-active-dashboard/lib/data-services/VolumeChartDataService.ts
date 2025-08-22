@@ -22,9 +22,9 @@ interface HighestVolumeData {
   sites: Array<{
     siteId: number;
     siteName: string;
-    bikeAADT: number;
-    pedAADT: number;
-    totalAADT: number;
+    bikeAADV: number;
+    pedAADV: number;
+    totalAADV: number;
     locality: string;
   }>;
 }
@@ -81,6 +81,7 @@ export class VolumeChartDataService {
   async getHighestVolumeData(
     mapView: MapView,
     filters: { showBicyclist: boolean; showPedestrian: boolean },
+    dateRange: { startDate: Date; endDate: Date },
     limit: number = 10,
     selectedGeometry?: __esri.Geometry | null
   ): Promise<HighestVolumeData> {
@@ -89,6 +90,7 @@ export class VolumeChartDataService {
       this.aadtLayer,
       mapView,
       filters,
+      dateRange,
       limit,
       selectedGeometry
     );

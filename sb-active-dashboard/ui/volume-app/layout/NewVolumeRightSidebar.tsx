@@ -459,6 +459,7 @@ export default function NewVolumeRightSidebar({
                 sitesLayer={sitesLayer}
                 countsLayer={countsLayer}
                 aadtTable={aadtTable}
+                dateRange={dateRange}
                 showBicyclist={showBicyclist}
                 showPedestrian={showPedestrian}
                 selectedGeometry={selectedGeometry}
