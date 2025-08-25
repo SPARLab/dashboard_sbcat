@@ -120,8 +120,7 @@ describe('YearToYearVolumeComparison', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/Enhanced Data Normalization:/)).toBeInTheDocument();
-        expect(screen.getByText(/Santa Cruz factors normalize day-of-week patterns/)).toBeInTheDocument();
+        expect(screen.getByText(/Select two years to attempt comparison/)).toBeInTheDocument();
       });
     });
 

@@ -11,6 +11,7 @@ import { formatSparklineDateRange } from "../utils/sparklineUtils";
 import AADVHistogram from "../components/right-sidebar/AADTHistogram";
 import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVolumeBreakdown";
 import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
+import EnhancedDataNormalization from "../components/right-sidebar/EnhancedDataNormalization";
 import HighestVolume from "../components/right-sidebar/HighestVolume";
 import LowDataCoverage from "../components/right-sidebar/LowDataCoverage";
 import PercentOfNetworkByVolumeLevelBarChart from "../components/right-sidebar/PercentOfNetworkByVolumeLevelBarChart";
@@ -417,6 +418,7 @@ export default function NewVolumeRightSidebar({
                 hasData={timelineData.length > 0}
                 isLoading={timelineLoading}
               />
+              <EnhancedDataNormalization />
               <SummaryStatistics 
                 spatialResult={enhancedAADVResult || null} 
                 isLoading={enhancedAADVLoading}

@@ -79,17 +79,7 @@ export default function SummaryStatistics({
           )}
           {selectedGeometry && (
             <>
-              <div id="summary-statistics-normalization-info" className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-xs text-blue-900">
-                  <strong>Enhanced Data Normalization:</strong> Volume data is normalized using a comprehensive approach:
-                  <ul className="mt-1 ml-3 list-disc">
-                    <li><strong>Hourly variations:</strong> NBPD factors normalize time-of-day fluctuations</li>
-                    <li><strong>Daily variations:</strong> Santa Cruz factors normalize day-of-week patterns</li>
-                    <li><strong>Monthly variations:</strong> Santa Cruz factors normalize seasonal patterns</li>
-                  </ul>
-                  This multi-layered approach provides the most accurate Average Annual Daily Volume (AADV) calculations.
-                </div>
-              </div>
+
               <div id="summary-statistics-content" className="space-y-2 text-sm">
                   <StatsRow 
                     idPrefix="sites-selected" 

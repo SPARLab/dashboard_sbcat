@@ -105,19 +105,7 @@ export default function HighestVolume({
           {!selectedGeometry && (
             <SelectRegionPlaceholder id="highest-volume-no-selection" subtext="Use the polygon tool or click on a boundary to see highest volume areas for that region" />
           )}
-          {selectedGeometry && (
-            <div id="highest-volume-normalization-info" className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-xs text-blue-900">
-                <strong>Enhanced Data Normalization:</strong> Volume data is normalized using a comprehensive approach:
-                <ul className="mt-1 ml-3 list-disc">
-                  <li><strong>Hourly variations:</strong> NBPD factors normalize time-of-day fluctuations</li>
-                  <li><strong>Daily variations:</strong> Santa Cruz factors normalize day-of-week patterns</li>
-                  <li><strong>Monthly variations:</strong> Santa Cruz factors normalize seasonal patterns</li>
-                </ul>
-                This multi-layered approach provides the most accurate Average Annual Daily Volume (AADV) calculations.
-              </div>
-            </div>
-          )}
+
           {selectedGeometry && isLoading && (
               <div id="highest-volume-loading" className="text-sm text-gray-500 text-center py-4">
                   Loading highest volume data...
