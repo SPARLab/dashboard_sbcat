@@ -213,20 +213,7 @@ export default function YearToYearVolumeComparison({
         )}
         {selectedGeometry && (
         <>
-        {/* Enhanced Data Normalization Info */}
-        <div id="yoy-normalization-info" className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="text-xs text-blue-900">
-            <strong>Enhanced Data Normalization:</strong> Count data is normalized using a comprehensive approach:
-            <ul className="mt-1 ml-3 list-disc">
-              <li><strong>Hourly variations:</strong> NBPD factors normalize time-of-day fluctuations</li>
-              <li><strong>Daily variations:</strong> Santa Cruz factors normalize day-of-week patterns</li>
-              <li><strong>Monthly variations:</strong> Santa Cruz factors normalize seasonal patterns</li>
-            </ul>
-            This multi-layered approach provides the most accurate Average Annual Daily Volume (AADV) calculations for year-to-year comparisons.
-          </div>
-        </div>
-
-        {/* Year Selection */}
+{/* Year Selection */}
         <div className="mt-4 space-y-3">
           <div className="text-sm text-gray-700 font-medium">
             Select two years to attempt comparison
