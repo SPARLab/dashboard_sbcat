@@ -13,6 +13,19 @@ import CollapseExpandIcon from './CollapseExpandIcon';
 import SelectRegionPlaceholder from '../../../components/SelectRegionPlaceholder';
 import { useVolumeAppStore } from '../../../../lib/stores/volume-app-state';
 
+  // Expose debugging functionality to global scope for development
+  if (typeof window !== 'undefined') {
+    (window as any).debugAADVHistogram = {
+      debugMissingCountSites: AADVHistogramDataService.debugMissingCountSites,
+      compareWithHighestVolume: AADVHistogramDataService.compareWithHighestVolumeComponent,
+      compareWithSparkline: AADVHistogramDataService.compareWithSparklineTimeline,
+      compareWithSparklineApproach: AADVHistogramDataService.compareWithSparklineApproach,
+      investigateNBPDFactors: AADVHistogramDataService.investigateNBPDFactorCoverage,
+      quickTest: AADVHistogramDataService.quickTestWithoutEnhancedCalculation,
+      service: AADVHistogramDataService
+    };
+  }
+
 interface HoveredBarData {
   binLabel: string;
   count: number;

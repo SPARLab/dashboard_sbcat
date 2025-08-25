@@ -244,7 +244,7 @@ export default function NewVolumeRightSidebar({
         const highlightedArray = highlightedSiteIds.length > 0 ? `[${highlightedSiteIds.join(',')}]` : '[]';
         
         const valueExpression = `IIF(IndexOf(${highlightedArray}, Number($feature.id)) > -1, 2, IIF(IndexOf(${contributingArray}, Number($feature.id)) > -1, 1, 0))`;
-        console.log('🎨 Value expression:', valueExpression);
+
 
         const filledBlue = new SimpleMarkerSymbol({
           size: 8,

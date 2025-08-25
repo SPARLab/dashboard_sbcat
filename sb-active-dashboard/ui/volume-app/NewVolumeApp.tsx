@@ -46,7 +46,7 @@ export default function NewVolumeApp() {
 
   // Handle map view ready from map component
   const handleMapViewReady = (view: __esri.MapView) => {
-    console.log('🗺️ MapView ready for chart integration');
+
     setMapView(view);
     setStoreMapView(view); // Also update Zustand store
   };

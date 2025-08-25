@@ -90,6 +90,7 @@ export class EnhancedAADVCalculationService {
       nbpdProfileKey = 'NBPD_PATH_moderate_2009'
     } = config;
 
+    // Simplified logging - only show summary
     if (rawCountData.length === 0) {
       return [];
     }
@@ -110,16 +111,18 @@ export class EnhancedAADVCalculationService {
       const factors = await this.ensureFactors();
       
       // Calculate AADV using enhanced method
-      return await this.calculateWithEnhancedFactors(
+      const results = await this.calculateWithEnhancedFactors(
         filteredData, 
         santaCruzProfileKey, 
         nbpdProfileKey, 
         factors
       );
+      
+      return results;
     } catch (error) {
-      console.error('Error in enhanced AADV calculation:', error);
-      // Fallback to simple raw aggregation
-      return this.calculateFallbackAADV(filteredData);
+      console.error('❌ Error in enhanced AADV calculation:', error);
+      const fallbackResults = this.calculateFallbackAADV(filteredData);
+      return fallbackResults;
     }
   }
 
@@ -230,11 +233,11 @@ export class EnhancedAADVCalculationService {
 
     // Group data by site and year
     const siteYearGroups = this.groupBySiteYear(rawCountData);
-    
     const results: EnhancedAADVResult[] = [];
 
     for (const [key, records] of Object.entries(siteYearGroups)) {
       const [siteId, year] = key.split('-');
+      
       const result = this.calculateSiteYearAADV(
         records,
         siteId,
@@ -242,6 +245,7 @@ export class EnhancedAADVCalculationService {
         santaCruzProfile,
         nbpdProfile
       );
+      
       results.push(result);
     }
 
@@ -327,8 +331,11 @@ export class EnhancedAADVCalculationService {
             factorsUsed.nbpd = true;
             factorsUsed.hourlyFactorsApplied++;
           } else {
-            // No hourly factor available or invalid factor
-            warnings.push(`No valid NBPD hourly factor for month=${month}, dayType=${dayType}, hour=${hour} (factor=${hourlyExpansionFactor})`);
+            // No hourly factor available - this is expected for hours 0-5 and 22-23
+            // Only log warning if it's during expected hours (6-21)
+            if (hour >= 6 && hour <= 21) {
+              warnings.push(`No valid NBPD hourly factor for month=${month}, dayType=${dayType}, hour=${hour} (factor=${hourlyExpansionFactor})`);
+            }
           }
         }
         
@@ -473,8 +480,8 @@ export class EnhancedAADVCalculationService {
 
   private static getDayType(date: Date): string {
     const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 6 = Saturday
-    if (dayOfWeek === 0) return "sunday";
-    if (dayOfWeek === 6) return "saturday";
+    // NBPD factors use "weekday" and "weekend" (not "saturday"/"sunday")
+    if (dayOfWeek === 0 || dayOfWeek === 6) return "weekend";
     return "weekday";
   }
 
