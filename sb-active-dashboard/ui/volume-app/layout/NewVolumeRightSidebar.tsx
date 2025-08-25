@@ -5,10 +5,10 @@ import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import React, { useCallback, useEffect, useState } from "react";
 import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDataService";
-import { useSpatialQuery, useVolumeSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
+import { useSpatialQuery, useVolumeSpatialQuery, useEnhancedAADVSummaryQuery } from "../../../lib/hooks/useSpatialQuery";
 import { useVolumeAppStore } from "../../../lib/stores/volume-app-state";
 import { formatSparklineDateRange } from "../utils/sparklineUtils";
-import AADTHistogram from "../components/right-sidebar/AADTHistogram";
+import AADVHistogram from "../components/right-sidebar/AADTHistogram";
 import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVolumeBreakdown";
 import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
 import HighestVolume from "../components/right-sidebar/HighestVolume";
@@ -244,7 +244,7 @@ export default function NewVolumeRightSidebar({
         const highlightedArray = highlightedSiteIds.length > 0 ? `[${highlightedSiteIds.join(',')}]` : '[]';
         
         const valueExpression = `IIF(IndexOf(${highlightedArray}, Number($feature.id)) > -1, 2, IIF(IndexOf(${contributingArray}, Number($feature.id)) > -1, 1, 0))`;
-        console.log('🎨 Value expression:', valueExpression);
+
 
         const filledBlue = new SimpleMarkerSymbol({
           size: 8,
@@ -290,11 +290,12 @@ export default function NewVolumeRightSidebar({
     selectedGeometry || null
   );
 
-  // Use volume-specific spatial query for summary statistics
-  const { result: volumeResult, isLoading: volumeLoading } = useVolumeSpatialQuery(
+  // Use enhanced AADV calculation for summary statistics
+  const { result: enhancedAADVResult, isLoading: enhancedAADVLoading } = useEnhancedAADVSummaryQuery(
     sitesLayer,
-    aadtTable,
-    selectedGeometry || null
+    selectedGeometry || null,
+    dateRange,
+    { showBicyclist, showPedestrian }
   );
 
   // State for timeline data
@@ -418,9 +419,12 @@ export default function NewVolumeRightSidebar({
                 isLoading={timelineLoading}
               />
               <SummaryStatistics 
-                spatialResult={volumeResult || null} 
-                isLoading={volumeLoading}
+                spatialResult={enhancedAADVResult || null} 
+                isLoading={enhancedAADVLoading}
                 selectedGeometry={selectedGeometry}
+                dateRange={dateRange}
+                showBicyclist={showBicyclist}
+                showPedestrian={showPedestrian}
               />
               <AggregatedVolumeBreakdown 
                 selectedGeometry={selectedGeometry}
@@ -448,7 +452,7 @@ export default function NewVolumeRightSidebar({
                 showPedestrian={showPedestrian}
                 modelCountsBy={modelCountsBy}
               />
-              <AADTHistogram
+                            <AADVHistogram 
                 selectedGeometry={selectedGeometry}
                 dateRange={dateRange}
                 showBicyclist={showBicyclist}
@@ -459,6 +463,7 @@ export default function NewVolumeRightSidebar({
                 sitesLayer={sitesLayer}
                 countsLayer={countsLayer}
                 aadtTable={aadtTable}
+                dateRange={dateRange}
                 showBicyclist={showBicyclist}
                 showPedestrian={showPedestrian}
                 selectedGeometry={selectedGeometry}

@@ -25,6 +25,7 @@ describe('HighestVolume Component - Data Validation', () => {
   let mockCountsLayer: any
   let mockAadtTable: any
   let mockGeometry: any
+  let mockDateRange: any
   let user: any
 
   beforeEach(() => {
@@ -48,6 +49,10 @@ describe('HighestVolume Component - Data Validation', () => {
     mockCountsLayer = createMockFeatureLayer('counts')
     mockAadtTable = createMockFeatureLayer('aadt')
     mockGeometry = createMockPolygonGeometry()
+    mockDateRange = {
+      startDate: new Date('2023-01-01'),
+      endDate: new Date('2023-12-31')
+    }
   })
 
   describe('Filter Combination Data Validation', () => {
@@ -61,6 +66,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={false}  // Pedestrian disabled
           selectedGeometry={mockGeometry}
@@ -71,6 +77,7 @@ describe('HighestVolume Component - Data Validation', () => {
         expect(mockVolumeService.getHighestVolumeData).toHaveBeenCalledWith(
           mockMapView,
           { showBicyclist: true, showPedestrian: false },
+          mockDateRange,
           5,
           mockGeometry
         )
@@ -91,6 +98,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={false}   // Bicycle disabled
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -101,6 +109,7 @@ describe('HighestVolume Component - Data Validation', () => {
         expect(mockVolumeService.getHighestVolumeData).toHaveBeenCalledWith(
           mockMapView,
           { showBicyclist: false, showPedestrian: true },
+          mockDateRange,
           5,
           mockGeometry
         )
@@ -121,6 +130,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -131,6 +141,7 @@ describe('HighestVolume Component - Data Validation', () => {
         expect(mockVolumeService.getHighestVolumeData).toHaveBeenCalledWith(
           mockMapView,
           { showBicyclist: true, showPedestrian: true },
+          mockDateRange,
           5,
           mockGeometry
         )
@@ -144,9 +155,9 @@ describe('HighestVolume Component - Data Validation', () => {
     it('should validate data aggregation is mathematically correct', async () => {
       const testData = {
         sites: [
-          { siteId: 1, siteName: 'Test Site A', bikeAADT: 100, pedAADT: 50, totalAADT: 150, locality: 'Test' },
-          { siteId: 2, siteName: 'Test Site B', bikeAADT: 80, pedAADT: 30, totalAADT: 110, locality: 'Test' },
-          { siteId: 3, siteName: 'Test Site C', bikeAADT: 200, pedAADT: 75, totalAADT: 275, locality: 'Test' },
+          { siteId: 1, siteName: 'Test Site A', bikeAADT: 100, pedAADT: 50, totalAADV: 150, locality: 'Test' },
+          { siteId: 2, siteName: 'Test Site B', bikeAADT: 80, pedAADT: 30, totalAADV: 110, locality: 'Test' },
+          { siteId: 3, siteName: 'Test Site C', bikeAADT: 200, pedAADT: 75, totalAADV: 275, locality: 'Test' },
         ]
       }
       
@@ -158,6 +169,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -193,6 +205,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -215,6 +228,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={newGeometry}
@@ -227,6 +241,7 @@ describe('HighestVolume Component - Data Validation', () => {
         expect(mockVolumeService.getHighestVolumeData).toHaveBeenLastCalledWith(
           mockMapView,
           { showBicyclist: true, showPedestrian: true },
+          mockDateRange,
           5,
           newGeometry
         )
@@ -244,6 +259,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -257,6 +273,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={null}
@@ -275,6 +292,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -297,9 +315,9 @@ describe('HighestVolume Component - Data Validation', () => {
     it('should display sites in correct descending order by total volume', async () => {
       const mockData = {
         sites: [
-          { siteId: 1, siteName: 'Highest Volume', bikeAADT: 200, pedAADT: 100, totalAADT: 300, locality: 'Test' },
-          { siteId: 2, siteName: 'Medium Volume', bikeAADT: 150, pedAADT: 50, totalAADT: 200, locality: 'Test' },
-          { siteId: 3, siteName: 'Lower Volume', bikeAADT: 80, pedAADT: 20, totalAADT: 100, locality: 'Test' },
+          { siteId: 1, siteName: 'Highest Volume', bikeAADT: 200, pedAADT: 100, totalAADV: 300, locality: 'Test' },
+          { siteId: 2, siteName: 'Medium Volume', bikeAADT: 150, pedAADT: 50, totalAADV: 200, locality: 'Test' },
+          { siteId: 3, siteName: 'Lower Volume', bikeAADT: 80, pedAADT: 20, totalAADV: 100, locality: 'Test' },
         ]
       }
       
@@ -311,6 +329,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -333,8 +352,8 @@ describe('HighestVolume Component - Data Validation', () => {
     it('should format volume numbers with commas for large values', async () => {
       const mockData = {
         sites: [
-          { siteId: 1, siteName: 'High Traffic Site', bikeAADT: 5000, pedAADT: 3500, totalAADT: 8500, locality: 'Test' },
-          { siteId: 2, siteName: 'Medium Traffic Site', bikeAADT: 2000, pedAADT: 1200, totalAADT: 3200, locality: 'Test' },
+          { siteId: 1, siteName: 'High Traffic Site', bikeAADT: 5000, pedAADT: 3500, totalAADV: 8500, locality: 'Test' },
+          { siteId: 2, siteName: 'Medium Traffic Site', bikeAADT: 2000, pedAADT: 1200, totalAADV: 3200, locality: 'Test' },
         ]
       }
       
@@ -346,6 +365,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -362,8 +382,8 @@ describe('HighestVolume Component - Data Validation', () => {
     it('should handle sites with zero volumes correctly', async () => {
       const mockData = {
         sites: [
-          { siteId: 1, siteName: 'Active Site', bikeAADT: 100, pedAADT: 50, totalAADT: 150, locality: 'Test' },
-          { siteId: 2, siteName: 'Inactive Site', bikeAADT: 0, pedAADT: 0, totalAADT: 0, locality: 'Test' },
+          { siteId: 1, siteName: 'Active Site', bikeAADT: 100, pedAADT: 50, totalAADV: 150, locality: 'Test' },
+          { siteId: 2, siteName: 'Inactive Site', bikeAADT: 0, pedAADT: 0, totalAADV: 0, locality: 'Test' },
         ]
       }
       
@@ -375,6 +395,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -402,6 +423,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -425,6 +447,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -451,6 +474,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -478,6 +502,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -505,6 +530,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -535,6 +561,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -574,6 +601,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -591,6 +619,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -613,6 +642,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -647,6 +677,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -670,6 +701,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
@@ -692,6 +724,7 @@ describe('HighestVolume Component - Data Validation', () => {
           sitesLayer={mockSitesLayer}
           countsLayer={mockCountsLayer}
           aadtTable={mockAadtTable}
+          dateRange={mockDateRange}
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}

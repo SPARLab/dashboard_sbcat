@@ -41,7 +41,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
       ]
 
       // Call the private method using type casting (for testing purposes)
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
 
       // Expected calculations:
       // Site 1, July 1: (10+15+20)/3 = 15 avg hourly
@@ -66,7 +66,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 1, timestamp: '2022-08-01T10:00:00Z', counts: 50, count_type: 'bike' }
       ]
 
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
 
       // July: (20+30)/2 = 25 avg hourly
       // August: (40+50)/2 = 45 avg hourly
@@ -86,7 +86,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 1, timestamp: '2022-07-01T10:00:00Z', counts: 10, count_type: 'bike' }
       ]
 
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
       
       // Should filter out zero counts, so only 10 counts for 1 hour = 10 avg
       expect(result[0].value).toBe(10)
@@ -97,7 +97,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 1, timestamp: '2022-07-01T09:00:00Z', counts: 50, count_type: 'bike' }
       ]
 
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
       
       expect(result[0].value).toBe(50)
     })
@@ -105,7 +105,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
     it('should handle empty data', async () => {
       const mockCountsData: any[] = []
 
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
       
       expect(result).toHaveLength(0)
     })
@@ -126,7 +126,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 1, timestamp: '2022-07-11T10:00:00Z', counts: 50, count_type: 'bike' }
       ]
 
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Day')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Day')
 
       // Monday site-days: 
       //   - July 4: (20+30)/2 = 25 avg hourly
@@ -158,7 +158,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 1, timestamp: '2022-07-03T10:00:00Z', counts: 80, count_type: 'bike' }
       ]
 
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Weekday vs Weekend')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Weekday vs Weekend')
 
       // Weekday: Monday (20+30)/2 = 25 avg hourly
       // Weekend: 
@@ -187,7 +187,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 2, timestamp: '2022-07-01T10:00:00Z', counts: 60, count_type: 'bike' }
       ]
 
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Hour')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Hour')
 
       // The hours may be affected by timezone conversion
       expect(result).toHaveLength(2)
@@ -209,7 +209,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 1, timestamp: '2022-07-01T11:00:00Z', counts: 30, count_type: 'bike' }
       ]
 
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
       
       // Should only count the valid 30 count for 1 hour = 30 avg
       expect(result[0].value).toBe(30)
@@ -221,7 +221,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 1, timestamp: '2022-07-01T09:00:00Z', counts: 40, count_type: 'bike' }
       ]
 
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
       
       // Both are July, so should be averaged: (20+40)/2 = 30
       expect(result[0].value).toBe(30)
@@ -233,7 +233,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 1, timestamp: '2022-07-01T10:00:00Z', counts: 5000, count_type: 'bike' }
       ]
 
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
       
       // Note: This will fail with the old logic due to the >10000 filter, 
       // but should work with the new logic: (10000+5000)/2 = 7500
@@ -257,7 +257,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 2, timestamp: '2022-07-01T12:00:00Z', counts: 30, count_type: 'bike' }
       ]
 
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
       
       // Site 1 daily avg: (343+300+250)/3 = 297.67
       // Site 2 daily avg: (15+20+25+30)/4 = 22.5  
@@ -314,7 +314,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
       ]
 
       // Call the aggregation method
-      const result = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockRealisticData, 'Month')
+      const result = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockRealisticData, 'Month')
       
       // Sort results by month for easier analysis
       const sortedResult = result.sort((a, b) => {
@@ -362,7 +362,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 2, timestamp: '2022-07-01T10:00:00Z', counts: 600, count_type: 'bike' }
       ]
       
-      const sitePatternResult = (YearToYearComparisonDataService as any).aggregateByTimeScale(differentSitePatterns, 'Month')
+      const sitePatternResult = await (YearToYearComparisonDataService as any).aggregateByTimeScale(differentSitePatterns, 'Month')
       
       console.log('🔍 SITE PATTERN INVESTIGATION:')
       console.log(`  July ADV with mixed site patterns: ${sitePatternResult[0]?.value.toFixed(2)}`)
@@ -388,7 +388,7 @@ describe('YearToYearComparisonDataService - Aggregation Logic', () => {
         { site_id: 1, timestamp: '2022-07-01T14:00:00Z', counts: 9, count_type: 'bike' }
       ]
       
-      const densityResult = (YearToYearComparisonDataService as any).aggregateByTimeScale(varyingDataDensity, 'Month')
+      const densityResult = await (YearToYearComparisonDataService as any).aggregateByTimeScale(varyingDataDensity, 'Month')
       const densitySorted = densityResult.sort((a, b) => {
         const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         return monthOrder.indexOf(a.name) - monthOrder.indexOf(b.name)

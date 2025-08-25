@@ -166,8 +166,8 @@ describe('VolumeBreakdownDataService - Aggregation Logic', () => {
         { site_id: 2, timestamp: '2022-07-01T12:00:00Z', counts: 30, count_type: 'bike' }
       ]
 
-      const volumeBreakdownResult = (VolumeBreakdownDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
-      const yearToYearResult = (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
+      const volumeBreakdownResult = await (VolumeBreakdownDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
+      const yearToYearResult = await (YearToYearComparisonDataService as any).aggregateByTimeScale(mockCountsData, 'Month')
       
       // Both services should produce identical results
       expect(volumeBreakdownResult).toHaveLength(1)

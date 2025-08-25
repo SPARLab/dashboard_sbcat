@@ -1,5 +1,10 @@
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import Polygon from "@arcgis/core/geometry/Polygon";
+import { loadProfiles, ProfilesIndex } from "../../src/lib/factors";
+import { expandToAADX, ShortRecord, HourObs } from "../../src/lib/nbpdExpand";
+import { SiteYear } from "../../src/lib/year-over-year";
+import { AADVCalculationService, RawCountRecord } from "../../src/lib/aadv-calculations";
+import { EnhancedAADVCalculationService, RawCountRecord as EnhancedRawCountRecord, EnhancedAADVConfig } from "../../src/lib/enhanced-aadv-calculations";
 
 /**
  * Interface for year-to-year comparison data by different time scales
@@ -37,9 +42,12 @@ export type NormalizationMode = 'none' | 'equal-site';
 export class YearToYearComparisonDataService {
   private static readonly COUNTS_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/1";
   private static readonly SITES_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/0";
+  
+  // Cache for NBPD profiles to avoid repeated loading
+  private static profilesCache: ProfilesIndex | null = null;
 
   /**
-   * Query year-to-year comparison data for selected area and time scale
+   * Query year-to-year comparison data for selected area and time scale with optional NBPD expansion
    */
   static async queryYearToYearComparison(
     selectedGeometry: Polygon | null,
@@ -47,7 +55,8 @@ export class YearToYearComparisonDataService {
     showBicyclist: boolean = true,
     showPedestrian: boolean = true,
     normalization: NormalizationMode = 'none',
-    scaleHourlyToDaily: boolean = false
+    scaleHourlyToDaily: boolean = false,
+    nbpdProfileKey?: string
   ): Promise<YearToYearComparisonResult> {
     try {
       if (!selectedGeometry) {
@@ -66,8 +75,8 @@ export class YearToYearComparisonDataService {
       const year2024Data = await this.queryCountsForSitesAndYear(siteIds, 2024, showBicyclist, showPedestrian);
       
       // Aggregate data based on time scale for both years
-      const aggregated2023 = this.aggregateByTimeScale(year2023Data, timeScale, normalization, scaleHourlyToDaily);
-      const aggregated2024 = this.aggregateByTimeScale(year2024Data, timeScale, normalization, scaleHourlyToDaily);
+      const aggregated2023 = await this.aggregateByTimeScale(year2023Data, timeScale, normalization, scaleHourlyToDaily, nbpdProfileKey, showBicyclist, showPedestrian);
+      const aggregated2024 = await this.aggregateByTimeScale(year2024Data, timeScale, normalization, scaleHourlyToDaily, nbpdProfileKey, showBicyclist, showPedestrian);
 
       // Combine the data for comparison
       const comparisonData = this.combineYearData(aggregated2023, aggregated2024, timeScale);
@@ -150,14 +159,33 @@ export class YearToYearComparisonDataService {
   }
 
   /**
-   * Aggregate count data by time scale
+   * Aggregate count data by time scale with optional NBPD expansion
    */
-  private static aggregateByTimeScale(
+  private static async aggregateByTimeScale(
     countsData: any[],
     timeScale: TimeScale,
     normalization: NormalizationMode = 'none',
-    scaleHourlyToDaily: boolean = false
-  ): { name: string; value: number }[] {
+    scaleHourlyToDaily: boolean = false,
+    nbpdProfileKey?: string,
+    showBicyclist: boolean = true,
+    showPedestrian: boolean = true
+  ): Promise<{ name: string; value: number }[]> {
+    // If NBPD profile is provided, use NBPD expansion instead of raw aggregation
+    if (nbpdProfileKey) {
+      const shortRecords = this.convertToShortRecords(countsData, showBicyclist, showPedestrian);
+      const aadxData = await this.mapRecordsToAADX(shortRecords, nbpdProfileKey);
+      
+      // Log warnings from NBPD expansion
+      const allWarnings = aadxData.flatMap(record => record.warnings);
+      if (allWarnings.length > 0) {
+        console.warn('NBPD Expansion Warnings:', allWarnings);
+      }
+      
+      const result = this.aggregateAADXByTimeScale(aadxData, timeScale, normalization);
+      return result;
+    }
+
+    // Original aggregation logic for non-NBPD cases
     // Debug: Log data quality analysis
     this.logDataQualityAnalysis(countsData, timeScale);
     
@@ -694,7 +722,8 @@ export class YearToYearComparisonDataService {
     showPedestrian: boolean = true,
     dateRange: { start: Date; end: Date },
     normalization: NormalizationMode = 'none',
-    scaleHourlyToDaily: boolean = false
+    scaleHourlyToDaily: boolean = false,
+    nbpdProfileKey?: string
   ): Promise<MultiYearComparisonResult> {
     try {
       if (!selectedGeometry || years.length === 0) {
@@ -754,11 +783,11 @@ export class YearToYearComparisonDataService {
       const aggregatedByYear = new Map<number, { name: string; value: number }[]>();
       const totalsByYear: Record<number, number> = {};
 
-      yearResults.forEach(({ year, data }) => {
-        const aggregated = this.aggregateByTimeScale(data, timeScale, normalization, scaleHourlyToDaily);
+      for (const { year, data } of yearResults) {
+        const aggregated = await this.aggregateByTimeScale(data, timeScale, normalization, scaleHourlyToDaily, nbpdProfileKey, showBicyclist, showPedestrian);
         aggregatedByYear.set(year, aggregated);
         totalsByYear[year] = aggregated.reduce((sum, item) => sum + item.value, 0);
-      });
+      }
 
       // Build categories and series
       const allCategoryNames = new Set<string>();
@@ -857,4 +886,386 @@ export class YearToYearComparisonDataService {
 
     return data2023[timeScale] || [];
   }
+
+  /**
+   * Ensure NBPD profiles are loaded and cached
+   */
+  private static async ensureProfiles(): Promise<ProfilesIndex> {
+    if (!this.profilesCache) {
+      this.profilesCache = await loadProfiles();
+    }
+    return this.profilesCache;
+  }
+
+  /**
+   * Convert raw count records to ShortRecord format for NBPD expansion
+   */
+  private static convertToShortRecords(
+    countsData: any[],
+    showBicyclist: boolean,
+    showPedestrian: boolean
+  ): ShortRecord[] {
+    // Group by site-date-mode-context
+    const grouped: { [key: string]: { 
+      siteId: string; 
+      mode: "bike" | "ped"; 
+      context: "PATH" | "PED"; 
+      date: string; 
+      hours: HourObs[] 
+    } } = {};
+
+    countsData.forEach(record => {
+      const timestamp = new Date(record.timestamp);
+      const date = timestamp.toISOString().split('T')[0]; // YYYY-MM-DD
+      const hour = timestamp.getHours();
+      const siteId = record.site_id.toString();
+      const mode = record.count_type as "bike" | "ped";
+      
+      // Skip if mode is not selected
+      if (mode === "bike" && !showBicyclist) return;
+      if (mode === "ped" && !showPedestrian) return;
+      
+      // Infer context from mode (simplified mapping)
+      const context = mode === "bike" ? "PATH" : "PED";
+      
+      const key = `${siteId}_${date}_${mode}_${context}`;
+      
+      if (!grouped[key]) {
+        grouped[key] = {
+          siteId,
+          mode,
+          context,
+          date,
+          hours: []
+        };
+      }
+      
+      grouped[key].hours.push({
+        hour,
+        count: record.counts || 0
+      });
+    });
+
+    return Object.values(grouped);
+  }
+
+  /**
+   * Map short records to AADX using NBPD expansion
+   */
+  static async mapRecordsToAADX(
+    records: ShortRecord[],
+    profileKey: string
+  ): Promise<Array<{ siteId: string; year: number; aadx: number; warnings: string[] }>> {
+    const profiles = await this.ensureProfiles();
+    
+    return records.map(record => {
+      const { aadx, warnings } = expandToAADX(record, profileKey, profiles);
+      const year = new Date(record.date).getUTCFullYear();
+      
+      return {
+        siteId: record.siteId,
+        year,
+        aadx,
+        warnings
+      };
+    });
+  }
+
+  /**
+   * Aggregate AADX values by time scale (replaces the original aggregation when using NBPD)
+   */
+  private static aggregateAADXByTimeScale(
+    aadxData: Array<{ siteId: string; year: number; aadx: number; warnings: string[] }>,
+    timeScale: TimeScale,
+    normalization: NormalizationMode = 'none'
+  ): { name: string; value: number }[] {
+    // For NBPD expansion, we work with annual values, so only Year scale makes sense
+    // For other scales, we'll group by site-year and average the AADX values
+    
+    if (timeScale === 'Year') {
+      const yearAggregation: { [year: string]: { values: number[], count: number } } = {};
+      
+      aadxData.forEach(record => {
+        const yearKey = record.year.toString();
+        if (!yearAggregation[yearKey]) {
+          yearAggregation[yearKey] = { values: [], count: 0 };
+        }
+        yearAggregation[yearKey].values.push(record.aadx);
+        yearAggregation[yearKey].count += 1;
+      });
+
+      return Object.entries(yearAggregation).map(([year, data]) => {
+        const avgAADX = data.values.length > 0 
+          ? data.values.reduce((sum, val) => sum + val, 0) / data.values.length 
+          : 0;
+        return { 
+          name: year, 
+          value: Math.round(avgAADX) 
+        };
+      });
+    }
+
+    // For other time scales with NBPD, we need to distribute the annual values
+    // This is a simplified approach - in practice, you might want more sophisticated distribution
+    const result: { name: string; value: number }[] = [];
+    
+    // Group by year first, then create time scale entries
+    const yearGroups: { [year: string]: number[] } = {};
+    aadxData.forEach(record => {
+      const yearKey = record.year.toString();
+      if (!yearGroups[yearKey]) yearGroups[yearKey] = [];
+      yearGroups[yearKey].push(record.aadx);
+    });
+
+    // For non-Year scales, create placeholder data
+    // This is a limitation noted in the requirements
+    const timeKeys = this.getTimeKeysForScale(timeScale);
+    timeKeys.forEach(timeKey => {
+      // Average across all years and distribute evenly
+      const allValues = Object.values(yearGroups).flat();
+      const avgValue = allValues.length > 0 
+        ? allValues.reduce((sum, val) => sum + val, 0) / allValues.length 
+        : 0;
+      
+      result.push({ 
+        name: timeKey, 
+        value: Math.round(avgValue / timeKeys.length) // Distribute evenly across time periods
+      });
+    });
+
+    return result;
+  }
+
+  /**
+   * Get time keys for a given time scale
+   */
+  private static getTimeKeysForScale(timeScale: TimeScale): string[] {
+    switch (timeScale) {
+      case 'Hour':
+        return Array.from({ length: 24 }, (_, i) => i.toString());
+      case 'Day':
+        return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      case 'Weekday vs Weekend':
+        return ['Weekday', 'Weekend'];
+      case 'Month':
+        return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      case 'Year':
+        return []; // Will be populated dynamically
+      default:
+        return [];
+    }
+  }
+
+  /**
+   * Get actual site names from the database for given site IDs
+   */
+  static async getSiteNames(siteIds: number[]): Promise<Map<number, string>> {
+    if (siteIds.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const sitesLayer = new FeatureLayer({ url: this.SITES_URL });
+      
+      const query = sitesLayer.createQuery();
+      query.where = `id IN (${siteIds.join(',')})`;
+      query.outFields = ["id", "name"];
+      query.returnGeometry = false;
+
+      const results = await sitesLayer.queryFeatures(query);
+      
+      const siteNameMap = new Map<number, string>();
+      results.features.forEach(feature => {
+        const siteId = feature.attributes.id;
+        const siteName = feature.attributes.name || `Site ${siteId}`;
+        siteNameMap.set(siteId, siteName);
+      });
+
+      return siteNameMap;
+    } catch (error) {
+      console.error('Error querying site names:', error);
+      // Return fallback names
+      const fallbackMap = new Map<number, string>();
+      siteIds.forEach(id => fallbackMap.set(id, `Site ${id}`));
+      return fallbackMap;
+    }
+  }
+
+  /**
+   * Get site names for given site IDs, but only for sites within the specified geometry
+   */
+  static async getSiteNamesInGeometry(siteIds: number[], geometry: Polygon): Promise<Map<number, string>> {
+    if (siteIds.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const sitesLayer = new FeatureLayer({ url: this.SITES_URL });
+      
+      const query = sitesLayer.createQuery();
+      query.where = `id IN (${siteIds.join(',')})`;
+      query.geometry = geometry;
+      query.spatialRelationship = "intersects";
+      query.outFields = ["id", "name"];
+      query.returnGeometry = false;
+
+      const results = await sitesLayer.queryFeatures(query);
+      
+      const siteNameMap = new Map<number, string>();
+      results.features.forEach(feature => {
+        const siteId = feature.attributes.id;
+        const siteName = feature.attributes.name || `Site ${siteId}`;
+        siteNameMap.set(siteId, siteName);
+      });
+      
+      return siteNameMap;
+    } catch (error) {
+      console.error('Error fetching site names in geometry:', error);
+      return new Map();
+    }
+  }
+
+  /**
+   * Get SiteYear data for year-over-year analysis
+   * This method returns the AADV data per site per year using enhanced AADV calculations
+   * that combine Santa Cruz (monthly/daily) and NBPD (hourly) expansion factors
+   */
+  static async getSiteYearData(
+    selectedGeometry: Polygon | null,
+    years: number[],
+    showBicyclist: boolean = true,
+    showPedestrian: boolean = true,
+    nbpdProfileKey?: string
+  ): Promise<SiteYear[]> {
+    try {
+      if (!selectedGeometry || years.length === 0) {
+        return [];
+      }
+
+      // Get site IDs within the selected geometry
+      const siteIds = await this.getSiteIdsInPolygon(selectedGeometry);
+      
+      if (siteIds.length === 0) {
+        return [];
+      }
+
+      // Query raw count data for all years
+      const allRawCountData: EnhancedRawCountRecord[] = [];
+      
+      for (const year of years) {
+        const yearData = await this.queryCountsForSitesAndYear(siteIds, year, showBicyclist, showPedestrian);
+        
+        // Convert to EnhancedRawCountRecord format
+        const rawCountRecords: EnhancedRawCountRecord[] = yearData.map(record => ({
+          site_id: record.site_id,
+          timestamp: record.timestamp,
+          counts: record.counts || 0,
+          count_type: record.count_type as 'bike' | 'ped'
+        }));
+        
+        allRawCountData.push(...rawCountRecords);
+      }
+
+      // Use enhanced AADV calculation service with both Santa Cruz and NBPD factors
+      const enhancedConfig: EnhancedAADVConfig = {
+        showBicyclist,
+        showPedestrian,
+        santaCruzProfileKey: 'SantaCruz_citywide_v1',
+        nbpdProfileKey: nbpdProfileKey || 'NBPD_PATH_moderate_2009'
+      };
+
+      const aadvResults = await EnhancedAADVCalculationService.calculateEnhancedAADV(
+        allRawCountData, 
+        enhancedConfig
+      );
+
+      // Log any warnings from AADV calculations
+      const allWarnings = aadvResults.flatMap(result => result.warnings);
+      if (allWarnings.length > 0) {
+        console.warn('Enhanced AADV Calculation Warnings:', allWarnings);
+      }
+
+      // Log factors usage summary
+      const factorsSummary = aadvResults.reduce((acc, result) => {
+        acc.santaCruzUsed = acc.santaCruzUsed || result.factorsUsed.santaCruz;
+        acc.nbpdUsed = acc.nbpdUsed || result.factorsUsed.nbpd;
+        acc.totalHourlyFactors += result.factorsUsed.hourlyFactorsApplied;
+        acc.totalDailyFactors += result.factorsUsed.dailyFactorsApplied;
+        acc.totalMonthlyFactors += result.factorsUsed.monthlyFactorsApplied;
+        return acc;
+      }, { santaCruzUsed: false, nbpdUsed: false, totalHourlyFactors: 0, totalDailyFactors: 0, totalMonthlyFactors: 0 });
+
+      console.log('Enhanced AADV Factors Summary:', factorsSummary);
+
+      // Return just the SiteYear data
+      return aadvResults.map(result => result.siteYear);
+      
+    } catch (error) {
+      console.error('Error getting SiteYear data:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get aggregated AADV totals for year-to-year comparison
+   * This method provides the total AADV for all sites in a geometry for each year
+   */
+  static async getAggregatedAADVByYear(
+    selectedGeometry: Polygon | null,
+    years: number[],
+    showBicyclist: boolean = true,
+    showPedestrian: boolean = true,
+    nbpdProfileKey?: string
+  ): Promise<Record<number, { totalAADV: number; siteCount: number; warnings: string[] }>> {
+    try {
+      if (!selectedGeometry || years.length === 0) {
+        return {};
+      }
+
+      // Get site IDs within the selected geometry
+      const siteIds = await this.getSiteIdsInPolygon(selectedGeometry);
+      
+      if (siteIds.length === 0) {
+        return {};
+      }
+
+      const results: Record<number, { totalAADV: number; siteCount: number; warnings: string[] }> = {};
+
+      // Process each year separately for better performance and clearer results
+      for (const year of years) {
+        const yearData = await this.queryCountsForSitesAndYear(siteIds, year, showBicyclist, showPedestrian);
+        
+        // Convert to EnhancedRawCountRecord format
+        const rawCountRecords: EnhancedRawCountRecord[] = yearData.map(record => ({
+          site_id: record.site_id,
+          timestamp: record.timestamp,
+          counts: record.counts || 0,
+          count_type: record.count_type as 'bike' | 'ped'
+        }));
+
+        // Use enhanced AADV calculation service
+        const enhancedConfig: EnhancedAADVConfig = {
+          showBicyclist,
+          showPedestrian,
+          santaCruzProfileKey: 'SantaCruz_citywide_v1',
+          nbpdProfileKey: nbpdProfileKey || 'NBPD_PATH_moderate_2009'
+        };
+
+        const yearResult = await EnhancedAADVCalculationService.calculateAggregatedAADVForYear(
+          rawCountRecords,
+          year,
+          enhancedConfig
+        );
+
+        results[year] = yearResult;
+      }
+
+      return results;
+      
+    } catch (error) {
+      console.error('Error getting aggregated AADV by year:', error);
+      return {};
+    }
+  }
+
 }

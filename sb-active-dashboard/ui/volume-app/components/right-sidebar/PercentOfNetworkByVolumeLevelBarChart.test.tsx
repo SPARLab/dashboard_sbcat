@@ -191,14 +191,16 @@ describe('PercentOfNetworkByVolumeLevelBarChart', () => {
     expect(mockGetTrafficLevelBreakdownData).not.toHaveBeenCalled();
   });
 
-  it('should always have a selected mode', () => {
+  it('should always have a selected mode', async () => {
     // With the radio button implementation, there's always a selected mode
     render(<PercentOfNetworkByVolumeLevelBarChart 
       {...defaultProps} 
       selectedMode="bike"
     />);
     
-    expect(screen.getByTestId('echarts-mock')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('echarts-mock')).toBeInTheDocument();
+    });
     expect(mockGetTrafficLevelBreakdownData).toHaveBeenCalled();
   });
 

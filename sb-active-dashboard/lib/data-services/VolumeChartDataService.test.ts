@@ -42,6 +42,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         {} as any // geometry
       )
@@ -71,6 +72,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: false },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         {} as any
       )
@@ -81,8 +83,9 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         mockAadtLayer,
         mockMapView,
         { showBicyclist: true, showPedestrian: false },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
-        expect.anything()
+        {} as any
       )
 
       // Verify results show only bike data
@@ -101,6 +104,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: false, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         {} as any
       )
@@ -111,8 +115,9 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         mockAadtLayer,
         mockMapView,
         { showBicyclist: false, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
-        expect.anything()
+        {} as any
       )
 
       // Verify results show only pedestrian data
@@ -134,6 +139,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         3, // limit to 3 sites
         {} as any
       )
@@ -144,8 +150,9 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         mockAadtLayer,
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         3, // The limit should be passed through
-        expect.anything()
+        {} as any
       )
 
       // The service should return what the underlying service returns
@@ -163,6 +170,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         {} as any
       )
@@ -183,6 +191,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         mockGeometry
       )
@@ -193,6 +202,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         mockAadtLayer,
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         mockGeometry
       )
@@ -228,6 +238,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         const result = await service.getHighestVolumeData(
           mockMapView,
           filters,
+          { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
           5,
           {} as any
         )
@@ -263,6 +274,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         {} as any
       )
@@ -286,6 +298,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         {} as any
       )
@@ -319,6 +332,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         {} as any
       )
@@ -332,6 +346,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         {} as any
       )
@@ -351,6 +366,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         {} as any
       )
@@ -379,6 +395,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         5,
         {} as any
       )
@@ -401,6 +418,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
       await service.getHighestVolumeData(
         mockMapView,
         mockFilters,
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
         10,
         mockGeometry
       )
@@ -411,6 +429,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         mockAadtLayer,     // aadtLayer  
         mockMapView,       // mapView
         mockFilters,       // filters
+        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') }, // dateRange
         10,                // limit
         mockGeometry       // selectedGeometry
       )

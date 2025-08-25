@@ -4,18 +4,21 @@ import CollapseExpandIcon from "./CollapseExpandIcon";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import SelectRegionPlaceholder from "../../../components/SelectRegionPlaceholder";
 
-interface SpatialQueryResult {
+interface EnhancedAADVSummaryResult {
   totalCount: number;
-  medianPedestrianWeekdayAADT?: number;
-  medianPedestrianWeekendAADT?: number;
-  medianBikeWeekdayAADT?: number;
-  medianBikeWeekendAADT?: number;
+  medianPedestrianWeekdayAADV?: number;
+  medianPedestrianWeekendAADV?: number;
+  medianBikeWeekdayAADV?: number;
+  medianBikeWeekendAADV?: number;
 }
 
 interface SummaryStatisticsProps {
-  spatialResult?: SpatialQueryResult | null;
+  spatialResult?: EnhancedAADVSummaryResult | null;
   isLoading?: boolean;
   selectedGeometry?: Polygon | null;
+  dateRange: { startDate: Date; endDate: Date };
+  showBicyclist?: boolean;
+  showPedestrian?: boolean;
 }
 
 const StatsRow = ({ label, value, tooltip, idPrefix }: { label: string, value: string | number, tooltip?: boolean, idPrefix: string }) => (
@@ -32,6 +35,9 @@ export default function SummaryStatistics({
   spatialResult = null, 
   isLoading = false,
   selectedGeometry = null,
+  dateRange,
+  showBicyclist = true,
+  showPedestrian = true,
 }: SummaryStatisticsProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -41,10 +47,10 @@ export default function SummaryStatistics({
 
     // Extract values from spatial result with defaults
     const sitesSelected = spatialResult?.totalCount || 0;
-    const pedWeekdayAADT = spatialResult?.medianPedestrianWeekdayAADT || 0;
-    const pedWeekendAADT = spatialResult?.medianPedestrianWeekendAADT || 0;
-    const bikeWeekdayAADT = spatialResult?.medianBikeWeekdayAADT || 0;
-    const bikeWeekendAADT = spatialResult?.medianBikeWeekendAADT || 0;
+    const pedWeekdayAADV = spatialResult?.medianPedestrianWeekdayAADV || 0;
+    const pedWeekendAADV = spatialResult?.medianPedestrianWeekendAADV || 0;
+    const bikeWeekdayAADV = spatialResult?.medianBikeWeekdayAADV || 0;
+    const bikeWeekendAADV = spatialResult?.medianBikeWeekendAADV || 0;
 
     // Format values for display
     const formatValue = (value: number) => {
@@ -67,54 +73,67 @@ export default function SummaryStatistics({
           </h3>
           <CollapseExpandIcon id="summary-statistics-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
         </div>
-      <div id="summary-statistics-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-y-hidden ${isCollapsed ? 'max-h-0' : 'max-h-96'}`}>
+      <div id="summary-statistics-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-y-hidden ${isCollapsed ? 'max-h-0' : 'max-h-100'}`}>
           {!selectedGeometry && (
             <SelectRegionPlaceholder id="summary-statistics-no-selection" subtext="Use the polygon tool or click on a boundary to see statistics for that area" />
           )}
           {selectedGeometry && (
-          <div id="summary-statistics-content" className="space-y-2 text-sm">
-              <StatsRow 
-                idPrefix="sites-selected" 
-                label="Sites Selected" 
-                value={isLoading ? "Loading..." : (sitesSelected || "Click a region")} 
-              />
-
-              <div id="weekday-section" className="space-y-2">
-                <p id="weekday-label" className="font-medium text-gray-600">Weekday</p>
-                <div id="weekday-stats" className="pl-4 space-y-2">
-                    <StatsRow 
-                      idPrefix="weekday-ped-aadt" 
-                      label="Median Pedestrian AADT" 
-                      value={spatialResult ? formatValue(pedWeekdayAADT) : "Select area"} 
-                      tooltip 
-                    />
-                    <StatsRow 
-                      idPrefix="weekday-bike-aadt" 
-                      label="Median Bike AADT" 
-                      value={spatialResult ? formatValue(bikeWeekdayAADT) : "Select area"} 
-                      tooltip 
-                    />
+            <>
+              <div id="summary-statistics-normalization-info" className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-xs text-blue-900">
+                  <strong>Enhanced Data Normalization:</strong> Volume data is normalized using a comprehensive approach:
+                  <ul className="mt-1 ml-3 list-disc">
+                    <li><strong>Hourly variations:</strong> NBPD factors normalize time-of-day fluctuations</li>
+                    <li><strong>Daily variations:</strong> Santa Cruz factors normalize day-of-week patterns</li>
+                    <li><strong>Monthly variations:</strong> Santa Cruz factors normalize seasonal patterns</li>
+                  </ul>
+                  This multi-layered approach provides the most accurate Average Annual Daily Volume (AADV) calculations.
                 </div>
               </div>
+              <div id="summary-statistics-content" className="space-y-2 text-sm">
+                  <StatsRow 
+                    idPrefix="sites-selected" 
+                    label="Sites Selected" 
+                    value={isLoading ? "Loading..." : (sitesSelected || "Click a region")} 
+                  />
 
-              <div id="weekend-section" className="space-y-2">
-                <p id="weekend-label" className="font-medium text-gray-600">Weekend</p>
-                <div id="weekend-stats" className="pl-4 space-y-2">
-                    <StatsRow 
-                      idPrefix="weekend-ped-aadt" 
-                      label="Median Pedestrian AADT" 
-                      value={spatialResult ? formatValue(pedWeekendAADT) : "Select area"} 
-                      tooltip 
-                    />
-                    <StatsRow 
-                      idPrefix="weekend-bike-aadt" 
-                      label="Median Bike AADT" 
-                      value={spatialResult ? formatValue(bikeWeekendAADT) : "Select area"} 
-                      tooltip 
-                    />
-                </div>
+                  <div id="weekday-section" className="space-y-2">
+                    <p id="weekday-label" className="font-medium text-gray-600">Weekday</p>
+                    <div id="weekday-stats" className="pl-4 space-y-2">
+                        <StatsRow 
+                          idPrefix="weekday-ped-aadv" 
+                          label="Median Pedestrian AADV" 
+                          value={spatialResult ? formatValue(pedWeekdayAADV) : "Select area"} 
+                          tooltip 
+                        />
+                        <StatsRow 
+                          idPrefix="weekday-bike-aadv" 
+                          label="Median Bike AADV" 
+                          value={spatialResult ? formatValue(bikeWeekdayAADV) : "Select area"} 
+                          tooltip 
+                        />
+                    </div>
+                  </div>
+
+                  <div id="weekend-section" className="space-y-2">
+                    <p id="weekend-label" className="font-medium text-gray-600">Weekend</p>
+                    <div id="weekend-stats" className="pl-4 space-y-2">
+                        <StatsRow 
+                          idPrefix="weekend-ped-aadv" 
+                          label="Median Pedestrian AADV" 
+                          value={spatialResult ? formatValue(pedWeekendAADV) : "Select area"} 
+                          tooltip 
+                        />
+                        <StatsRow 
+                          idPrefix="weekend-bike-aadv" 
+                          label="Median Bike AADV" 
+                          value={spatialResult ? formatValue(bikeWeekendAADV) : "Select area"} 
+                          tooltip 
+                        />
+                    </div>
+                  </div>
               </div>
-          </div>
+            </>
           )}
       </div>
     </div>

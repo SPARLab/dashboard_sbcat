@@ -3,15 +3,28 @@ import Polygon from "@arcgis/core/geometry/Polygon";
 import ReactECharts from 'echarts-for-react';
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { 
-  AADTHistogramDataService, 
-  AADTHistogramResult, 
+  AADVHistogramDataService, 
+  AADVHistogramResult, 
   HistogramBinData,
-  SiteAADTData 
-} from '../../../../lib/data-services/AADTHistogramDataService';
+  SiteAADVData 
+} from '../../../../lib/data-services/AADVHistogramDataService';
 import Tooltip from '../../../components/Tooltip';
 import CollapseExpandIcon from './CollapseExpandIcon';
 import SelectRegionPlaceholder from '../../../components/SelectRegionPlaceholder';
 import { useVolumeAppStore } from '../../../../lib/stores/volume-app-state';
+
+  // Expose debugging functionality to global scope for development
+  if (typeof window !== 'undefined') {
+    (window as any).debugAADVHistogram = {
+      debugMissingCountSites: AADVHistogramDataService.debugMissingCountSites,
+      compareWithHighestVolume: AADVHistogramDataService.compareWithHighestVolumeComponent,
+      compareWithSparkline: AADVHistogramDataService.compareWithSparklineTimeline,
+      compareWithSparklineApproach: AADVHistogramDataService.compareWithSparklineApproach,
+      investigateNBPDFactors: AADVHistogramDataService.investigateNBPDFactorCoverage,
+      quickTest: AADVHistogramDataService.quickTestWithoutEnhancedCalculation,
+      service: AADVHistogramDataService
+    };
+  }
 
 interface HoveredBarData {
   binLabel: string;
@@ -24,7 +37,7 @@ interface DateRangeValue {
   endDate: Date;
 }
 
-interface AADTHistogramProps {
+interface AADVHistogramProps {
   selectedGeometry?: Polygon | null;
   dateRange: DateRangeValue;
   showBicyclist?: boolean;
@@ -33,12 +46,12 @@ interface AADTHistogramProps {
 
 type VisualizationMode = 'histogram' | 'individual-bars' | 'density';
 
-export default function AADTHistogram({
+export default function AADVHistogram({
   selectedGeometry = null,
   dateRange,
   showBicyclist = true,
   showPedestrian = true,
-}: AADTHistogramProps) {
+}: AADVHistogramProps) {
   const { 
     setSelectedCountSite, 
     setHighlightedBinSites,
@@ -52,8 +65,8 @@ export default function AADTHistogram({
   const [selectedBarIndex, setSelectedBarIndex] = useState<number | null>(null);
   const chartRef = useRef<ReactECharts>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [histogramData, setHistogramData] = useState<AADTHistogramResult | null>(null);
-  const [individualSitesData, setIndividualSitesData] = useState<SiteAADTData[]>([]);
+  const [histogramData, setHistogramData] = useState<AADVHistogramResult | null>(null);
+  const [individualSitesData, setIndividualSitesData] = useState<SiteAADVData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [numberOfBins, setNumberOfBins] = useState(10);
@@ -88,7 +101,7 @@ export default function AADTHistogram({
 
       try {
         if (visualizationMode === 'individual-bars') {
-          const result = await AADTHistogramDataService.queryIndividualSiteAADT(
+          const result = await AADVHistogramDataService.queryIndividualSiteAADV(
             selectedGeometry,
             debouncedDateRange,
             showBicyclist,
@@ -101,7 +114,7 @@ export default function AADTHistogram({
             setError(result.error);
           }
         } else {
-          const result = await AADTHistogramDataService.queryAADTHistogram(
+          const result = await AADVHistogramDataService.queryAADVHistogram(
             selectedGeometry,
             debouncedDateRange,
             showBicyclist,
@@ -116,7 +129,7 @@ export default function AADTHistogram({
           }
         }
       } catch (err) {
-        console.error('Error fetching AADT data:', err);
+        console.error('Error fetching AADV data:', err);
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
         setHistogramData(null);
         setIndividualSitesData([]);
@@ -172,7 +185,7 @@ export default function AADTHistogram({
       if (site) setSelectedCountSite(site.siteName);
     } else {
       if (!histogramData) return;
-      const sitesInBin = AADTHistogramDataService.getSitesInAADTRange(histogramData, params.dataIndex);
+      const sitesInBin = AADVHistogramDataService.getSitesInAADVRange(histogramData, params.dataIndex);
       if (sitesInBin.length > 0) {
         setHighlightedBinSites(sitesInBin.map(site => site.siteName));
       }
@@ -203,7 +216,7 @@ export default function AADTHistogram({
           if (site) {
             setHoveredBar({
               binLabel: site.siteName,
-              count: site.aadt,
+              count: site.aadv,
               binIndex: params.dataIndex
             });
           }
@@ -241,20 +254,20 @@ export default function AADTHistogram({
     if (visualizationMode === 'individual-bars') {
       if (individualSitesData.length === 0) return '';
       
-      const aadtValues = individualSitesData.map(site => site.aadt);
+      const aadvValues = individualSitesData.map(site => site.aadv);
       const totalSites = individualSitesData.length;
-      const meanAADT = aadtValues.reduce((sum, val) => sum + val, 0) / aadtValues.length;
-      const minAADT = Math.min(...aadtValues);
-      const maxAADT = Math.max(...aadtValues);
-      const sortedAADTs = [...aadtValues].sort((a, b) => a - b);
-      const medianAADT = sortedAADTs[Math.floor(sortedAADTs.length / 2)];
+      const meanAADV = aadvValues.reduce((sum, val) => sum + val, 0) / aadvValues.length;
+      const minAADV = Math.min(...aadvValues);
+      const maxAADV = Math.max(...aadvValues);
+      const sortedAADVs = [...aadvValues].sort((a, b) => a - b);
+      const medianAADV = sortedAADVs[Math.floor(sortedAADVs.length / 2)];
       
-      return `${totalSites} sites  • Mean: ${formatNumber(meanAADT)}  • Median: ${formatNumber(medianAADT)}  • Range: ${formatNumber(minAADT)}-${formatNumber(maxAADT)}`;
+      return `${totalSites} sites  • Mean: ${formatNumber(meanAADV)}  • Median: ${formatNumber(medianAADV)}  • Range: ${formatNumber(minAADV)}-${formatNumber(maxAADV)}`;
     } else {
       if (!histogramData || histogramData.totalSites === 0) return '';
       
-      const { totalSites, meanAADT, medianAADT, minAADT, maxAADT } = histogramData;
-      return `${totalSites} sites  • Mean: ${formatNumber(meanAADT)}  • Median: ${formatNumber(medianAADT)}  • Range: ${formatNumber(minAADT)}-${formatNumber(maxAADT)}`;
+      const { totalSites, meanAADV, medianAADV, minAADV, maxAADV } = histogramData;
+      return `${totalSites} sites  • Mean: ${formatNumber(meanAADV)}  • Median: ${formatNumber(medianAADV)}  • Range: ${formatNumber(minAADV)}-${formatNumber(maxAADV)}`;
     }
   };
 
@@ -303,10 +316,10 @@ export default function AADTHistogram({
   const option = useMemo(() => {
     if (visualizationMode === 'individual-bars') {
       // Individual bars mode - show min, mean, max on x-axis
-      const aadtValues = individualSitesData.map(site => site.aadt);
-      const minAADT = aadtValues.length > 0 ? Math.min(...aadtValues) : 0;
-      const maxAADT = aadtValues.length > 0 ? Math.max(...aadtValues) : 0;
-      const meanAADT = aadtValues.length > 0 ? aadtValues.reduce((sum, val) => sum + val, 0) / aadtValues.length : 0;
+      const aadvValues = individualSitesData.map(site => site.aadv);
+      const minAADV = aadvValues.length > 0 ? Math.min(...aadvValues) : 0;
+      const maxAADV = aadvValues.length > 0 ? Math.max(...aadvValues) : 0;
+      const meanAADV = aadvValues.length > 0 ? aadvValues.reduce((sum, val) => sum + val, 0) / aadvValues.length : 0;
       
       return {
         grid: {
@@ -332,7 +345,7 @@ export default function AADTHistogram({
           axisLabel: {
             show: false, // Hide individual site labels
           },
-          name: `AADT Distribution (Min: ${formatNumber(minAADT)}  • Mean: ${formatNumber(meanAADT)}  • Max: ${formatNumber(maxAADT)})`,
+          name: `AADV Distribution (Min: ${formatNumber(minAADV)}  • Mean: ${formatNumber(meanAADV)}  • Max: ${formatNumber(maxAADV)})`,
           nameLocation: 'middle',
           nameGap: 40,
           nameTextStyle: {
@@ -358,7 +371,7 @@ export default function AADTHistogram({
             fontSize: 12,
             margin: 8,
           },
-          name: 'AADT Value',
+          name: 'AADV Value',
           nameLocation: 'middle',
           nameGap: 45,
           nameTextStyle: {
@@ -380,7 +393,7 @@ export default function AADTHistogram({
           // Invisible full-height bars for better hover/click targeting
           {
             data: individualSitesData.map(() => ({
-              value: Math.max(...individualSitesData.map(s => s.aadt)), // Use max height
+              value: Math.max(...individualSitesData.map(s => s.aadv)), // Use max height
               itemStyle: {
                 color: 'transparent', // Invisible
                 borderColor: 'transparent',
@@ -404,7 +417,7 @@ export default function AADTHistogram({
               const isHovered = hoveredBar?.binIndex === index;
               const isSelected = selectedBarIndex === index;
               return {
-                value: site.aadt,
+                value: site.aadv,
                 itemStyle: {
                   color: isSelected ? '#eab308' : (isHovered ? '#1e40af' : getBarColor(index)),
                   borderRadius: [2, 2, 0, 0],
@@ -463,7 +476,7 @@ export default function AADTHistogram({
             rotate: 45,
             margin: 8,
           },
-          name: 'AADT (Annual Average Daily Traffic)',
+          name: 'AADV (Average Annual Daily Volume)',
           nameLocation: 'middle',
           nameGap: 60,
           nameTextStyle: {
@@ -598,15 +611,28 @@ export default function AADTHistogram({
   return (
     <div ref={componentRef} id="aadt-histogram-container" className="rounded-lg border border-gray-200 bg-white p-4">
       <div id="aadt-histogram-header" className="flex justify-between items-center">
-        <h3 id="aadt-histogram-title" className="text-lg font-medium text-gray-900">AADT Distribution</h3>
+        <h3 id="aadv-histogram-title" className="text-lg font-medium text-gray-900">AADV Distribution</h3>
         <CollapseExpandIcon id="aadt-histogram-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
       </div>
-      <div id="aadt-histogram-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'max-h-0' : 'max-h-[500px]'}`}>
+      <div id="aadt-histogram-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'max-h-0' : 'max-h-[650px]'}`}>
         {!selectedGeometry && (
-          <SelectRegionPlaceholder id="aadt-histogram-no-selection" subtext="Use the polygon tool or click on a boundary to see AADT distribution for that area" />
+          <SelectRegionPlaceholder id="aadv-histogram-no-selection" subtext="Use the polygon tool or click on a boundary to see AADV distribution for that area" />
         )}
         {selectedGeometry && (
           <>
+            {/* Enhanced Data Normalization Info */}
+            <div id="aadv-normalization-info" className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="text-xs text-blue-900">
+                <strong>Enhanced Data Normalization:</strong> Count data is normalized using a comprehensive approach:
+                <ul className="mt-1 ml-3 list-disc">
+                  <li><strong>Hourly variations:</strong> NBPD factors normalize time-of-day fluctuations</li>
+                  <li><strong>Daily variations:</strong> Santa Cruz factors normalize day-of-week patterns</li>
+                  <li><strong>Monthly variations:</strong> Santa Cruz factors normalize seasonal patterns</li>
+                </ul>
+                This multi-layered approach provides the most accurate Average Annual Daily Volume (AADV) calculations.
+              </div>
+            </div>
+            
             <div id="aadt-histogram-controls" className="mt-2 mb-2">
               <div id="aadt-histogram-mode-control" className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
@@ -660,11 +686,11 @@ export default function AADTHistogram({
             )}
 
             <div id="aadt-histogram-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
-            <div id="aadt-histogram-description" className="w-full text-sm text-gray-600">
-              Distribution of Average Annual Daily Traffic (AADT) across count sites in selected area
-              <span id="aadt-histogram-info-icon-container" className="ml-1 inline-flex align-middle">
+            <div id="aadv-histogram-description" className="w-full text-sm text-gray-600">
+              Distribution of Average Annual Daily Volume (AADV) across count sites in selected area
+              <span id="aadv-histogram-info-icon-container" className="ml-1 inline-flex align-middle">
                 <Tooltip 
-                  text="AADT is calculated by averaging daily traffic counts over the selected time period and annualizing. Click on bars to highlight sites on the map." 
+                  text="AADV is calculated using enhanced normalization with NBPD hourly factors, Santa Cruz daily factors, and Santa Cruz monthly factors for the most accurate annual volume estimates. Click on bars to highlight sites on the map." 
                   align="right" 
                 />
               </span>
@@ -678,21 +704,21 @@ export default function AADTHistogram({
                 >
                   {visualizationMode === 'individual-bars' ? (
                     <div>
-                      <div>{`${hoveredBar.binLabel}: ${formatNumber(hoveredBar.count)} AADT`}</div>
+                      <div>{`${hoveredBar.binLabel}: ${formatNumber(hoveredBar.count)} AADV`}</div>
                       {(() => {
                         const totalSites = individualSitesData.length;
                         const sitesAtOrBelow = hoveredBar.binIndex + 1; // +1 because index is 0-based
                         const percentage = totalSites > 0 ? Math.round((sitesAtOrBelow / totalSites) * 100) : 0;
                         return (
                           <div className="text-yellow-400 mt-1 font-medium">
-                            {percentage}% of sites have ≤ {formatNumber(hoveredBar.count)} AADT
+                            {percentage}% of sites have ≤ {formatNumber(hoveredBar.count)} AADV
                           </div>
                         );
                       })()}
                     </div>
                   ) : (
                     <>
-                      <div>{`${hoveredBar.count} sites with AADT ${hoveredBar.binLabel}`}</div>
+                      <div>{`${hoveredBar.count} sites with AADV ${hoveredBar.binLabel}`}</div>
                       {histogramData?.bins[hoveredBar.binIndex]?.sites && histogramData.bins[hoveredBar.binIndex].sites.length > 1 && (
                         <div className="text-yellow-400 mt-1">Click to highlight all sites on map</div>
                       )}
@@ -709,7 +735,7 @@ export default function AADTHistogram({
                 >
                   <div className="flex flex-col items-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-3"></div>
-                    <span className="text-sm text-gray-700 font-medium">Calculating AADT...</span>
+                    <span className="text-sm text-gray-700 font-medium">Calculating AADV...</span>
                     <span className="text-xs text-gray-500 mt-1">Processing count data for {histogramData?.totalSites || 0} sites</span>
                   </div>
                 </div>
@@ -728,7 +754,7 @@ export default function AADTHistogram({
                 >
                   {!isLoading && (
                     <div className="text-center">
-                      <div className="text-gray-400 text-sm">No AADT data available for selected area</div>
+                      <div className="text-gray-400 text-sm">No AADV data available for selected area</div>
                       <div className="text-gray-300 text-xs mt-1">Try selecting a different area or adjusting the date range</div>
                     </div>
                   )}
