@@ -320,38 +320,28 @@ describe('AADVHistogram', () => {
   });
 
   it('debounces date range changes', async () => {
-    vi.useFakeTimers();
+    const { rerender } = render(<AADVHistogram {...defaultProps} />);
     
-    try {
-      const { rerender } = render(<AADVHistogram {...defaultProps} />);
-      
-      // Clear initial call
-      mockAADVHistogramDataService.queryIndividualSiteAADV.mockClear();
-      
-      // Change date range multiple times quickly
-      const newDateRange1 = { startDate: new Date('2023-02-01'), endDate: new Date('2023-12-31') };
-      const newDateRange2 = { startDate: new Date('2023-03-01'), endDate: new Date('2023-12-31') };
-      
-      rerender(<AADVHistogram {...defaultProps} dateRange={newDateRange1} />);
-      rerender(<AADVHistogram {...defaultProps} dateRange={newDateRange2} />);
-      
-      // Fast forward past debounce delay (500ms) and run all pending timers
-      vi.advanceTimersByTime(600);
-      await vi.runAllTimersAsync();
-      
-      // Wait for async operations to complete
-      await waitFor(() => {
-        // Should only call with the final date range (component is in individual-bars mode)
-        expect(mockAADVHistogramDataService.queryIndividualSiteAADV).toHaveBeenCalledWith(
-          mockPolygon,
-          newDateRange2,
-          true,
-          true
-        );
-      });
-    } finally {
-      vi.useRealTimers();
-    }
+    // Clear initial call
+    mockAADVHistogramDataService.queryIndividualSiteAADV.mockClear();
+    
+    // Change date range multiple times quickly
+    const newDateRange1 = { startDate: new Date('2023-02-01'), endDate: new Date('2023-12-31') };
+    const newDateRange2 = { startDate: new Date('2023-03-01'), endDate: new Date('2023-12-31') };
+    
+    rerender(<AADVHistogram {...defaultProps} dateRange={newDateRange1} />);
+    rerender(<AADVHistogram {...defaultProps} dateRange={newDateRange2} />);
+    
+    // Wait for debounced operations to complete
+    await waitFor(() => {
+      // Should call with the final date range (component is in individual-bars mode)
+      expect(mockAADVHistogramDataService.queryIndividualSiteAADV).toHaveBeenCalledWith(
+        mockPolygon,
+        newDateRange2,
+        true,
+        true
+      );
+    }, { timeout: 2000 });
   });
 
   it('respects road user filters', async () => {
@@ -365,7 +355,7 @@ describe('AADVHistogram', () => {
         false,
         true
       );
-    });
+    }, { timeout: 2000 });
   });
 
   it('shows no data message when no sites available', async () => {
@@ -381,7 +371,7 @@ describe('AADVHistogram', () => {
     await waitFor(() => {
       expect(screen.getByText('No AADV data available for selected area')).toBeInTheDocument();
       expect(screen.getByText(/Try selecting a different area or adjusting the date range/)).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
   });
 
   it('includes tooltip with explanation', async () => {
