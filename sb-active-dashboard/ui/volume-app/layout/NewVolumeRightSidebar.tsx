@@ -245,7 +245,6 @@ export default function NewVolumeRightSidebar({
         
         const valueExpression = `IIF(IndexOf(${highlightedArray}, Number($feature.id)) > -1, 2, IIF(IndexOf(${contributingArray}, Number($feature.id)) > -1, 1, 0))`;
 
-
         const filledBlue = new SimpleMarkerSymbol({
           size: 8,
           color: [0, 102, 255, 0.95],
