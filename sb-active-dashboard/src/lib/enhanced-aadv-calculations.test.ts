@@ -460,7 +460,7 @@ describe('EnhancedAADVCalculationService', () => {
           "NBPD_PATH_moderate_2009": {
             "hours": {
               "8": {
-                "saturday": {
+                "weekend": {
                   "6": 105.0,                  // 6 AM: H=105.0, p=1/105.0=0.0095
                   "7": 35.0,                   // 7 AM: H=35.0, p=1/35.0=0.0286
                   "8": 17.5,                   // 8 AM: H=17.5, p=1/17.5=0.0571

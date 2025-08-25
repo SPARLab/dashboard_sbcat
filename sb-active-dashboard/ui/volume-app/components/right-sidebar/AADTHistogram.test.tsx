@@ -42,6 +42,17 @@ vi.mock('../../../components/SelectRegionPlaceholder', () => ({
   )
 }));
 
+// Mock the volume app store
+const mockSetSelectedCountSite = vi.fn();
+const mockSetHighlightedBinSites = vi.fn();
+vi.mock('../../../../lib/stores/volume-app-state', () => ({
+  useVolumeAppStore: () => ({
+    setSelectedCountSite: mockSetSelectedCountSite,
+    setHighlightedBinSites: mockSetHighlightedBinSites,
+    selectedCountSite: null
+  })
+}));
+
 const mockAADVHistogramDataService = AADVHistogramDataService as any;
 
 describe('AADVHistogram', () => {
@@ -89,14 +100,15 @@ describe('AADVHistogram', () => {
     selectedGeometry: mockPolygon,
     dateRange: mockDateRange,
     showBicyclist: true,
-    showPedestrian: true,
-    selectedCountSite: null,
-    onCountSiteSelect: vi.fn()
+    showPedestrian: true
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSetSelectedCountSite.mockClear();
+    mockSetHighlightedBinSites.mockClear();
     mockAADVHistogramDataService.queryAADVHistogram = vi.fn().mockResolvedValue(mockHistogramResult);
+    mockAADVHistogramDataService.getSitesInAADVRange = vi.fn().mockReturnValue([]);
     mockAADVHistogramDataService.queryIndividualSiteAADV = vi.fn().mockResolvedValue({
       sites: [
         { siteId: 1, siteName: 'Site A', aadv: 50, bikeAADV: 30, pedAADV: 20 },
@@ -117,7 +129,7 @@ describe('AADVHistogram', () => {
   it('renders component with title and collapse icon', () => {
     render(<AADVHistogram {...defaultProps} />);
     
-    expect(screen.getByText('AADT Distribution')).toBeInTheDocument();
+    expect(screen.getByText('AADV Distribution')).toBeInTheDocument();
     expect(screen.getByTestId('collapse-icon')).toBeInTheDocument();
   });
 
@@ -130,6 +142,10 @@ describe('AADVHistogram', () => {
 
   it('fetches and displays histogram data', async () => {
     render(<AADVHistogram {...defaultProps} />);
+    
+    // Switch to histogram mode to trigger queryAADVHistogram call
+    const modeSelect = screen.getByDisplayValue('Individual Sites');
+    fireEvent.change(modeSelect, { target: { value: 'histogram' } });
     
     await waitFor(() => {
       expect(mockAADVHistogramDataService.queryAADVHistogram).toHaveBeenCalledWith(
@@ -149,7 +165,8 @@ describe('AADVHistogram', () => {
     render(<AADVHistogram {...defaultProps} />);
     
     await waitFor(() => {
-      expect(screen.getByText(/8 sites • Mean: 95 • Median: 85 • Range: 25-180/)).toBeInTheDocument();
+      // Component starts in individual-bars mode, so it shows stats for the 3 individual sites
+      expect(screen.getByText(/3 sites.*Mean: 92.*Median: 75.*Range: 50-150/)).toBeInTheDocument();
     });
   });
 
@@ -160,16 +177,17 @@ describe('AADVHistogram', () => {
 
     render(<AADVHistogram {...defaultProps} />);
     
-    expect(screen.getByText('Calculating AADT...')).toBeInTheDocument();
+    expect(screen.getByText('Calculating AADV...')).toBeInTheDocument();
     expect(screen.getByText(/Processing count data for/)).toBeInTheDocument();
   });
 
   it('shows error state', async () => {
+    // Component starts in individual-bars mode, so mock the individual sites query to return an error
     const errorResult = {
-      ...mockHistogramResult,
+      sites: [],
       error: 'Failed to fetch data'
     };
-    mockAADVHistogramDataService.queryAADVHistogram = vi.fn().mockResolvedValue(errorResult);
+    mockAADVHistogramDataService.queryIndividualSiteAADV = vi.fn().mockResolvedValue(errorResult);
 
     render(<AADVHistogram {...defaultProps} />);
     
@@ -192,6 +210,10 @@ describe('AADVHistogram', () => {
   it('allows changing number of bins', async () => {
     render(<AADVHistogram {...defaultProps} />);
     
+    // First switch to histogram mode to make bins select visible
+    const modeSelect = screen.getByDisplayValue('Individual Sites');
+    fireEvent.change(modeSelect, { target: { value: 'histogram' } });
+    
     await waitFor(() => {
       expect(screen.getByDisplayValue('10')).toBeInTheDocument();
     });
@@ -211,63 +233,63 @@ describe('AADVHistogram', () => {
   });
 
   it('handles histogram bar click for single site', async () => {
-    const onCountSiteSelect = vi.fn();
-    render(<AADVHistogram {...defaultProps} onCountSiteSelect={onCountSiteSelect} />);
+    render(<AADVHistogram {...defaultProps} />);
+    
+    // Switch to histogram mode first
+    const modeSelect = screen.getByDisplayValue('Individual Sites');
+    fireEvent.change(modeSelect, { target: { value: 'histogram' } });
     
     await waitFor(() => {
       expect(screen.getByTestId('echarts-mock')).toBeInTheDocument();
     });
 
-    // Mock getSitesInAADTRange to return single site
+    // Mock getSitesInAADVRange to return single site
     mockAADVHistogramDataService.getSitesInAADVRange.mockReturnValue([
-      { siteId: 3, siteName: 'Site C', aadt: 150, bikeAADT: 90, pedAADT: 60 }
+      { siteId: 3, siteName: 'Site C', aadv: 150, bikeAADV: 90, pedAADV: 60 }
     ]);
 
     const chart = screen.getByTestId('echarts-mock');
     fireEvent.click(chart);
     
-    expect(onCountSiteSelect).toHaveBeenCalledWith('Site C');
+    expect(mockSetHighlightedBinSites).toHaveBeenCalledWith(['Site C']);
   });
 
-  it('handles histogram bar click for multiple sites - selects highest AADT', async () => {
-    const onCountSiteSelect = vi.fn();
-    render(<AADVHistogram {...defaultProps} onCountSiteSelect={onCountSiteSelect} />);
+  it('handles histogram bar click for multiple sites - highlights all sites', async () => {
+    render(<AADVHistogram {...defaultProps} />);
+    
+    // Switch to histogram mode first
+    const modeSelect = screen.getByDisplayValue('Individual Sites');
+    fireEvent.change(modeSelect, { target: { value: 'histogram' } });
     
     await waitFor(() => {
       expect(screen.getByTestId('echarts-mock')).toBeInTheDocument();
     });
 
-    // Mock getSitesInAADTRange to return multiple sites
+    // Mock getSitesInAADVRange to return multiple sites
     mockAADVHistogramDataService.getSitesInAADVRange.mockReturnValue([
-      { siteId: 1, siteName: 'Site A', aadt: 50, bikeAADT: 30, pedAADT: 20 },
-      { siteId: 2, siteName: 'Site B', aadt: 75, bikeAADT: 45, pedAADT: 30 }
+      { siteId: 1, siteName: 'Site A', aadv: 50, bikeAADV: 30, pedAADV: 20 },
+      { siteId: 2, siteName: 'Site B', aadv: 75, bikeAADV: 45, pedAADV: 30 }
     ]);
 
     const chart = screen.getByTestId('echarts-mock');
     fireEvent.click(chart);
     
-    expect(onCountSiteSelect).toHaveBeenCalledWith('Site B'); // Higher AADT
+    expect(mockSetHighlightedBinSites).toHaveBeenCalledWith(['Site A', 'Site B']);
   });
 
-  it('cycles through sites when clicking on same bin repeatedly', async () => {
-    const onCountSiteSelect = vi.fn();
-    const sites = [
-      { siteId: 1, siteName: 'Site A', aadt: 50, bikeAADT: 30, pedAADT: 20 },
-      { siteId: 2, siteName: 'Site B', aadt: 75, bikeAADT: 45, pedAADT: 30 }
-    ];
+  it('selects individual site when clicking in individual-bars mode', async () => {
+    render(<AADVHistogram {...defaultProps} />);
     
-    render(<AADVHistogram {...defaultProps} onCountSiteSelect={onCountSiteSelect} selectedCountSite="Site B" />);
-    
+    // Component starts in individual-bars mode by default
     await waitFor(() => {
       expect(screen.getByTestId('echarts-mock')).toBeInTheDocument();
     });
 
-    mockAADVHistogramDataService.getSitesInAADVRange.mockReturnValue(sites);
-
     const chart = screen.getByTestId('echarts-mock');
     fireEvent.click(chart);
     
-    expect(onCountSiteSelect).toHaveBeenCalledWith('Site A'); // Cycles to next site
+    // Should call setSelectedCountSite with the first site (dataIndex: 0)
+    expect(mockSetSelectedCountSite).toHaveBeenCalledWith('Site A');
   });
 
   it('highlights selected site bin with different color', async () => {
@@ -293,70 +315,67 @@ describe('AADVHistogram', () => {
     fireEvent.mouseOver(chart);
     
     await waitFor(() => {
-      expect(screen.getByText(/sites with AADV/)).toBeInTheDocument();
+      expect(screen.getByText(/Site A: 50 AADV/)).toBeInTheDocument();
     });
   });
 
   it('debounces date range changes', async () => {
     vi.useFakeTimers();
     
-    const { rerender } = render(<AADVHistogram {...defaultProps} />);
-    
-    // Change date range multiple times quickly
-    const newDateRange1 = { startDate: new Date('2023-02-01'), endDate: new Date('2023-12-31') };
-    const newDateRange2 = { startDate: new Date('2023-03-01'), endDate: new Date('2023-12-31') };
-    
-    rerender(<AADVHistogram {...defaultProps} dateRange={newDateRange1} />);
-    rerender(<AADVHistogram {...defaultProps} dateRange={newDateRange2} />);
-    
-    // Fast forward past debounce delay
-    vi.advanceTimersByTime(400);
-    
-    await waitFor(() => {
-      // Should only call with the final date range
-      expect(mockAADVHistogramDataService.queryAADVHistogram).toHaveBeenCalledWith(
+    try {
+      const { rerender } = render(<AADVHistogram {...defaultProps} />);
+      
+      // Clear initial call
+      mockAADVHistogramDataService.queryIndividualSiteAADV.mockClear();
+      
+      // Change date range multiple times quickly
+      const newDateRange1 = { startDate: new Date('2023-02-01'), endDate: new Date('2023-12-31') };
+      const newDateRange2 = { startDate: new Date('2023-03-01'), endDate: new Date('2023-12-31') };
+      
+      rerender(<AADVHistogram {...defaultProps} dateRange={newDateRange1} />);
+      rerender(<AADVHistogram {...defaultProps} dateRange={newDateRange2} />);
+      
+      // Fast forward past debounce delay
+      vi.advanceTimersByTime(400);
+      
+      // Should only call with the final date range (component is in individual-bars mode)
+      expect(mockAADVHistogramDataService.queryIndividualSiteAADV).toHaveBeenCalledWith(
         mockPolygon,
         newDateRange2,
         true,
-        true,
-        10
+        true
       );
-    });
-    
-    vi.useRealTimers();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('respects road user filters', async () => {
     render(<AADVHistogram {...defaultProps} showBicyclist={false} showPedestrian={true} />);
     
     await waitFor(() => {
-      expect(mockAADVHistogramDataService.queryAADVHistogram).toHaveBeenCalledWith(
+      // Component is in individual-bars mode, so it calls queryIndividualSiteAADV
+      expect(mockAADVHistogramDataService.queryIndividualSiteAADV).toHaveBeenCalledWith(
         mockPolygon,
         mockDateRange,
         false,
-        true,
-        10
+        true
       );
     });
   });
 
   it('shows no data message when no sites available', async () => {
+    // Component is in individual-bars mode, so mock queryIndividualSiteAADV
     const emptyResult = {
-      bins: [],
-      totalSites: 0,
-      minAADT: 0,
-      maxAADT: 0,
-      meanAADT: 0,
-      medianAADT: 0,
-      isLoading: false,
+      sites: [],
       error: null
     };
-    mockAADVHistogramDataService.queryAADVHistogram = vi.fn().mockResolvedValue(emptyResult);
+    mockAADVHistogramDataService.queryIndividualSiteAADV = vi.fn().mockResolvedValue(emptyResult);
 
     render(<AADVHistogram {...defaultProps} />);
     
     await waitFor(() => {
-      expect(screen.getByText('No AADT data available for selected area')).toBeInTheDocument();
+      expect(screen.getByText('No AADV data available for selected area')).toBeInTheDocument();
       expect(screen.getByText(/Try selecting a different area or adjusting the date range/)).toBeInTheDocument();
     });
   });
