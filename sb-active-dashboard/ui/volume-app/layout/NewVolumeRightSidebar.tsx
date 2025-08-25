@@ -20,6 +20,7 @@ import SummaryStatistics from "../components/right-sidebar/SummaryStatistics";
 import TimelineSparkline from "../components/right-sidebar/TimelineSparkline";
 import TrendsHeader from "../components/right-sidebar/TrendsHeader";
 import YearToYearVolumeComparison from "../components/right-sidebar/YearToYearVolumeComparison";
+import LocationIndicator from "../../components/LocationIndicator";
 
 interface DateRangeValue {
   startDate: Date;
@@ -380,33 +381,25 @@ export default function NewVolumeRightSidebar({
     <div id="volume-trends-sidebar" className="w-[412px] bg-white border-l border-gray-200 overflow-y-auto no-scrollbar">
       <div className="py-4">
         <TrendsHeader activeTab={activeTab} horizontalMargins={horizontalMargins} />
-        {selectedGeometry && (activeTab === 'raw-data' || activeTab === 'modeled-data') && (
-          <div id="selection-indicator" className={`${horizontalMargins} mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg`}>
-            {selectedAreaName ? (
-              <p className="text-sm text-blue-700 font-medium">{selectedAreaName}</p>
-            ) : (
-              <p className="text-xs text-blue-700">Custom selected area</p>
-            )}
-            {/* <p className="text-xs text-blue-600 mt-2 italic">
-              Click elsewhere to clear selection.
-            </p> */}
-          </div>
-        )}
-        
-        
-        <div className="w-full h-[1px] bg-gray-200 my-4"></div>
+        <LocationIndicator 
+          selectedAreaName={selectedAreaName}
+          horizontalMargins={horizontalMargins}
+          id="volume-location-indicator"
+        />
         {activeTab === 'modeled-data' && (
-                          <PercentOfNetworkByVolumeLevelBarChart 
-            dataType={activeTab} 
-            horizontalMargins={horizontalMargins}
-            mapView={mapView || undefined}
-            showBicyclist={showBicyclist}
-            showPedestrian={showPedestrian}
-            selectedMode={selectedMode}
-            modelCountsBy={modelCountsBy}
-            year={selectedYear}
-            selectedGeometry={selectedGeometry}
-          />
+          <div className="mt-4">
+            <PercentOfNetworkByVolumeLevelBarChart 
+              dataType={activeTab} 
+              horizontalMargins={horizontalMargins}
+              mapView={mapView || undefined}
+              showBicyclist={showBicyclist}
+              showPedestrian={showPedestrian}
+              selectedMode={selectedMode}
+              modelCountsBy={modelCountsBy}
+              year={selectedYear}
+              selectedGeometry={selectedGeometry}
+            />
+          </div>
         )}
         {activeTab === 'raw-data' && (
           <>
@@ -486,7 +479,7 @@ export default function NewVolumeRightSidebar({
           </>
         )}
         {activeTab === 'data-completeness' && (
-          <>
+          <div className="mt-4">
             <CompletenessMetrics 
               horizontalMargins={horizontalMargins}
               timelineData={timelineData}
@@ -496,7 +489,7 @@ export default function NewVolumeRightSidebar({
               selectedSiteId={selectedCountSite}
               onSiteSelect={setSelectedCountSite}
             />
-          </>
+          </div>
         )}
       </div>
     </div>

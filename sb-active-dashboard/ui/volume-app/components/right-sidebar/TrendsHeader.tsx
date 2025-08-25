@@ -21,7 +21,7 @@ export default function TrendsHeader({ activeTab, horizontalMargins }: TrendsHea
 
   return (
     <div className={horizontalMargins}>
-      <h2 id="trends-header" className="text-xl font-semibold text-gray-900 mb-0">
+      <h2 id="trends-header" className="text-xl font-semibold text-gray-900 mb-3">
         {getHeaderText()}
       </h2>
     </div>

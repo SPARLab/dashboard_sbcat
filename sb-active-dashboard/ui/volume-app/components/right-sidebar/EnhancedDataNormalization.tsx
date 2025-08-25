@@ -20,7 +20,7 @@ export default function EnhancedDataNormalization({
           <li><strong>Monthly variations:</strong> Santa Cruz factors normalize seasonal patterns</li>
         </ul>
         <p className="mt-2">
-          This multi-layered approach provides the most accurate Average Annual Daily Volume (AADV) calculations.
+          This multi-layered approach provides the best estimate of Average Annual Daily Volume (AADV) we can provide given the limited raw count data.
         </p>
       </div>
     </div>
