@@ -73,7 +73,7 @@ export default function SummaryStatistics({
           </h3>
           <CollapseExpandIcon id="summary-statistics-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
         </div>
-      <div id="summary-statistics-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-y-hidden ${isCollapsed ? 'max-h-0' : 'max-h-96'}`}>
+      <div id="summary-statistics-collapsible-content" className={`transition-all duration-300 ease-in-out overflow-y-hidden ${isCollapsed ? 'max-h-0' : 'max-h-100'}`}>
           {!selectedGeometry && (
             <SelectRegionPlaceholder id="summary-statistics-no-selection" subtext="Use the polygon tool or click on a boundary to see statistics for that area" />
           )}

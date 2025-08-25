@@ -69,7 +69,11 @@ describe('YearToYearVolumeComparison', () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Clear only the data service mocks, not the module mocks
+    vi.mocked(YearToYearComparisonDataService.getSiteYearData).mockClear();
+    vi.mocked(YearToYearComparisonDataService.getSiteNamesInGeometry).mockClear();
+    vi.mocked(YearToYearComparisonDataService.getSiteNames).mockClear();
+    mockSetHighlightedBinSites.mockClear();
     
     // Setup default mocks
     vi.mocked(YearToYearComparisonDataService.getSiteYearData).mockResolvedValue(mockSiteYearData);
@@ -82,10 +86,6 @@ describe('YearToYearVolumeComparison', () => {
     
     // Always provide a safe default mock for computeSharedSiteYoY
     vi.mocked(computeSharedSiteYoY).mockReturnValue(mockComparisonResult);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   describe('Component Rendering', () => {

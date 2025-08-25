@@ -7,14 +7,14 @@ export const createMockHighestVolumeSite = (overrides: Partial<{
   siteName: string
   bikeAADT: number
   pedAADT: number
-  totalAADT: number
+  totalAADV: number
   locality: string
 }> = {}) => ({
   siteId: faker.number.int({ min: 1, max: 1000 }),
   siteName: faker.location.streetAddress(),
   bikeAADT: faker.number.int({ min: 10, max: 500 }),
   pedAADT: faker.number.int({ min: 5, max: 200 }),
-  totalAADT: 0, // Will be calculated
+  totalAADV: 0, // Will be calculated
   locality: faker.location.city(),
   ...overrides
 })
@@ -26,13 +26,13 @@ export const createMockHighestVolumeData = (count: number = 5, overrides: any = 
       siteName: `Test Site ${String.fromCharCode(65 + index)}`, // A, B, C, etc.
       ...overrides
     })
-    // Calculate totalAADT
-    site.totalAADT = site.bikeAADT + site.pedAADT
+    // Calculate totalAADV
+    site.totalAADV = site.bikeAADT + site.pedAADT
     return site
   })
 
-  // Sort by totalAADT descending (highest first)
-  sites.sort((a, b) => b.totalAADT - a.totalAADT)
+  // Sort by totalAADV descending (highest first)
+  sites.sort((a, b) => b.totalAADV - a.totalAADV)
 
   return { sites }
 }
@@ -148,12 +148,12 @@ export const createRealisticVolumeData = () => {
     siteName: site.siteName,
     bikeAADT: site.bikeAADT,
     pedAADT: site.pedAADT,
-    totalAADT: site.bikeAADT + site.pedAADT,
+    totalAADV: site.bikeAADT + site.pedAADT,
     locality: 'Santa Barbara'
   }))
 
   // Sort by total volume (highest first)
-  sites.sort((a, b) => b.totalAADT - a.totalAADT)
+  sites.sort((a, b) => b.totalAADV - a.totalAADV)
 
   return { sites }
 }
@@ -168,8 +168,8 @@ export const createFilteredVolumeData = (showBicyclist: boolean, showPedestrian:
       // Simulate filtering by zeroing out excluded modes
       bikeAADT: showBicyclist ? site.bikeAADT : 0,
       pedAADT: showPedestrian ? site.pedAADT : 0,
-      totalAADT: (showBicyclist ? site.bikeAADT : 0) + (showPedestrian ? site.pedAADT : 0)
-    })).filter(site => site.totalAADT > 0) // Remove sites with no relevant data
-      .sort((a, b) => b.totalAADT - a.totalAADT) // Re-sort after filtering
+      totalAADV: (showBicyclist ? site.bikeAADT : 0) + (showPedestrian ? site.pedAADT : 0)
+    })).filter(site => site.totalAADV > 0) // Remove sites with no relevant data
+      .sort((a, b) => b.totalAADV - a.totalAADV) // Re-sort after filtering
   }
 }
