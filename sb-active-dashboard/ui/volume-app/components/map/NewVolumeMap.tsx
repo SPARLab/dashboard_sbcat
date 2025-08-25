@@ -469,9 +469,9 @@ export default function NewVolumeMap({
       try {
         // Note: highlight was already cleared above for immediate feedback
 
-        // Query the AADT layer for the selected count site by name
+        // Query the AADT layer for the selected count site by ID
         const query = aadtLayer.createQuery();
-        query.where = `name = '${selectedCountSite}'`;
+        query.where = `id = ${selectedCountSite}`;
         query.outFields = ["*"];
         query.returnGeometry = true;
 

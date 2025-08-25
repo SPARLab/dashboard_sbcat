@@ -246,20 +246,24 @@ export class CountSiteProcessingService {
           // Calculate average AADV across all years for this site
           const totalAADV = siteResults.reduce((sum, result) => sum + result.siteYear.aadv, 0) / siteResults.length;
           
-          // For bike/ped breakdown, we need to calculate separately
+          // For bike/ped breakdown, we need to calculate based on the count types in the original data
+          // Since SiteYear only has combined AADV, we'll need to estimate the breakdown
           let bikeAADV = 0;
           let pedAADV = 0;
           
-          if (filters.showBicyclist) {
-            const bikeResults = siteResults.filter(r => r.siteYear.bikeAADV !== undefined);
-            bikeAADV = bikeResults.length > 0 ? 
-              bikeResults.reduce((sum, result) => sum + (result.siteYear.bikeAADV || 0), 0) / bikeResults.length : 0;
-          }
-          
-          if (filters.showPedestrian) {
-            const pedResults = siteResults.filter(r => r.siteYear.pedAADV !== undefined);
-            pedAADV = pedResults.length > 0 ? 
-              pedResults.reduce((sum, result) => sum + (result.siteYear.pedAADV || 0), 0) / pedResults.length : 0;
+          // If both modes are enabled, we can't separate them from the combined AADV
+          // So we'll use the total for both (this is a limitation of the current data structure)
+          if (filters.showBicyclist && filters.showPedestrian) {
+            // When both are enabled, we can't separate them, so we use total for both
+            // This is not ideal but matches the current data structure limitation
+            bikeAADV = totalAADV / 2; // Rough estimate
+            pedAADV = totalAADV / 2; // Rough estimate
+          } else if (filters.showBicyclist) {
+            bikeAADV = totalAADV;
+            pedAADV = 0;
+          } else if (filters.showPedestrian) {
+            bikeAADV = 0;
+            pedAADV = totalAADV;
           }
 
           if (totalAADV > 0) {
@@ -274,13 +278,177 @@ export class CountSiteProcessingService {
         }
 
         // Sort by total AADV (highest first) and limit results
-        return siteAADVResults
+        const finalResults = siteAADVResults
           .sort((a, b) => b.totalAADV - a.totalAADV)
           .slice(0, limit);
           
+        // If we expected multiple sites but only got results for some, use fallback for missing sites
+        if (siteIds.length > 1 && finalResults.length < siteIds.length) {
+          // Get the missing site IDs
+          const processedSiteIds = finalResults.map(r => r.siteId);
+          const missingSiteIds = siteIds.filter(id => !processedSiteIds.includes(id));
+          
+          // Use fallback for missing sites
+          try {
+            const aadtQuery = aadtLayer.createQuery();
+            aadtQuery.where = `site_id IN (${missingSiteIds.join(',')})`;
+            aadtQuery.outFields = ["site_id", "count_type", "all_aadt"];
+            aadtQuery.returnGeometry = false;
+            
+            const aadtResults = await aadtLayer.queryFeatures(aadtQuery);
+            
+            // Group AADT data by site
+            const aadtBySite: Record<number, { bike: number; ped: number }> = {};
+            
+            aadtResults.features.forEach(feature => {
+              const attrs = feature.attributes;
+              const siteId = attrs.site_id;
+              const countType = attrs.count_type;
+              const aadt = attrs.all_aadt || 0;
+              
+              if (!aadtBySite[siteId]) {
+                aadtBySite[siteId] = { bike: 0, ped: 0 };
+              }
+              
+              if (countType === 'bike') {
+                aadtBySite[siteId].bike = aadt;
+              } else if (countType === 'ped') {
+                aadtBySite[siteId].ped = aadt;
+              }
+            });
+            
+            // Add fallback results for missing sites
+            for (const siteId of missingSiteIds) {
+              const aadtData = aadtBySite[siteId];
+              const metadata = siteMetadata[siteId];
+              
+              if (!aadtData) {
+                continue;
+              }
+              
+              let bikeAADV = 0;
+              let pedAADV = 0;
+              
+              if (filters.showBicyclist) {
+                bikeAADV = aadtData.bike;
+              }
+              if (filters.showPedestrian) {
+                pedAADV = aadtData.ped;
+              }
+              
+              const totalAADV = bikeAADV + pedAADV;
+              
+              if (totalAADV > 0) {
+                finalResults.push({
+                  siteId,
+                  siteName: metadata?.name || `Site ${siteId}`,
+                  bikeAADV,
+                  pedAADV,
+                  totalAADV
+                });
+              }
+            }
+            
+            // Re-sort and limit the combined results
+            const combinedResults = finalResults
+              .sort((a, b) => b.totalAADV - a.totalAADV)
+              .slice(0, limit);
+              
+            return combinedResults;
+            
+          } catch (fallbackError) {
+            console.warn('Fallback supplement failed:', fallbackError);
+            return finalResults;
+          }
+        }
+        
+        return finalResults;
+          
       } catch (enhancedError) {
-        console.warn('Enhanced AADV calculation failed, falling back to empty results:', enhancedError);
-        return [];
+        console.warn('Enhanced AADV calculation failed, falling back to AADT table data:', enhancedError);
+        
+        // Fallback: Use existing AADT table data
+        try {
+          const aadtQuery = aadtLayer.createQuery();
+          aadtQuery.where = `site_id IN (${siteIds.join(',')})`;
+          aadtQuery.outFields = ["site_id", "count_type", "all_aadt"];
+          aadtQuery.returnGeometry = false;
+          
+          const aadtResults = await aadtLayer.queryFeatures(aadtQuery);
+          
+          if (aadtResults.features.length === 0) {
+            return [];
+          }
+          
+          // Group AADT data by site
+          const aadtBySite: Record<number, { bike: number; ped: number }> = {};
+          
+          aadtResults.features.forEach(feature => {
+            const attrs = feature.attributes;
+            const siteId = attrs.site_id;
+            const countType = attrs.count_type;
+            const aadt = attrs.all_aadt || 0;
+            
+            if (!aadtBySite[siteId]) {
+              aadtBySite[siteId] = { bike: 0, ped: 0 };
+            }
+            
+            if (countType === 'bike') {
+              aadtBySite[siteId].bike = aadt;
+            } else if (countType === 'ped') {
+              aadtBySite[siteId].ped = aadt;
+            }
+          });
+          
+          // Build results using AADT data
+          const fallbackResults: Array<{
+            siteId: number;
+            siteName: string;
+            bikeAADV: number;
+            pedAADV: number;
+            totalAADV: number;
+          }> = [];
+          
+          for (const siteId of siteIds) {
+            const aadtData = aadtBySite[siteId];
+            const metadata = siteMetadata[siteId];
+            
+            if (!aadtData) continue;
+            
+            let bikeAADV = 0;
+            let pedAADV = 0;
+            
+            if (filters.showBicyclist) {
+              bikeAADV = aadtData.bike;
+            }
+            if (filters.showPedestrian) {
+              pedAADV = aadtData.ped;
+            }
+            
+            const totalAADV = bikeAADV + pedAADV;
+            
+            if (totalAADV > 0) {
+              fallbackResults.push({
+                siteId,
+                siteName: metadata?.name || `Site ${siteId}`,
+                bikeAADV,
+                pedAADV,
+                totalAADV
+              });
+            }
+          }
+          
+          // Sort by total AADV (highest first) and limit results
+          const fallbackFinalResults = fallbackResults
+            .sort((a, b) => b.totalAADV - a.totalAADV)
+            .slice(0, limit);
+            
+          return fallbackFinalResults;
+            
+        } catch (fallbackError) {
+          console.error('Fallback AADT calculation also failed:', fallbackError);
+          return [];
+        }
       }
       
     } catch (error) {

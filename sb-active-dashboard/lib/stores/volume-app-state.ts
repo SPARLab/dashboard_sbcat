@@ -2,10 +2,10 @@ import { create } from 'zustand';
 import MapView from "@arcgis/core/views/MapView";
 
 interface VolumeAppState {
-  selectedCountSite: string | null;
-  highlightedBinSites: string[];
+  selectedCountSite: string | null; // Site ID as string
+  highlightedBinSites: string[]; // Site names for bin highlighting
   mapView: MapView | null;
-  setSelectedCountSite: (siteName: string | null) => void;
+  setSelectedCountSite: (siteId: string | null) => void;
   setHighlightedBinSites: (siteNames: string[]) => void;
   setMapView: (mapView: MapView | null) => void;
 }
@@ -14,9 +14,9 @@ export const useVolumeAppStore = create<VolumeAppState>((set) => ({
   selectedCountSite: null,
   highlightedBinSites: [],
   mapView: null,
-  setSelectedCountSite: (siteName) => {
+  setSelectedCountSite: (siteId) => {
     set({
-      selectedCountSite: siteName,
+      selectedCountSite: siteId,
       highlightedBinSites: [],
     });
   },

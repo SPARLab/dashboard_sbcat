@@ -136,13 +136,13 @@ export default function HighestVolume({
           {selectedGeometry && !isLoading && !error && sites.length > 0 && (
               <ul id="highest-volume-list" data-testid="highest-volume-list" className="space-y-2 text-sm">
                   {sites.map((site, index) => {
-                      const isSelected = selectedSiteId === site.siteName;
+                      const isSelected = selectedSiteId === site.siteId.toString();
                       return (
                         <li
                           key={site.siteId}
                           id={`highest-volume-item-${index + 1}`}
-                          className={`flex justify-between items-center rounded-md px-2 py-1 cursor-pointer transition-colors ${isSelected ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-100'}`}
-                          onClick={() => onSiteSelect?.(isSelected ? null : site.siteName)}
+                          className={`flex justify-between items-center rounded-md px-2 cursor-pointer transition-colors ${isSelected ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-100'}`}
+                          onClick={() => onSiteSelect?.(isSelected ? null : site.siteId.toString())}
                           aria-selected={isSelected}
                         >
                           <p id={`highest-volume-item-${index + 1}-name`} className={`text-gray-800 ${isSelected ? 'text-blue-800 font-medium' : ''}`}>

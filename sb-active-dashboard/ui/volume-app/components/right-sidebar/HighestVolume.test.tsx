@@ -646,7 +646,7 @@ describe('HighestVolume Component - Data Validation', () => {
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
-          selectedSiteId={mockData.sites[1].siteName}
+          selectedSiteId={mockData.sites[1].siteId.toString()}
         />
       )
 
@@ -692,7 +692,7 @@ describe('HighestVolume Component - Data Validation', () => {
       // Click first item to select
       const firstItem = document.getElementById(testIds.highestVolume.item(1)) as HTMLElement
       await user.click(firstItem)
-      expect(onSiteSelect).toHaveBeenCalledWith(mockData.sites[0].siteName)
+      expect(onSiteSelect).toHaveBeenCalledWith(mockData.sites[0].siteId.toString())
 
       // Simulate parent reflecting selection, then click again to deselect
       rerender(
@@ -705,7 +705,7 @@ describe('HighestVolume Component - Data Validation', () => {
           showBicyclist={true}
           showPedestrian={true}
           selectedGeometry={mockGeometry}
-          selectedSiteId={mockData.sites[0].siteName}
+          selectedSiteId={mockData.sites[0].siteId.toString()}
           onSiteSelect={onSiteSelect}
         />
       )
