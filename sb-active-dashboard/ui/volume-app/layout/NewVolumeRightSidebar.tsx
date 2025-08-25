@@ -5,7 +5,7 @@ import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import React, { useCallback, useEffect, useState } from "react";
 import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDataService";
-import { useSpatialQuery, useVolumeSpatialQuery } from "../../../lib/hooks/useSpatialQuery";
+import { useSpatialQuery, useVolumeSpatialQuery, useEnhancedAADVSummaryQuery } from "../../../lib/hooks/useSpatialQuery";
 import { useVolumeAppStore } from "../../../lib/stores/volume-app-state";
 import { formatSparklineDateRange } from "../utils/sparklineUtils";
 import AADVHistogram from "../components/right-sidebar/AADTHistogram";
@@ -290,11 +290,12 @@ export default function NewVolumeRightSidebar({
     selectedGeometry || null
   );
 
-  // Use volume-specific spatial query for summary statistics
-  const { result: volumeResult, isLoading: volumeLoading } = useVolumeSpatialQuery(
+  // Use enhanced AADV calculation for summary statistics
+  const { result: enhancedAADVResult, isLoading: enhancedAADVLoading } = useEnhancedAADVSummaryQuery(
     sitesLayer,
-    aadtTable,
-    selectedGeometry || null
+    selectedGeometry || null,
+    dateRange,
+    { showBicyclist, showPedestrian }
   );
 
   // State for timeline data
@@ -418,9 +419,12 @@ export default function NewVolumeRightSidebar({
                 isLoading={timelineLoading}
               />
               <SummaryStatistics 
-                spatialResult={volumeResult || null} 
-                isLoading={volumeLoading}
+                spatialResult={enhancedAADVResult || null} 
+                isLoading={enhancedAADVLoading}
                 selectedGeometry={selectedGeometry}
+                dateRange={dateRange}
+                showBicyclist={showBicyclist}
+                showPedestrian={showPedestrian}
               />
               <AggregatedVolumeBreakdown 
                 selectedGeometry={selectedGeometry}

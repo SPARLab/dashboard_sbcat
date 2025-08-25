@@ -4,6 +4,7 @@ import Polygon from "@arcgis/core/geometry/Polygon";
 import { queryAADTWithinPolygon, queryVolumeCountSitesWithinPolygon, getSelectedAreaDescription } from '../utilities/spatialQueries';
 import { SafetyIncidentsDataService } from '../data-services/SafetyIncidentsDataService';
 import { SafetyFilters, SafetyAnalysisResult } from '../safety-app/types';
+import { CountSiteProcessingService } from '../utilities/volume-utils/count-site-processing';
 
 interface SpatialQueryResult {
   aadtFeatures: Array<{
@@ -209,6 +210,75 @@ export const useSafetySpatialQuery = (
       console.debug('[useSafetySpatialQuery] Cancelled pending timer');
     };
   }, [selectedGeometry, JSON.stringify(filters), debounceMs]); // Stringify filters to ensure proper dependency tracking
+
+  return {
+    result,
+    isLoading,
+    error,
+  };
+};
+
+/**
+ * Hook for enhanced AADV summary statistics using the new calculation method
+ * Used by: SummaryStatistics component (updated version)
+ */
+export const useEnhancedAADVSummaryQuery = (
+  sitesLayer: FeatureLayer | null,
+  selectedGeometry: Polygon | null,
+  dateRange: { startDate: Date; endDate: Date },
+  filters: { showBicyclist: boolean; showPedestrian: boolean }
+): {
+  result: {
+    totalCount: number;
+    medianPedestrianWeekdayAADV?: number;
+    medianPedestrianWeekendAADV?: number;
+    medianBikeWeekdayAADV?: number;
+    medianBikeWeekendAADV?: number;
+  } | null;
+  isLoading: boolean;
+  error: string | null;
+} => {
+  const [result, setResult] = useState<{
+    totalCount: number;
+    medianPedestrianWeekdayAADV?: number;
+    medianPedestrianWeekendAADV?: number;
+    medianBikeWeekdayAADV?: number;
+    medianBikeWeekendAADV?: number;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const performQuery = async () => {
+      if (!sitesLayer || !selectedGeometry) {
+        setResult(null);
+        setError(null);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const queryResult = await CountSiteProcessingService.getEnhancedAADVSummaryStatistics(
+          sitesLayer,
+          selectedGeometry,
+          dateRange,
+          filters
+        );
+
+        setResult(queryResult);
+      } catch (err) {
+        console.error('Enhanced AADV summary query failed:', err);
+        setError('Failed to calculate enhanced AADV summary statistics');
+        setResult(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    performQuery();
+  }, [sitesLayer, selectedGeometry, dateRange, filters.showBicyclist, filters.showPedestrian]);
 
   return {
     result,

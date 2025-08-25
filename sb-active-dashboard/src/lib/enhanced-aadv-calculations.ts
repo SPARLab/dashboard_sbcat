@@ -27,6 +27,27 @@ export interface EnhancedAADVResult {
 }
 
 /**
+ * Enhanced AADV result with weekday/weekend breakdown
+ */
+export interface EnhancedAADVWithWeekdayWeekendResult {
+  siteId: string;
+  year: number;
+  countType: 'bike' | 'ped';
+  weekdayAADV: number;
+  weekendAADV: number;
+  overallAADV: number;
+  warnings: string[];
+  method: 'enhanced-expansion' | 'fallback-raw';
+  factorsUsed: {
+    santaCruz: boolean;
+    nbpd: boolean;
+    hourlyFactorsApplied: number;
+    dailyFactorsApplied: number;
+    monthlyFactorsApplied: number;
+  };
+}
+
+/**
  * Configuration for enhanced AADV calculations
  */
 export interface EnhancedAADVConfig {
@@ -253,6 +274,131 @@ export class EnhancedAADVCalculationService {
   }
 
   /**
+   * Calculate enhanced AADV with weekday/weekend breakdown
+   */
+  static async calculateEnhancedAADVWithWeekdayWeekend(
+    rawCountData: RawCountRecord[],
+    config: EnhancedAADVConfig = {}
+  ): Promise<EnhancedAADVWithWeekdayWeekendResult[]> {
+    const {
+      showBicyclist = true,
+      showPedestrian = true,
+      santaCruzProfileKey = 'SantaCruz_citywide_v1',
+      nbpdProfileKey = 'NBPD_PATH_moderate_2009'
+    } = config;
+
+    if (rawCountData.length === 0) {
+      return [];
+    }
+
+    // Filter by count type
+    const filteredData = rawCountData.filter(record => {
+      if (record.count_type === 'bike' && !showBicyclist) return false;
+      if (record.count_type === 'ped' && !showPedestrian) return false;
+      return true;
+    });
+
+    if (filteredData.length === 0) {
+      return [];
+    }
+
+    // Load factors
+    const factors = await this.ensureFactors();
+    const santaCruzFactors = factors.santaCruz[santaCruzProfileKey];
+    const nbpdFactors = factors.nbpd[nbpdProfileKey];
+
+    if (!santaCruzFactors || !nbpdFactors) {
+      console.warn(`Missing factors: santaCruz=${!!santaCruzFactors}, nbpd=${!!nbpdFactors}`);
+      return [];
+    }
+
+    // Group data by site, year, and count type
+    const groupedData = this.groupBySiteYearCountType(filteredData);
+    const results: EnhancedAADVWithWeekdayWeekendResult[] = [];
+
+    for (const [groupKey, records] of Array.from(groupedData.entries())) {
+      const [siteId, year, countType] = groupKey.split('|');
+      
+      // Separate weekday and weekend data
+      const weekdayRecords = records.filter((record: RawCountRecord) => {
+        const date = new Date(record.timestamp);
+        const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 6 = Saturday
+        return dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
+      });
+
+      const weekendRecords = records.filter((record: RawCountRecord) => {
+        const date = new Date(record.timestamp);
+        const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 6 = Saturday
+        return dayOfWeek === 0 || dayOfWeek === 6; // Saturday and Sunday
+      });
+
+      const warnings: string[] = [];
+      let factorsUsed = {
+        santaCruz: false,
+        nbpd: false,
+        hourlyFactorsApplied: 0,
+        dailyFactorsApplied: 0,
+        monthlyFactorsApplied: 0
+      };
+
+      // Calculate weekday AADV
+      let weekdayAADV = 0;
+      if (weekdayRecords.length > 0) {
+        const weekdayResult = this.calculateSiteYearAADV(
+          weekdayRecords,
+          siteId,
+          parseInt(year),
+          santaCruzFactors,
+          nbpdFactors
+        );
+        weekdayAADV = weekdayResult.siteYear.aadv;
+        warnings.push(...weekdayResult.warnings);
+        factorsUsed.santaCruz = weekdayResult.factorsUsed.santaCruz || factorsUsed.santaCruz;
+        factorsUsed.nbpd = weekdayResult.factorsUsed.nbpd || factorsUsed.nbpd;
+        factorsUsed.hourlyFactorsApplied += weekdayResult.factorsUsed.hourlyFactorsApplied;
+        factorsUsed.dailyFactorsApplied += weekdayResult.factorsUsed.dailyFactorsApplied;
+        factorsUsed.monthlyFactorsApplied += weekdayResult.factorsUsed.monthlyFactorsApplied;
+      }
+
+      // Calculate weekend AADV
+      let weekendAADV = 0;
+      if (weekendRecords.length > 0) {
+        const weekendResult = this.calculateSiteYearAADV(
+          weekendRecords,
+          siteId,
+          parseInt(year),
+          santaCruzFactors,
+          nbpdFactors
+        );
+        weekendAADV = weekendResult.siteYear.aadv;
+        warnings.push(...weekendResult.warnings);
+        factorsUsed.santaCruz = weekendResult.factorsUsed.santaCruz || factorsUsed.santaCruz;
+        factorsUsed.nbpd = weekendResult.factorsUsed.nbpd || factorsUsed.nbpd;
+        factorsUsed.hourlyFactorsApplied += weekendResult.factorsUsed.hourlyFactorsApplied;
+        factorsUsed.dailyFactorsApplied += weekendResult.factorsUsed.dailyFactorsApplied;
+        factorsUsed.monthlyFactorsApplied += weekendResult.factorsUsed.monthlyFactorsApplied;
+      }
+
+      // Calculate overall AADV (weighted average based on 5 weekdays vs 2 weekend days)
+      const overallAADV = (weekdayAADV * 5 + weekendAADV * 2) / 7;
+
+      results.push({
+        siteId,
+        year: parseInt(year),
+        countType: countType as 'bike' | 'ped',
+        weekdayAADV: Math.round(weekdayAADV * 100) / 100,
+        weekendAADV: Math.round(weekendAADV * 100) / 100,
+        overallAADV: Math.round(overallAADV * 100) / 100,
+        warnings: Array.from(new Set(warnings)),
+        method: 'enhanced-expansion',
+        factorsUsed
+      });
+    }
+
+    return results;
+  }
+
+  /**
    * Calculate AADV for a single site-year using enhanced factors
    */
   private static calculateSiteYearAADV(
@@ -438,6 +584,23 @@ export class EnhancedAADVCalculationService {
         groups[key] = [];
       }
       groups[key].push(record);
+    });
+    
+    return groups;
+  }
+
+  private static groupBySiteYearCountType(records: RawCountRecord[]): Map<string, RawCountRecord[]> {
+    const groups = new Map<string, RawCountRecord[]>();
+    
+    records.forEach(record => {
+      const date = new Date(record.timestamp);
+      const year = date.getUTCFullYear();
+      const key = `${record.site_id}|${year}|${record.count_type}`;
+      
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(record);
     });
     
     return groups;
