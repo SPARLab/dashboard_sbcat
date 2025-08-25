@@ -38,7 +38,7 @@ export default function SafetyRightSidebar({
 
       {/* Scrollable Analysis Content */}
       <div id="safety-analysis-content" className="flex-1 overflow-y-auto no-scrollbar">
-        <div id="safety-analysis-components" className="space-y-3 px-3.5 py-2">
+        <div id="safety-analysis-components" className="space-y-3 px-3.5 pt-4 pb-2">
           <SummaryStatistics 
             selectedGeometry={selectedGeometry}
             filters={filters}
