@@ -103,14 +103,18 @@ describe('HexagonModeledVolumes Service Integration', () => {
       
       expect(layer).toBeDefined();
       expect(layer.layers).toBeDefined();
-      expect(layer.layers.length).toBe(2); // bike and ped layers
+      expect(layer.layers.length).toBe(1); // single layer (bike by default)
       
-      // Verify that layers have the expected configuration
+      // Verify that the bike layer has the expected configuration
       const bikeLayer = layer.layers.items[0];
-      const pedLayer = layer.layers.items[1];
-      
       expect(bikeLayer.title).toBe('Modeled Biking Volumes');
-      expect(pedLayer.title).toBe('Modeled Walking Volumes');
+      
+      // Test pedestrian layer separately
+      const pedLayer = createHexagonLayer('cost-benefit', 2023, 'ped');
+      expect(pedLayer).toBeDefined();
+      expect(pedLayer.layers.length).toBe(1);
+      const pedVectorTile = pedLayer.layers.items[0];
+      expect(pedVectorTile.title).toBe('Modeled Walking Volumes');
     });
   });
 
@@ -141,7 +145,7 @@ describe('HexagonModeledVolumes Service Integration', () => {
       
       // Verify that we can create the layer successfully
       // The actual color validation would require rendering, but we can verify structure
-      expect(layer.layers.length).toBe(2);
+      expect(layer.layers.length).toBe(1);
     });
   });
 

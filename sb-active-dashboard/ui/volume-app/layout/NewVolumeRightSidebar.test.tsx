@@ -43,6 +43,37 @@ vi.mock('../components/right-sidebar/YearToYearVolumeComparison', () => ({
 import NewVolumeRightSidebar from './NewVolumeRightSidebar';
 import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
 
+// Mock ArcGIS renderer classes
+vi.mock('@arcgis/core/renderers/SimpleRenderer', () => ({
+  default: vi.fn().mockImplementation((config) => ({
+    type: 'simple',
+    symbol: config?.symbol,
+    ...config
+  }))
+}));
+
+vi.mock('@arcgis/core/renderers/UniqueValueRenderer', () => ({
+  default: vi.fn().mockImplementation((config) => ({
+    type: 'unique-value',
+    field: config?.field,
+    valueExpression: config?.valueExpression,
+    uniqueValueInfos: config?.uniqueValueInfos,
+    defaultSymbol: config?.defaultSymbol,
+    ...config
+  }))
+}));
+
+vi.mock('@arcgis/core/symbols/SimpleMarkerSymbol', () => ({
+  default: vi.fn().mockImplementation((config) => ({
+    type: 'simple-marker',
+    style: config?.style,
+    color: config?.color,
+    outline: config?.outline,
+    size: config?.size,
+    ...config
+  }))
+}));
+
 describe('NewVolumeRightSidebar - AADT site highlighting', () => {
   beforeEach(() => {
     // Ensure we start with a clean constructor mock
@@ -55,7 +86,13 @@ describe('NewVolumeRightSidebar - AADT site highlighting', () => {
   });
 
   function renderSidebar(uiProps?: Partial<React.ComponentProps<typeof NewVolumeRightSidebar>>) {
-    const aadtLayer: any = { title: 'AADT Count Sites', renderer: null };
+    const aadtLayer: any = { 
+      title: 'AADT Count Sites', 
+      renderer: null,
+      // Add missing methods that the component expects
+      createQuery: vi.fn(() => ({})),
+      queryFeatures: vi.fn().mockResolvedValue({ features: [] })
+    };
 
     const defaultProps: React.ComponentProps<typeof NewVolumeRightSidebar> = {
       activeTab: 'raw-data',
@@ -211,7 +248,13 @@ describe('NewVolumeRightSidebar - selectedYear prop handling', () => {
   });
 
   function renderSidebar(uiProps?: Partial<React.ComponentProps<typeof NewVolumeRightSidebar>>) {
-    const aadtLayer: any = { title: 'AADT Count Sites', renderer: null };
+    const aadtLayer: any = { 
+      title: 'AADT Count Sites', 
+      renderer: null,
+      // Add missing methods that the component expects
+      createQuery: vi.fn(() => ({})),
+      queryFeatures: vi.fn().mockResolvedValue({ features: [] })
+    };
 
     const defaultProps: React.ComponentProps<typeof NewVolumeRightSidebar> = {
       activeTab: 'modeled-data',

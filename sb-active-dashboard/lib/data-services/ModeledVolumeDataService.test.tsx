@@ -311,7 +311,13 @@ describe('ModeledVolumeDataService', () => {
         geometry: mockGeometry,
         spatialRelationship: "intersects",
         returnGeometry: true,
-        outFields: ["edgeuid"]
+        outFields: [
+          "id", "SHAPE__Length",
+          "cos_2019_bike", "cos_2019_ped", "cos_2020_bike", "cos_2020_ped",
+          "cos_2021_bike", "cos_2021_ped", "cos_2022_bike", "cos_2022_ped", 
+          "cos_2023_bike", "cos_2023_ped",
+          "str_2023_bike", "str_2023_ped"
+        ]
       }));
     });
 

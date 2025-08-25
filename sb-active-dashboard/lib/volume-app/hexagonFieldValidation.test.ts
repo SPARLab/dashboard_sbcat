@@ -9,26 +9,33 @@ describe('Hexagon Strava Field Data Validation', () => {
 
   // Test helper to validate layer creation and structure
   const testLayerCreation = (modelType: string, year: number, expectedFields: string[]) => {
-    const testLayer = createHexagonLayer(modelType, year);
-    expect(testLayer).toBeDefined();
-    expect(testLayer.title).toBe('Modeled Volumes');
-    expect(testLayer.layers.length).toBe(2);
+    // Test both bike and ped layers separately since the function now creates one at a time
+    const bikeLayer = createHexagonLayer(modelType, year, 'bike');
+    const pedLayer = createHexagonLayer(modelType, year, 'ped');
+    
+    expect(bikeLayer).toBeDefined();
+    expect(bikeLayer.title).toBe('Modeled Volumes');
+    expect(bikeLayer.layers.length).toBe(1);
+    
+    expect(pedLayer).toBeDefined();
+    expect(pedLayer.title).toBe('Modeled Volumes');
+    expect(pedLayer.layers.length).toBe(1);
 
-    const bikeLayer = testLayer.layers.getItemAt(0);
-    const pedLayer = testLayer.layers.getItemAt(1);
+    const bikeVectorTile = bikeLayer.layers.getItemAt(0);
+    const pedVectorTile = pedLayer.layers.getItemAt(0);
 
-    expect(bikeLayer.title).toBe('Modeled Biking Volumes');
-    expect(pedLayer.title).toBe('Modeled Walking Volumes');
-    expect(bikeLayer.type).toBe('vector-tile');
-    expect(pedLayer.type).toBe('vector-tile');
+    expect(bikeVectorTile.title).toBe('Modeled Biking Volumes');
+    expect(pedVectorTile.title).toBe('Modeled Walking Volumes');
+    expect(bikeVectorTile.type).toBe('vector-tile');
+    expect(pedVectorTile.type).toBe('vector-tile');
 
     return {
       layerCreated: true,
       expectedFields,
       modelType,
       year,
-      bikeLayer,
-      pedLayer
+      bikeLayer: bikeVectorTile,
+      pedLayer: pedVectorTile
     };
   };
 
@@ -84,9 +91,9 @@ describe('Hexagon Strava Field Data Validation', () => {
       expect(stravaLayer).toBeDefined();
       expect(costBenefitLayer).toBeDefined();
       
-      // Test that layers have expected structure
-      expect(stravaLayer.layers.length).toBe(2);
-      expect(costBenefitLayer.layers.length).toBe(2);
+      // Test that layers have expected structure (each layer creates one vector tile)
+      expect(stravaLayer.layers.length).toBe(1);
+      expect(costBenefitLayer.layers.length).toBe(1);
       
       // We can't easily test the field references in the style object without 
       // parsing the VectorTileLayer style, but we can verify the layers exist
@@ -177,10 +184,10 @@ describe('Hexagon Strava Field Data Validation', () => {
       expect(strava2024).toBeDefined();
       expect(costBenefit2023).toBeDefined();
       
-      // Verify layer structure
-      expect(strava2023.layers.length).toBe(2);
-      expect(strava2024.layers.length).toBe(2);
-      expect(costBenefit2023.layers.length).toBe(2);
+      // Verify layer structure (each layer creates one vector tile)
+      expect(strava2023.layers.length).toBe(1);
+      expect(strava2024.layers.length).toBe(1);
+      expect(costBenefit2023.layers.length).toBe(1);
       
       console.log('✅ All test layers created successfully');
       console.log('📝 These layers can be loaded in map for visual color inspection');

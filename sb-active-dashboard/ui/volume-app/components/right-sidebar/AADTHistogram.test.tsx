@@ -335,16 +335,20 @@ describe('AADVHistogram', () => {
       rerender(<AADVHistogram {...defaultProps} dateRange={newDateRange1} />);
       rerender(<AADVHistogram {...defaultProps} dateRange={newDateRange2} />);
       
-      // Fast forward past debounce delay
-      vi.advanceTimersByTime(400);
+      // Fast forward past debounce delay (500ms) and run all pending timers
+      vi.advanceTimersByTime(600);
+      await vi.runAllTimersAsync();
       
-      // Should only call with the final date range (component is in individual-bars mode)
-      expect(mockAADVHistogramDataService.queryIndividualSiteAADV).toHaveBeenCalledWith(
-        mockPolygon,
-        newDateRange2,
-        true,
-        true
-      );
+      // Wait for async operations to complete
+      await waitFor(() => {
+        // Should only call with the final date range (component is in individual-bars mode)
+        expect(mockAADVHistogramDataService.queryIndividualSiteAADV).toHaveBeenCalledWith(
+          mockPolygon,
+          newDateRange2,
+          true,
+          true
+        );
+      });
     } finally {
       vi.useRealTimers();
     }
