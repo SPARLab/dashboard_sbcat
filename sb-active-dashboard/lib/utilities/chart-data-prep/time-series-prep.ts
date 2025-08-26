@@ -115,7 +115,7 @@ export class TimeSeriesPrepService {
     const totalSpanMs = totalTimeSpan.end.getTime() - totalTimeSpan.start.getTime();
 
     return siteData.map(site => ({
-      id: `site${site.siteId}`,
+      id: site.siteId.toString(),
       name: site.siteName,
       label: site.siteLabel,
       dataPeriods: site.dataPeriods.map(period => {

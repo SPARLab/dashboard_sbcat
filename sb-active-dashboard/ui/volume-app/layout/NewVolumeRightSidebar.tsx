@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDataService";
 import { useSpatialQuery, useVolumeSpatialQuery, useEnhancedAADVSummaryQuery } from "../../../lib/hooks/useSpatialQuery";
 import { useVolumeAppStore } from "../../../lib/stores/volume-app-state";
+import { queryDeduplicator, QueryDeduplicator } from "../../../lib/utilities/shared/QueryDeduplicator";
 import { formatSparklineDateRange } from "../utils/sparklineUtils";
 import AADVHistogram from "../components/right-sidebar/AADTHistogram";
 import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVolumeBreakdown";
@@ -149,13 +150,22 @@ export default function NewVolumeRightSidebar({
       }
 
       try {
-        // 1) Query sites intersecting geometry
-        const sitesQuery = sitesLayer.createQuery();
-        sitesQuery.geometry = selectedGeometry;
-        sitesQuery.spatialRelationship = "intersects" as const;
-        sitesQuery.returnGeometry = false;
-        sitesQuery.outFields = ["id"]; // site id field
-        const sitesResult = await sitesLayer.queryFeatures(sitesQuery as __esri.QueryProperties);
+        // 1) Query sites intersecting geometry - WITH DEDUPLICATION
+        const sitesQueryKey = QueryDeduplicator.generateGeometryKey(
+          'sites-intersecting',
+          selectedGeometry,
+          { outFields: 'id' }
+        );
+        
+        const sitesResult = await queryDeduplicator.deduplicate(sitesQueryKey, async () => {
+          const sitesQuery = sitesLayer.createQuery();
+          sitesQuery.geometry = selectedGeometry;
+          sitesQuery.spatialRelationship = "intersects" as const;
+          sitesQuery.returnGeometry = false;
+          sitesQuery.outFields = ["id"]; // site id field
+          return sitesLayer.queryFeatures(sitesQuery as __esri.QueryProperties);
+        });
+        
         const siteIds: number[] = sitesResult.features.map(f => Number(f.attributes.id)).filter((v) => Number.isFinite(v));
 
         if (siteIds.length === 0) {
@@ -168,7 +178,7 @@ export default function NewVolumeRightSidebar({
           return;
         }
 
-        // 2) Query counts for those sites within the date range and count_type filters; group by site_id
+        // 2) Query counts for those sites within the date range and count_type filters - WITH DEDUPLICATION
         const start = dateRange.startDate.toISOString().split('T')[0];
         const end = dateRange.endDate.toISOString().split('T')[0];
         const typeClauses: string[] = [];
@@ -176,18 +186,29 @@ export default function NewVolumeRightSidebar({
         if (showPedestrian) typeClauses.push("'ped'");
         const countTypeWhere = typeClauses.length ? ` AND count_type IN (${typeClauses.join(',')})` : '';
 
-        const countsQuery = countsLayer.createQuery();
-        countsQuery.where = `site_id IN (${siteIds.join(',')}) AND timestamp >= DATE '${start}' AND timestamp <= DATE '${end}'${countTypeWhere}`;
-        countsQuery.returnGeometry = false;
-        countsQuery.outFields = ["site_id"]; // needed for groupBy
-        countsQuery.groupByFieldsForStatistics = ["site_id"];
-        countsQuery.outStatistics = [{
-          statisticType: "count",
-          onStatisticField: "site_id",
-          outStatisticFieldName: "site_count",
-        } as __esri.StatisticDefinition];
+        const countsQueryKey = QueryDeduplicator.generateKey('counts-for-sites', {
+          siteIds: siteIds.sort().join(','), // Sort for consistent caching
+          startDate: start,
+          endDate: end,
+          showBicyclist,
+          showPedestrian,
+          operation: 'group-by-site'
+        });
 
-        const countsResult = await countsLayer.queryFeatures(countsQuery as __esri.QueryProperties);
+        const countsResult = await queryDeduplicator.deduplicate(countsQueryKey, async () => {
+          const countsQuery = countsLayer.createQuery();
+          countsQuery.where = `site_id IN (${siteIds.join(',')}) AND timestamp >= DATE '${start}' AND timestamp <= DATE '${end}'${countTypeWhere}`;
+          countsQuery.returnGeometry = false;
+          countsQuery.outFields = ["site_id"]; // needed for groupBy
+          countsQuery.groupByFieldsForStatistics = ["site_id"];
+          countsQuery.outStatistics = [{
+            statisticType: "count",
+            onStatisticField: "site_id",
+            outStatisticFieldName: "site_count",
+          } as __esri.StatisticDefinition];
+          return countsLayer.queryFeatures(countsQuery as __esri.QueryProperties);
+        });
+        
         const contributingIds = countsResult.features.map(f => Number(f.attributes.site_id)).filter(v => Number.isFinite(v));
 
         // 3) Apply renderer: contributing -> solid blue; others -> hollow gray
@@ -201,36 +222,38 @@ export default function NewVolumeRightSidebar({
           return;
         }
 
-        // Query sites to get site names for highlighted bin sites
+        // Query sites to get site names for highlighted bin sites - OPTIMIZED
         let highlightedSiteIds: number[] = [];
         if (highlightedBinSites.length > 0) {
           console.log('🟡 Processing highlighted bin sites:', highlightedBinSites.length, 'sites');
           
           try {
-            // Process sites in batches to avoid SQL query limits
-            const batchSize = 50; // Process 50 sites at a time
-            const batches = [];
+            // OPTIMIZATION: Use single query instead of batches
+            // Escape single quotes in site names for SQL
+            const escapedNames = highlightedBinSites.map(name => name.replace(/'/g, "''"));
             
-            for (let i = 0; i < highlightedBinSites.length; i += batchSize) {
-              batches.push(highlightedBinSites.slice(i, i + batchSize));
+            // Split into chunks only if we exceed SQL parameter limits (typically 1000)
+            const maxNamesPerQuery = 900; // Conservative limit
+            const chunks = [];
+            for (let i = 0; i < escapedNames.length; i += maxNamesPerQuery) {
+              chunks.push(escapedNames.slice(i, i + maxNamesPerQuery));
             }
             
-            console.log('🟡 Processing', batches.length, 'batches of sites');
+            console.log('🟡 Processing', chunks.length, 'optimized chunks');
             
-            for (const batch of batches) {
-              // Escape single quotes in site names for SQL
-              const escapedNames = batch.map(name => name.replace(/'/g, "''"));
+            // Execute chunks in parallel for maximum performance
+            const chunkPromises = chunks.map(async (chunk) => {
               const sitesQuery = sitesLayer.createQuery();
-              sitesQuery.where = `name IN ('${escapedNames.join("','")}')`;
+              sitesQuery.where = `name IN ('${chunk.join("','")}')`;
               sitesQuery.outFields = ["id", "name"];
               sitesQuery.returnGeometry = false;
               
               const sitesResult = await sitesLayer.queryFeatures(sitesQuery);
-              const batchIds = sitesResult.features.map(f => Number(f.attributes.id)).filter(v => Number.isFinite(v));
-              highlightedSiteIds.push(...batchIds);
-              
-              console.log('🟡 Batch found', batchIds.length, 'site IDs');
-            }
+              return sitesResult.features.map(f => Number(f.attributes.id)).filter(v => Number.isFinite(v));
+            });
+            
+            const chunkResults = await Promise.all(chunkPromises);
+            highlightedSiteIds = chunkResults.flat();
             
             console.log('🟡 Total highlighted site IDs:', highlightedSiteIds.length);
           } catch (err) {

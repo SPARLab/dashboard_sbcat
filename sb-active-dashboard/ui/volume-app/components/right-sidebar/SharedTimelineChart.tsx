@@ -86,7 +86,7 @@ export default function SharedTimelineChart({
       {/* Timeline Rows */}
       <div id={`${idPrefix}-rows`} className={`${styles.rowSpacing} w-full`}>
         {sites.map((site) => {
-          const isSelected = selectedSiteId === site.name;
+          const isSelected = selectedSiteId === site.id;
           return (
             <div
               id={`${idPrefix}-row-${encodeURIComponent(site.name)}`}
@@ -96,7 +96,7 @@ export default function SharedTimelineChart({
                   ? 'bg-blue-100 border border-blue-300 ring-2 ring-blue-300 border-l-4 border-l-blue-500' 
                   : 'hover:bg-gray-100'
               }`}
-              onClick={() => onSiteSelect?.(isSelected ? null : site.name)}
+              onClick={() => onSiteSelect?.(isSelected ? null : site.id)}
             >
               {/* Site Label */}
               <div
