@@ -29,7 +29,7 @@ export default function SafetyMapArea({
     <div id="safety-map-area-container" className="flex-1 bg-white flex flex-col">
       {/* Geographic Area Header */}
       <div id="safety-geographic-header" className="bg-gray-100 border-b border-gray-200 px-4 py-[1.15rem] flex-shrink-0">
-        <h2 id="safety-current-geographic-area" className="text-base font-bold italic text-gray-700">
+        <h2 id="safety-current-geographic-area" className="text-base italic text-gray-700">
           {selectedAreaName || 'Please select a region on the map'}
         </h2>
       </div>
