@@ -54,10 +54,10 @@ export default function Header(props: any) {
                   variant="text"
                   sx={{
                     backgroundColor: isActive
-                      ? theme.palette.navy.main
+                      ? "#d1d5db" // gray-300 equivalent
                       : "transparent",
                     color: isActive
-                      ? theme.palette.white.main
+                      ? "#374151" // gray-700 equivalent
                       : theme.palette.lightgray.contrastText,
                     fontWeight: "bold",
                     fontSize: "1rem",
@@ -67,8 +67,19 @@ export default function Header(props: any) {
                     py: 1,
                     "&:hover": {
                       backgroundColor: isActive
-                        ? theme.palette.navy.main
-                        : theme.palette.mist.light,
+                        ? "#9ca3af" // gray-400 equivalent
+                        : "#d1d5db", // gray-300 equivalent
+                      color: isActive
+                        ? "#1f2937" // gray-800 equivalent
+                        : "#374151", // gray-700 equivalent
+                    },
+                    "&:focus": {
+                      outline: "none",
+                      boxShadow: "none",
+                    },
+                    "&:active": {
+                      outline: "none",
+                      boxShadow: "none",
                     },
                   }}
                 >

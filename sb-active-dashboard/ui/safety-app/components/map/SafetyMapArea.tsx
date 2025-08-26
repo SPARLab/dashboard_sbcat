@@ -8,6 +8,7 @@ interface SafetyMapAreaProps {
   onMapViewReady?: (mapView: __esri.MapView) => void;
   onSelectionChange?: (data: { geometry: __esri.Polygon | null; areaName?: string | null } | null) => void;
   selectedAreaName?: string | null;
+  showLoadingOverlay?: boolean;
 }
 
 export default function SafetyMapArea({ 
@@ -15,7 +16,8 @@ export default function SafetyMapArea({
   geographicLevel = 'cities',
   onMapViewReady,
   onSelectionChange,
-  selectedAreaName
+  selectedAreaName,
+  showLoadingOverlay = true
 }: SafetyMapAreaProps) {
   const [activeMapTab, setActiveMapTab] = useState<SafetyVisualizationType>('raw-incidents');
 
@@ -38,7 +40,7 @@ export default function SafetyMapArea({
       <div id="safety-map-content" className="flex-1 bg-gray-100 relative">
         
         {/* Map Tabs - Absolutely positioned over the map */}
-        <div id="safety-map-tabs-container" className="absolute top-4 right-4 z-30">
+        <div id="safety-map-tabs-container" className="absolute top-2 right-2 z-30">
           <div id="safety-map-tabs-wrapper" className="flex bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
             {mapTabs.map((tab) => (
               <button
@@ -64,11 +66,12 @@ export default function SafetyMapArea({
             geographicLevel={geographicLevel}
             onMapViewReady={onMapViewReady}
             onSelectionChange={onSelectionChange}
+            showLoadingOverlay={showLoadingOverlay}
           />
         </div>
 
         {/* Legend - positioned in bottom right with proper z-index */}
-        <div id="safety-map-legend" className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-36 z-10">
+        <div id="safety-map-legend" className="absolute bottom-6 right-2 bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-36 z-10">
           <h4 id="safety-legend-title" className="text-xs font-normal text-gray-900 mb-3">Legend</h4>
           <div id="safety-legend-items" className="space-y-2">
             <div id="safety-legend-fatality" className="flex items-center gap-2">
