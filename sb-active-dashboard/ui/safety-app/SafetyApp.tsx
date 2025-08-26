@@ -4,6 +4,8 @@ import { SafetyFilters } from "../../lib/safety-app/types";
 import SafetyMapArea from "./components/map/SafetyMapArea";
 import SafetyLeftSidebar from "./layout/SafetyLeftSidebar";
 import SafetyRightSidebar from "./layout/SafetyRightSidebar";
+import DisclaimerModal from "../components/DisclaimerModal";
+import SafetyDataDisclaimer from "../components/SafetyDataDisclaimer";
 
 function useDebouncedValue<T>(value: T, delayMs: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -18,6 +20,7 @@ function useDebouncedValue<T>(value: T, delayMs: number = 300): T {
 
 export default function SafetyApp() {
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
   
   // Selection hook for polygon selection (same as volume page)
   const { selectedGeometry, selectedAreaName, onSelectionChange } = useSelection();
@@ -61,8 +64,18 @@ export default function SafetyApp() {
 
 
   return (
-    <div id="safety-app-container" className="flex flex-col h-[calc(100vh-70px)] bg-white">
-      <div id="safety-main-content" className="flex flex-1 overflow-hidden">
+    <>
+      <DisclaimerModal
+        id="safety-data-disclaimer"
+        isOpen={showDisclaimer}
+        onClose={() => setShowDisclaimer(false)}
+        title="Safety Data Information"
+      >
+        <SafetyDataDisclaimer />
+      </DisclaimerModal>
+
+      <div id="safety-app-container" className="flex flex-col h-[calc(100vh-70px)] bg-white">
+        <div id="safety-main-content" className="flex flex-1 overflow-hidden">
         <SafetyLeftSidebar 
           filters={filters}
           onFiltersChange={handleFiltersChange}
@@ -75,6 +88,7 @@ export default function SafetyApp() {
           onMapViewReady={handleMapViewReady}
           onSelectionChange={onSelectionChange}
           selectedAreaName={selectedAreaName}
+          showLoadingOverlay={!showDisclaimer}
         />
         <SafetyRightSidebar 
           mapView={mapView}
@@ -91,6 +105,7 @@ export default function SafetyApp() {
           </p>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

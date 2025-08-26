@@ -33,6 +33,7 @@ interface NewVolumeMapProps {
   onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void;
   selectedCountSite?: string | null;
   highlightedBinSites?: string[];
+  showLoadingOverlay?: boolean;
 }
 
 export default function NewVolumeMap({ 
@@ -48,6 +49,7 @@ export default function NewVolumeMap({
   onSelectionChange,
   selectedCountSite: selectedCountSiteProp, // Keep for compatibility
   highlightedBinSites: highlightedBinSitesProp = [], // Keep for compatibility
+  showLoadingOverlay = true, // Add the new prop with default value
 }: NewVolumeMapProps) {
   // Use Zustand store for state management
   const { selectedCountSite, highlightedBinSites, setMapView: setStoreMapView } = useVolumeAppStore();

@@ -5,9 +5,12 @@ import NewVolumeMap from "./components/map/NewVolumeMap";
 import NewVolumeLeftSidebar from "./layout/NewVolumeLeftSidebar";
 import NewVolumeRightSidebar from "./layout/NewVolumeRightSidebar";
 import NewVolumeSubHeader from "./layout/NewVolumeSubHeader";
+import DisclaimerModal from "../components/DisclaimerModal";
+import VolumeDataDisclaimer from "../components/VolumeDataDisclaimer";
 
 export default function NewVolumeApp() {
   const [activeTab, setActiveTab] = useState('raw-data');
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
   
   // Selection hook for polygon selection
   const { selectedGeometry, selectedAreaName, onSelectionChange } = useSelection();
@@ -64,9 +67,19 @@ export default function NewVolumeApp() {
   };
 
   return (
-    <div id="new-volumes-page" className="flex flex-col h-[calc(100vh-70px)] bg-white">
-      <NewVolumeSubHeader activeTab={activeTab} onTabChange={setActiveTab} />
-      <div id="volume-main-content" className="flex flex-1 overflow-hidden">
+    <>
+      <DisclaimerModal
+        id="volume-data-disclaimer"
+        isOpen={showDisclaimer}
+        onClose={() => setShowDisclaimer(false)}
+        title="Volume Data Information"
+      >
+        <VolumeDataDisclaimer />
+      </DisclaimerModal>
+
+      <div id="new-volumes-page" className="flex flex-col h-[calc(100vh-70px)] bg-white">
+        <NewVolumeSubHeader activeTab={activeTab} onTabChange={setActiveTab} />
+        <div id="volume-main-content" className="flex flex-1 overflow-hidden">
         <NewVolumeLeftSidebar 
           activeTab={activeTab}
           showBicyclist={showBicyclist}
@@ -97,6 +110,7 @@ export default function NewVolumeApp() {
           onSelectionChange={onSelectionChange}
           selectedCountSite={selectedCountSite}
           highlightedBinSites={highlightedBinSites}
+          showLoadingOverlay={!showDisclaimer}
         />
         <NewVolumeRightSidebar 
           activeTab={activeTab}
@@ -124,6 +138,7 @@ export default function NewVolumeApp() {
           </p>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -22,6 +22,7 @@ interface NewSafetyMapProps {
   onMapViewReady?: (mapView: __esri.MapView) => void;
   geographicLevel: string;
   onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | null) => void;
+  showLoadingOverlay?: boolean;
 }
 
 export default function NewSafetyMap({ 
@@ -29,7 +30,8 @@ export default function NewSafetyMap({
   filters,
   onMapViewReady,
   geographicLevel,
-  onSelectionChange
+  onSelectionChange,
+  showLoadingOverlay = true
 }: NewSafetyMapProps) {
   // Map and state management
   const mapViewRef = useRef<__esri.MapView | null>(null);
@@ -296,7 +298,7 @@ export default function NewSafetyMap({
   return (
     <div id="improved-safety-map-container" className="w-full h-full relative">
       {/* Loading Overlay */}
-      {dataLoading && (
+      {dataLoading && showLoadingOverlay && (
         <div 
           id="safety-map-loading-overlay" 
           className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50"
