@@ -378,6 +378,7 @@ export class VolumeChartDataService {
 
   /**
    * Get data for AggregatedVolumeBreakdown chart component
+   * @deprecated This method is deprecated as the AggregatedVolumeBreakdown component has been removed.
    */
   async getAggregatedVolumeBreakdownData(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

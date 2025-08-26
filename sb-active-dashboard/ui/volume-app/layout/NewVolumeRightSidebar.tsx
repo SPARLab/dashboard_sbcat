@@ -10,7 +10,6 @@ import { useVolumeAppStore } from "../../../lib/stores/volume-app-state";
 import { queryDeduplicator, QueryDeduplicator } from "../../../lib/utilities/shared/QueryDeduplicator";
 import { formatSparklineDateRange } from "../utils/sparklineUtils";
 import AADVHistogram from "../components/right-sidebar/AADTHistogram";
-import AggregatedVolumeBreakdown from "../components/right-sidebar/AggregatedVolumeBreakdown";
 import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
 import EnhancedDataNormalization from "../components/right-sidebar/EnhancedDataNormalization";
 import HighestVolume from "../components/right-sidebar/HighestVolume";
@@ -443,12 +442,7 @@ export default function NewVolumeRightSidebar({
                 showBicyclist={showBicyclist}
                 showPedestrian={showPedestrian}
               />
-              <AggregatedVolumeBreakdown 
-                selectedGeometry={selectedGeometry}
-                showBicyclist={showBicyclist}
-                showPedestrian={showPedestrian}
-                dateRange={dateRange}
-              />
+
               <YearToYearVolumeComparison 
                 selectedGeometry={selectedGeometry}
                 showBicyclist={showBicyclist}

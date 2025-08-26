@@ -3,9 +3,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor, cleanup } from '@testing-library/react';
 
 // Mock heavy child components to avoid rendering charts/HTML elements directly
-vi.mock('../components/right-sidebar/AggregatedVolumeBreakdown', () => ({
-  default: () => null,
-}));
 vi.mock('../components/right-sidebar/CompletenessMetrics', () => ({
   default: () => null,
 }));
