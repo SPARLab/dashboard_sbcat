@@ -10,7 +10,7 @@ interface DateRangeValue {
   endDate: Date;
 }
 
-interface NewVolumeLeftSidebarProps {
+interface VolumeLeftSidebarProps {
   activeTab: string;
   showBicyclist: boolean;
   setShowBicyclist: (show: boolean) => void;
@@ -28,7 +28,7 @@ interface NewVolumeLeftSidebarProps {
   onYearChange: (year: number) => void;
 }
 
-export default function NewVolumeLeftSidebar({ 
+export default function VolumeLeftSidebar({ 
   activeTab,
   showBicyclist,
   setShowBicyclist,
@@ -44,7 +44,7 @@ export default function NewVolumeLeftSidebar({
   onDateRangeChange,
   selectedYear,
   onYearChange,
-}: NewVolumeLeftSidebarProps) {
+}: VolumeLeftSidebarProps) {
   return (
     <div id="volume-filters-sidebar" className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
       <SortDataSection />

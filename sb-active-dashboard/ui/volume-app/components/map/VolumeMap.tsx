@@ -20,7 +20,7 @@ import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 import SketchViewModel from "@arcgis/core/widgets/Sketch/SketchViewModel";
 
-interface NewVolumeMapProps {
+interface VolumeMapProps {
   activeTab: string;
   showBicyclist: boolean;
   showPedestrian: boolean;
@@ -36,7 +36,7 @@ interface NewVolumeMapProps {
   showLoadingOverlay?: boolean;
 }
 
-export default function NewVolumeMap({ 
+export default function VolumeMap({ 
   activeTab, 
   showBicyclist,
   showPedestrian,
@@ -50,7 +50,7 @@ export default function NewVolumeMap({
   selectedCountSite: selectedCountSiteProp, // Keep for compatibility
   highlightedBinSites: highlightedBinSitesProp = [], // Keep for compatibility
   showLoadingOverlay = true, // Add the new prop with default value
-}: NewVolumeMapProps) {
+}: VolumeMapProps) {
   // Use Zustand store for state management
   const { selectedCountSite, highlightedBinSites, setMapView: setStoreMapView } = useVolumeAppStore();
   const mapViewRef = useRef<any>(null);
@@ -664,4 +664,3 @@ export default function NewVolumeMap({
     </div>
   );
 }
-

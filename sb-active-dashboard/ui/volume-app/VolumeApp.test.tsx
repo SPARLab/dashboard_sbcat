@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import NewVolumeApp from './NewVolumeApp';
+import VolumeApp from './VolumeApp';
 
 // Mock the complex components to focus on the prop flow bug we're testing
-vi.mock('./components/map/NewVolumeMap', () => ({
+vi.mock('./components/map/VolumeMap', () => ({
   default: vi.fn((props) => (
     <div data-testid="volume-map">
       <span data-testid="map-selected-year">{props.selectedYear}</span>
@@ -13,7 +13,7 @@ vi.mock('./components/map/NewVolumeMap', () => ({
   ))
 }));
 
-vi.mock('./layout/NewVolumeRightSidebar', () => ({
+vi.mock('./layout/VolumeRightSidebar', () => ({
   default: vi.fn((props) => (
     <div data-testid="volume-right-sidebar">
       <span data-testid="sidebar-selected-year">{props.selectedYear}</span>
@@ -22,7 +22,7 @@ vi.mock('./layout/NewVolumeRightSidebar', () => ({
   ))
 }));
 
-vi.mock('./layout/NewVolumeSubHeader', () => ({
+vi.mock('./layout/VolumeSubHeader', () => ({
   default: vi.fn(({ activeTab, onTabChange }) => (
     <div data-testid="volume-sub-header">
       <button 
@@ -44,14 +44,14 @@ vi.mock('../../lib/hooks/useSelection', () => ({
   })
 }));
 
-describe('NewVolumeApp Year Selector Bug Prevention', () => {
+describe('VolumeApp Year Selector Bug Prevention', () => {
   it('should prevent "onYearChange is not a function" error by ensuring prop flow', async () => {
     const user = userEvent.setup();
     
     // Capture any console errors
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     
-    render(<NewVolumeApp />);
+    render(<VolumeApp />);
 
     // Switch to Modeled Data tab to activate year selector
     await user.click(screen.getByTestId('modeled-data-tab'));
@@ -78,7 +78,7 @@ describe('NewVolumeApp Year Selector Bug Prevention', () => {
   });
 
   it('should pass selectedYear prop to both map and sidebar components by default', () => {
-    render(<NewVolumeApp />);
+    render(<VolumeApp />);
     
     // Map should receive the default selectedYear (2023)
     expect(screen.getByTestId('map-selected-year')).toHaveTextContent('2023');
@@ -89,7 +89,7 @@ describe('NewVolumeApp Year Selector Bug Prevention', () => {
 
   it('should show year selector in modeled data tab', async () => {
     const user = userEvent.setup();
-    render(<NewVolumeApp />);
+    render(<VolumeApp />);
 
     // Switch to modeled data tab
     await user.click(screen.getByTestId('modeled-data-tab'));
@@ -101,7 +101,7 @@ describe('NewVolumeApp Year Selector Bug Prevention', () => {
 
   it('should update map when year changes', async () => {
     const user = userEvent.setup();
-    render(<NewVolumeApp />);
+    render(<VolumeApp />);
 
     // Switch to modeled data tab
     await user.click(screen.getByTestId('modeled-data-tab'));
@@ -117,7 +117,7 @@ describe('NewVolumeApp Year Selector Bug Prevention', () => {
 
   it('should have working onYearChange function for all available years', async () => {
     const user = userEvent.setup();
-    render(<NewVolumeApp />);
+    render(<VolumeApp />);
 
     // Switch to modeled data tab
     await user.click(screen.getByTestId('modeled-data-tab'));

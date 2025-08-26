@@ -40,7 +40,7 @@ vi.mock('../components/right-sidebar/YearToYearVolumeComparison', () => ({
   default: () => null,
 }));
 
-import NewVolumeRightSidebar from './NewVolumeRightSidebar';
+import VolumeRightSidebar from './VolumeRightSidebar';
 import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
 
 // Mock FeatureLayer at the module level
@@ -79,13 +79,13 @@ vi.mock('@arcgis/core/symbols/SimpleMarkerSymbol', () => ({
   }))
 }));
 
-describe('NewVolumeRightSidebar - AADT site highlighting', () => {
+describe('VolumeRightSidebar - AADT site highlighting', () => {
   beforeEach(() => {
     // Ensure we start with a clean constructor mock
     (FeatureLayer as unknown as { mockClear: () => void }).mockClear?.();
     
     // Set up default FeatureLayer constructor mock with all required methods
-    (FeatureLayer as unknown as jest.Mock).mockImplementation((config) => ({
+    (FeatureLayer as unknown as any).mockImplementation((config) => ({
       title: config?.title || 'Mock Layer',
       url: config?.url,
       createQuery: vi.fn(() => ({
@@ -105,7 +105,7 @@ describe('NewVolumeRightSidebar - AADT site highlighting', () => {
     vi.restoreAllMocks();
   });
 
-  function renderSidebar(uiProps?: Partial<React.ComponentProps<typeof NewVolumeRightSidebar>>) {
+  function renderSidebar(uiProps?: Partial<React.ComponentProps<typeof VolumeRightSidebar>>) {
     const aadtLayer: any = { 
       title: 'AADT Count Sites', 
       renderer: null,
@@ -114,7 +114,7 @@ describe('NewVolumeRightSidebar - AADT site highlighting', () => {
       queryFeatures: vi.fn().mockResolvedValue({ features: [] })
     };
 
-    const defaultProps: React.ComponentProps<typeof NewVolumeRightSidebar> = {
+    const defaultProps: React.ComponentProps<typeof VolumeRightSidebar> = {
       activeTab: 'raw-data',
       selectedMode: 'bike',
       modelCountsBy: 'cost-benefit',
@@ -126,9 +126,11 @@ describe('NewVolumeRightSidebar - AADT site highlighting', () => {
       selectedCountSite: null,
       onCountSiteSelect: () => {},
       selectedYear: 2023,
+      showBicyclist: true,
+      showPedestrian: true,
     };
 
-    const utils = render(<NewVolumeRightSidebar {...defaultProps} {...uiProps} />);
+    const utils = render(<VolumeRightSidebar {...defaultProps} {...uiProps} />);
     return { ...utils, aadtLayer };
   }
 
@@ -199,7 +201,7 @@ describe('NewVolumeRightSidebar - AADT site highlighting', () => {
 
   it('re-applies styling when date range changes', async () => {
     // First render constructor sequence (sites, counts, aadtTable)
-    ;(FeatureLayer as unknown as jest.Mock)
+    ;(FeatureLayer as unknown as any)
       .mockImplementationOnce(() => ({
         title: 'Count Sites',
         createQuery: vi.fn(() => ({})),
@@ -231,7 +233,7 @@ describe('NewVolumeRightSidebar - AADT site highlighting', () => {
 
     cleanup();
 
-    ;(FeatureLayer as unknown as jest.Mock)
+    ;(FeatureLayer as unknown as any)
       .mockImplementationOnce(() => ({
         title: 'Count Sites',
         createQuery: vi.fn(() => ({})),
@@ -264,12 +266,12 @@ describe('NewVolumeRightSidebar - AADT site highlighting', () => {
   });
 });
 
-describe('NewVolumeRightSidebar - selectedYear prop handling', () => {
+describe('VolumeRightSidebar - selectedYear prop handling', () => {
   beforeEach(() => {
     (FeatureLayer as unknown as { mockClear: () => void }).mockClear?.();
     
     // Set up default FeatureLayer constructor mock with all required methods
-    (FeatureLayer as unknown as jest.Mock).mockImplementation((config) => ({
+    (FeatureLayer as unknown as any).mockImplementation((config) => ({
       title: config?.title || 'Mock Layer',
       url: config?.url,
       createQuery: vi.fn(() => ({
@@ -289,7 +291,7 @@ describe('NewVolumeRightSidebar - selectedYear prop handling', () => {
     vi.restoreAllMocks();
   });
 
-  function renderSidebar(uiProps?: Partial<React.ComponentProps<typeof NewVolumeRightSidebar>>) {
+  function renderSidebar(uiProps?: Partial<React.ComponentProps<typeof VolumeRightSidebar>>) {
     const aadtLayer: any = { 
       title: 'AADT Count Sites', 
       renderer: null,
@@ -298,7 +300,7 @@ describe('NewVolumeRightSidebar - selectedYear prop handling', () => {
       queryFeatures: vi.fn().mockResolvedValue({ features: [] })
     };
 
-    const defaultProps: React.ComponentProps<typeof NewVolumeRightSidebar> = {
+    const defaultProps: React.ComponentProps<typeof VolumeRightSidebar> = {
       activeTab: 'modeled-data',
       selectedMode: 'bike',
       modelCountsBy: 'cost-benefit',
@@ -310,9 +312,11 @@ describe('NewVolumeRightSidebar - selectedYear prop handling', () => {
       selectedCountSite: null,
       onCountSiteSelect: () => {},
       selectedYear: 2023,
+      showBicyclist: true,
+      showPedestrian: true,
     };
 
-    const utils = render(<NewVolumeRightSidebar {...defaultProps} {...uiProps} />);
+    const utils = render(<VolumeRightSidebar {...defaultProps} {...uiProps} />);
     return { ...utils, aadtLayer };
   }
 
@@ -353,7 +357,7 @@ describe('NewVolumeRightSidebar - selectedYear prop handling', () => {
     
     // Mock the component constructor to avoid re-creating FeatureLayer instances
     const aadtLayer: any = { title: 'AADT Count Sites', renderer: null };
-    const updatedProps: React.ComponentProps<typeof NewVolumeRightSidebar> = {
+    const updatedProps: React.ComponentProps<typeof VolumeRightSidebar> = {
       activeTab: 'modeled-data',
       selectedMode: 'bike',
       modelCountsBy: 'cost-benefit',
@@ -365,9 +369,11 @@ describe('NewVolumeRightSidebar - selectedYear prop handling', () => {
       selectedCountSite: null,
       onCountSiteSelect: () => {},
       selectedYear: 2022,
+      showBicyclist: true,
+      showPedestrian: true,
     };
     
-    rerender(<NewVolumeRightSidebar {...updatedProps} />);
+    rerender(<VolumeRightSidebar {...updatedProps} />);
     
     expect(getByTestId('chart-year')).toHaveTextContent('2022');
   });

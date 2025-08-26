@@ -6,7 +6,7 @@ import LayerProvider from "@/lib/context/MapContext";
 import HomePage from "./pages/home";
 import ExplorePage from "./pages/dashboard/explore";
 import SafetyPage from "./pages/dashboard/safety";
-import NewVolumePage from "./pages/dashboard/new-volume";
+import VolumePage from "./pages/dashboard/volume";
 import Test from "./pages/dashboard/test";
 import TestBoundariesPage from "./pages/dashboard/test-boundaries";
 
@@ -33,7 +33,7 @@ function App() {
                     <Routes>
                       <Route path="explore" element={<ExplorePage />} />
                       <Route path="safety" element={<SafetyPage />} />
-                      <Route path="volume" element={<NewVolumePage />} />
+                      <Route path="volume" element={<VolumePage />} />
                       <Route path="test" element={<Test />} />
                       <Route path="test-boundaries" element={<TestBoundariesPage />} />
                     </Routes>

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import NewVolumeMap from './NewVolumeMap';
+import VolumeMap from './VolumeMap';
 import { shouldShowLineSegments, ZOOM_THRESHOLD_FOR_LINE_SEGMENTS } from '../../../../lib/volume-app/volumeLayers';
 
 // Mock ArcGIS components and services
@@ -126,14 +126,16 @@ vi.mock('@arcgis/core/core/reactiveUtils', () => ({
   })
 }));
 
-describe('NewVolumeMap - Zoom-Dependent Layer Switching', () => {
+describe('VolumeMap - Zoom-Dependent Layer Switching', () => {
   const defaultProps = {
     activeTab: 'modeled-data' as const,
     selectedMode: 'bike' as const,
     modelCountsBy: 'cost-benefit',
     selectedYear: 2023,
     geographicLevel: 'city',
-    selectedCountSite: null
+    selectedCountSite: null,
+    showBicyclist: true,
+    showPedestrian: true,
   };
 
   beforeEach(() => {
@@ -145,7 +147,7 @@ describe('NewVolumeMap - Zoom-Dependent Layer Switching', () => {
   });
 
   it('should render the map component', async () => {
-    render(<NewVolumeMap {...defaultProps} />);
+    render(<VolumeMap {...defaultProps} />);
     
     expect(screen.getByTestId('arcgis-map')).toBeInTheDocument();
     expect(screen.getByText(/Cost Benefit Tool Legend/)).toBeInTheDocument();
@@ -153,7 +155,7 @@ describe('NewVolumeMap - Zoom-Dependent Layer Switching', () => {
 
   it('should show hexagon view at default zoom levels', async () => {
     const onMapViewReady = vi.fn();
-    render(<NewVolumeMap {...defaultProps} onMapViewReady={onMapViewReady} />);
+    render(<VolumeMap {...defaultProps} onMapViewReady={onMapViewReady} />);
     
     await waitFor(() => {
       expect(onMapViewReady).toHaveBeenCalled();
@@ -176,7 +178,7 @@ describe('NewVolumeMap - Zoom-Dependent Layer Switching', () => {
 
   it('should show zoom instruction when in line segment view', async () => {
     // Test that the legend structure is correct and shows zoom level info
-    render(<NewVolumeMap {...defaultProps} />);
+    render(<VolumeMap {...defaultProps} />);
     
     // Check that the legend shows hexagon view at default zoom level 9 (below threshold of 16)
     await waitFor(() => {
@@ -185,17 +187,17 @@ describe('NewVolumeMap - Zoom-Dependent Layer Switching', () => {
   });
 
   it('should handle different model types correctly', async () => {
-    const { rerender } = render(<NewVolumeMap {...defaultProps} modelCountsBy="cost-benefit" />);
+    const { rerender } = render(<VolumeMap {...defaultProps} modelCountsBy="cost-benefit" />);
     
     expect(screen.getByText(/Cost Benefit Tool Legend/)).toBeInTheDocument();
     
-    rerender(<NewVolumeMap {...defaultProps} modelCountsBy="strava-bias" />);
+    rerender(<VolumeMap {...defaultProps} modelCountsBy="strava-bias" />);
     
     expect(screen.getByText(/Volume Legend/)).toBeInTheDocument();
   });
 
   it('should show different volume level descriptions', async () => {
-    render(<NewVolumeMap {...defaultProps} />);
+    render(<VolumeMap {...defaultProps} />);
     
     // Check that volume level indicators are shown with ranges
     expect(screen.getByText(/Low \(<50\)/)).toBeInTheDocument();
@@ -204,7 +206,7 @@ describe('NewVolumeMap - Zoom-Dependent Layer Switching', () => {
   });
 
   it('should handle road user mode selection', async () => {
-    const { rerender } = render(<NewVolumeMap {...defaultProps} selectedMode="bike" />);
+    const { rerender } = render(<VolumeMap {...defaultProps} selectedMode="bike" />);
     
     // Initially bike mode should be selected
     await waitFor(() => {
@@ -212,51 +214,51 @@ describe('NewVolumeMap - Zoom-Dependent Layer Switching', () => {
     });
     
     // Test switching to pedestrian mode
-    rerender(<NewVolumeMap {...defaultProps} selectedMode="ped" />);
+    rerender(<VolumeMap {...defaultProps} selectedMode="ped" />);
     
     // Verify component handles mode changes without errors
     expect(screen.getByTestId('arcgis-map')).toBeInTheDocument();
   });
 
   it('should handle tab switching correctly', async () => {
-    const { rerender } = render(<NewVolumeMap {...defaultProps} activeTab="modeled-data" />);
+    const { rerender } = render(<VolumeMap {...defaultProps} activeTab="modeled-data" />);
     
     // Legend should be visible for modeled data
     expect(screen.getByText(/Cost Benefit Tool Legend/)).toBeInTheDocument();
     
     // Switch to raw data tab
-    rerender(<NewVolumeMap {...defaultProps} activeTab="raw-data" />);
+    rerender(<VolumeMap {...defaultProps} activeTab="raw-data" />);
     
     // Legend should be hidden for raw data
     expect(screen.queryByText(/Cost Benefit Tool Legend/)).not.toBeInTheDocument();
   });
 
   it('should handle year changes correctly', async () => {
-    const { rerender } = render(<NewVolumeMap {...defaultProps} selectedYear={2023} />);
+    const { rerender } = render(<VolumeMap {...defaultProps} selectedYear={2023} />);
     
     await waitFor(() => {
       expect(screen.getByTestId('arcgis-map')).toBeInTheDocument();
     });
     
     // Change year
-    rerender(<NewVolumeMap {...defaultProps} selectedYear={2022} />);
+    rerender(<VolumeMap {...defaultProps} selectedYear={2022} />);
     
     // Verify component handles year change without errors
     expect(screen.getByTestId('arcgis-map')).toBeInTheDocument();
   });
 
   it('should handle geographic level changes', async () => {
-    const { rerender } = render(<NewVolumeMap {...defaultProps} geographicLevel="city" />);
+    const { rerender } = render(<VolumeMap {...defaultProps} geographicLevel="city" />);
     
     await waitFor(() => {
       expect(screen.getByTestId('arcgis-map')).toBeInTheDocument();
     });
     
     // Switch to county level
-    rerender(<NewVolumeMap {...defaultProps} geographicLevel="county" />);
+    rerender(<VolumeMap {...defaultProps} geographicLevel="county" />);
     
     // Switch to custom level
-    rerender(<NewVolumeMap {...defaultProps} geographicLevel="custom" />);
+    rerender(<VolumeMap {...defaultProps} geographicLevel="custom" />);
     
     // Verify component handles geographic level changes
     expect(screen.getByTestId('arcgis-map')).toBeInTheDocument();
@@ -266,7 +268,7 @@ describe('NewVolumeMap - Zoom-Dependent Layer Switching', () => {
     const onMapViewReady = vi.fn();
     const onAadtLayerReady = vi.fn();
     
-    render(<NewVolumeMap 
+    render(<VolumeMap 
       {...defaultProps} 
       onMapViewReady={onMapViewReady}
       onAadtLayerReady={onAadtLayerReady}
@@ -280,7 +282,7 @@ describe('NewVolumeMap - Zoom-Dependent Layer Switching', () => {
   it('should handle selection changes correctly', async () => {
     const onSelectionChange = vi.fn();
     
-    render(<NewVolumeMap {...defaultProps} onSelectionChange={onSelectionChange} />);
+    render(<VolumeMap {...defaultProps} onSelectionChange={onSelectionChange} />);
     
     await waitFor(() => {
       expect(screen.getByTestId('arcgis-map')).toBeInTheDocument();

@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useSelection } from "../../lib/hooks/useSelection";
 import { useVolumeAppStore } from "../../lib/stores/volume-app-state";
-import NewVolumeMap from "./components/map/NewVolumeMap";
-import NewVolumeLeftSidebar from "./layout/NewVolumeLeftSidebar";
-import NewVolumeRightSidebar from "./layout/NewVolumeRightSidebar";
-import NewVolumeSubHeader from "./layout/NewVolumeSubHeader";
+import VolumeMap from "./components/map/VolumeMap";
+import VolumeLeftSidebar from "./layout/VolumeLeftSidebar";
+import VolumeRightSidebar from "./layout/VolumeRightSidebar";
+import VolumeSubHeader from "./layout/VolumeSubHeader";
 import DisclaimerModal from "../components/DisclaimerModal";
 import VolumeDataDisclaimer from "../components/VolumeDataDisclaimer";
 
-export default function NewVolumeApp() {
+export default function VolumeApp() {
   const [activeTab, setActiveTab] = useState('raw-data');
   const [showDisclaimer, setShowDisclaimer] = useState(true);
   
@@ -77,10 +77,10 @@ export default function NewVolumeApp() {
         <VolumeDataDisclaimer />
       </DisclaimerModal>
 
-      <div id="new-volumes-page" className="flex flex-col h-[calc(100vh-70px)] bg-white">
-        <NewVolumeSubHeader activeTab={activeTab} onTabChange={setActiveTab} />
+      <div id="volumes-page" className="flex flex-col h-[calc(100vh-70px)] bg-white">
+        <VolumeSubHeader activeTab={activeTab} onTabChange={setActiveTab} />
         <div id="volume-main-content" className="flex flex-1 overflow-hidden">
-        <NewVolumeLeftSidebar 
+        <VolumeLeftSidebar 
           activeTab={activeTab}
           showBicyclist={showBicyclist}
           setShowBicyclist={setShowBicyclist}
@@ -97,7 +97,7 @@ export default function NewVolumeApp() {
           selectedYear={selectedYear}
           onYearChange={setSelectedYear}
         />
-        <NewVolumeMap 
+        <VolumeMap 
           activeTab={activeTab}
           showBicyclist={showBicyclist}
           showPedestrian={showPedestrian}
@@ -112,7 +112,7 @@ export default function NewVolumeApp() {
           highlightedBinSites={highlightedBinSites}
           showLoadingOverlay={!showDisclaimer}
         />
-        <NewVolumeRightSidebar 
+        <VolumeRightSidebar 
           activeTab={activeTab}
           showBicyclist={showBicyclist}
           showPedestrian={showPedestrian}
