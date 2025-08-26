@@ -1,6 +1,7 @@
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import { EnhancedAADVCalculationService, RawCountRecord as EnhancedRawCountRecord, EnhancedAADVConfig } from "../../src/lib/enhanced-aadv-calculations";
+import { queryDeduplicator, QueryDeduplicator } from "../utilities/shared/QueryDeduplicator";
 
 /**
  * Interface for AADV data per count site
@@ -56,10 +57,24 @@ export class AADVHistogramDataService {
     showPedestrian: boolean = true,
     numberOfBins: number = 10
   ): Promise<AADVHistogramResult> {
-    try {
-      if (!selectedGeometry) {
-        return this.getEmptyResult();
+    if (!selectedGeometry) {
+      return this.getEmptyResult();
+    }
+
+    const cacheKey = QueryDeduplicator.generateGeometryKey(
+      'aadv-histogram',
+      selectedGeometry,
+      {
+        startDate: dateRange.startDate.toISOString().split('T')[0],
+        endDate: dateRange.endDate.toISOString().split('T')[0],
+        showBicyclist,
+        showPedestrian,
+        numberOfBins
       }
+    );
+
+    return queryDeduplicator.deduplicate(cacheKey, async () => {
+      try {
 
       // Get AADV data using enhanced calculation with both Santa Cruz and NBPD factors
       const siteAADVs = await this.getAADVDataFromEnhancedCalculation(selectedGeometry, dateRange, showBicyclist, showPedestrian);
@@ -113,19 +128,20 @@ export class AADVHistogramDataService {
         error: null
       };
 
-    } catch (error) {
-      console.error('Error querying AADV histogram data:', error);
-      return {
-        bins: [],
-        totalSites: 0,
-        minAADV: 0,
-        maxAADV: 0,
-        meanAADV: 0,
-        medianAADV: 0,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
-      };
-    }
+      } catch (error) {
+        console.error('Error querying AADV histogram data:', error);
+        return {
+          bins: [],
+          totalSites: 0,
+          minAADV: 0,
+          maxAADV: 0,
+          meanAADV: 0,
+          medianAADV: 0,
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+        };
+      }
+    });
   }
 
   /**

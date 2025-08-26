@@ -182,7 +182,7 @@ export default function AADVHistogram({
     // Update global state for other components (like the map)
     if (visualizationMode === 'individual-bars') {
       const site = individualSitesData[params.dataIndex];
-      if (site) setSelectedCountSite(site.siteName);
+      if (site) setSelectedCountSite(site.siteId.toString());
     } else {
       if (!histogramData) return;
       const sitesInBin = AADVHistogramDataService.getSitesInAADVRange(histogramData, params.dataIndex);

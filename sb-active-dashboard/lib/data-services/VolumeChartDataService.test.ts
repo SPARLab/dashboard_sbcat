@@ -3,6 +3,7 @@ import { VolumeChartDataService } from './VolumeChartDataService'
 import { CountSiteProcessingService } from '../utilities/volume-utils/count-site-processing'
 import { createMockFeatureLayer, createMockMapView } from '../../src/test-utils/factories'
 import { TimeSeriesPrepService } from '../utilities/chart-data-prep/time-series-prep'
+import { queryDeduplicator } from '../utilities/shared/QueryDeduplicator'
 
 // Mock the dependencies
 vi.mock('../utilities/volume-utils/count-site-processing', () => ({
@@ -21,6 +22,10 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    
+    // Clear caches to ensure test isolation
+    VolumeChartDataService.clearCache()
+    queryDeduplicator.clearAll()
     
     mockSitesLayer = createMockFeatureLayer('sites')
     mockCountsLayer = createMockFeatureLayer('counts')
@@ -167,10 +172,11 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
 
       ;(CountSiteProcessingService.getHighestVolumeSites as any).mockResolvedValue(mockZeroVolumeSites)
 
+      // Use unique date range to avoid cache collision
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
-        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
+        { startDate: new Date('2022-01-01'), endDate: new Date('2022-12-31') },
         5,
         {} as any
       )
@@ -271,10 +277,11 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
 
       ;(CountSiteProcessingService.getHighestVolumeSites as any).mockResolvedValue(mockLargeVolumeSites)
 
+      // Use unique date range to avoid cache collision
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
-        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
+        { startDate: new Date('2021-01-01'), endDate: new Date('2021-12-31') },
         5,
         {} as any
       )
@@ -295,10 +302,11 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
 
       ;(CountSiteProcessingService.getHighestVolumeSites as any).mockResolvedValue(mockFractionalSites)
 
+      // Use unique date range to avoid cache collision
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
-        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
+        { startDate: new Date('2020-01-01'), endDate: new Date('2020-12-31') },
         5,
         {} as any
       )
@@ -320,6 +328,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         service.getHighestVolumeData(
           mockMapView,
           { showBicyclist: true, showPedestrian: true },
+          { startDate: new Date('2019-01-01'), endDate: new Date('2019-12-31') },
           5,
           {} as any
         )
@@ -329,10 +338,11 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
     it('should handle empty results from underlying service', async () => {
       ;(CountSiteProcessingService.getHighestVolumeSites as any).mockResolvedValue([])
 
+      // Use unique date range to avoid cache collision
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
-        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
+        { startDate: new Date('2018-01-01'), endDate: new Date('2018-12-31') },
         5,
         {} as any
       )
@@ -343,10 +353,11 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
     it('should handle null/undefined results from underlying service', async () => {
       ;(CountSiteProcessingService.getHighestVolumeSites as any).mockResolvedValue(null)
 
+      // Use unique date range to avoid cache collision
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
-        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
+        { startDate: new Date('2017-01-01'), endDate: new Date('2017-12-31') },
         5,
         {} as any
       )
@@ -363,10 +374,11 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
 
       ;(CountSiteProcessingService.getHighestVolumeSites as any).mockResolvedValue(mockMalformedSites)
 
+      // Use unique date range to avoid cache collision
       const result = await service.getHighestVolumeData(
         mockMapView,
         { showBicyclist: true, showPedestrian: true },
-        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
+        { startDate: new Date('2016-01-01'), endDate: new Date('2016-12-31') },
         5,
         {} as any
       )
@@ -410,15 +422,24 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
     })
 
     it('should pass through all parameters correctly to underlying service', async () => {
-      const mockGeometry = { type: 'polygon', extent: {} }
+      const mockGeometry = { 
+        type: 'polygon', 
+        extent: { 
+          xmin: -120.5, 
+          ymin: 34.5, 
+          xmax: -119.5, 
+          ymax: 35.5 
+        } 
+      }
       const mockFilters = { showBicyclist: true, showPedestrian: false }
 
       ;(CountSiteProcessingService.getHighestVolumeSites as any).mockResolvedValue([])
 
+      // Use unique date range to avoid cache collision
       await service.getHighestVolumeData(
         mockMapView,
         mockFilters,
-        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') },
+        { startDate: new Date('2015-01-01'), endDate: new Date('2015-12-31') },
         10,
         mockGeometry
       )
@@ -429,7 +450,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         mockAadtLayer,     // aadtLayer  
         mockMapView,       // mapView
         mockFilters,       // filters
-        { startDate: new Date('2023-01-01'), endDate: new Date('2023-12-31') }, // dateRange
+        { startDate: new Date('2015-01-01'), endDate: new Date('2015-12-31') }, // dateRange
         10,                // limit
         mockGeometry       // selectedGeometry
       )
@@ -695,7 +716,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         // Verify site 1 structure
         const site1 = transformedSites[0]
         expect(site1).toMatchObject({
-          id: 'site1',
+          id: '1',
           name: 'North Alisos St',
           label: 'Site 1',
           dataPeriods: expect.any(Array)
@@ -718,7 +739,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         // Verify site 2 structure and single period
         const site2 = transformedSites[1]
         expect(site2).toMatchObject({
-          id: 'site2',
+          id: '2',
           name: 'East Anacapa St', 
           label: 'Site 2',
           dataPeriods: expect.any(Array)
@@ -775,7 +796,7 @@ describe('VolumeChartDataService - Data Accuracy Tests', () => {
         
         // Verify empty data periods don't break the component interface
         expect(transformedSites[0]).toMatchObject({
-          id: 'site1',
+          id: '1',
           name: 'Empty Site',
           label: 'Site 1',
           dataPeriods: []

@@ -88,18 +88,34 @@ export default function YearToYearVolumeComparison({
         const availYears = listYears(data);
         setAvailableYears(availYears);
         
-        // Auto-select years if we have exactly 2
-        if (availYears.length === 2) {
-          setSelectedYearA(availYears[0]);
-          setSelectedYearB(availYears[1]);
-        } else if (availYears.length > 2) {
-          // Select the two most recent years
-          setSelectedYearA(availYears[availYears.length - 2]);
-          setSelectedYearB(availYears[availYears.length - 1]);
-        } else {
-          setSelectedYearA(availYears[0] || null);
-          setSelectedYearB(null);
-        }
+        // Find the most recent valid year pair with shared sites
+        const findBestYearPair = (years: number[], siteData: SiteYear[]): [number | null, number | null] => {
+          if (years.length < 2) {
+            return [years[0] || null, null];
+          }
+          
+          // Start from the most recent year and work backwards
+          for (let i = years.length - 1; i >= 1; i--) {
+            const laterYear = years[i];
+            
+            // Try pairing with each previous year, starting from the most recent
+            for (let j = i - 1; j >= 0; j--) {
+              const earlierYear = years[j];
+              const result = computeSharedSiteYoY(siteData, earlierYear, laterYear);
+              
+              if (result.sharedCount > 0) {
+                return [earlierYear, laterYear];
+              }
+            }
+          }
+          
+          // If no valid pairs found, return the two most recent years anyway
+          return [years[years.length - 2] || null, years[years.length - 1] || null];
+        };
+        
+        const [bestYearA, bestYearB] = findBestYearPair(availYears, data);
+        setSelectedYearA(bestYearA);
+        setSelectedYearB(bestYearB);
         
       } catch (err) {
         console.error('Error loading SiteYear data:', err);

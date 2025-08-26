@@ -8,6 +8,7 @@ import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import MapView from "@arcgis/core/views/MapView";
 import { TimeSeriesPrepService } from "../utilities/chart-data-prep/time-series-prep";
 import { CountSiteProcessingService } from "../utilities/volume-utils/count-site-processing";
+import { queryDeduplicator, QueryDeduplicator } from "../utilities/shared/QueryDeduplicator";
 
 // Chart-specific data interfaces
 interface SummaryStatsData {
@@ -47,6 +48,10 @@ export class VolumeChartDataService {
   private sitesLayer: FeatureLayer;
   private countsLayer: FeatureLayer;
   private aadtLayer: FeatureLayer;
+  
+  // Basic cache for expensive operations
+  private static cache = new Map<string, { data: any; timestamp: number }>();
+  private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     sitesLayer: FeatureLayer,
@@ -56,6 +61,61 @@ export class VolumeChartDataService {
     this.sitesLayer = sitesLayer;
     this.countsLayer = countsLayer;
     this.aadtLayer = aadtLayer;
+  }
+
+  /**
+   * Get cached data or execute function and cache result
+   */
+  private async getCachedOrExecute<T>(key: string, executeFn: () => Promise<T>): Promise<T> {
+    // Check cache first
+    const cached = VolumeChartDataService.cache.get(key);
+    if (cached && (Date.now() - cached.timestamp) < VolumeChartDataService.CACHE_TTL) {
+      console.debug(`[VolumeChartDataService] Cache hit: ${key}`);
+      return cached.data as T;
+    }
+
+    // Execute function and cache result
+    console.debug(`[VolumeChartDataService] Cache miss, executing: ${key}`);
+    const result = await executeFn();
+    
+    VolumeChartDataService.cache.set(key, {
+      data: result,
+      timestamp: Date.now()
+    });
+
+    // Clean up old cache entries (simple cleanup)
+    this.cleanupCache();
+    
+    return result;
+  }
+
+  /**
+   * Clean up expired cache entries
+   */
+  private cleanupCache(): void {
+    const now = Date.now();
+    const expiredKeys: string[] = [];
+    
+    for (const [key, entry] of VolumeChartDataService.cache.entries()) {
+      if (now - entry.timestamp > VolumeChartDataService.CACHE_TTL) {
+        expiredKeys.push(key);
+      }
+    }
+    
+    for (const key of expiredKeys) {
+      VolumeChartDataService.cache.delete(key);
+    }
+    
+    if (expiredKeys.length > 0) {
+      console.debug(`[VolumeChartDataService] Cleaned up ${expiredKeys.length} expired cache entries`);
+    }
+  }
+
+  /**
+   * Clear all cached data (useful for testing or manual cache invalidation)
+   */
+  static clearCache(): void {
+    VolumeChartDataService.cache.clear();
   }
 
   /**
@@ -76,7 +136,7 @@ export class VolumeChartDataService {
   }
 
   /**
-   * Get data for HighestVolume chart component
+   * Get data for HighestVolume chart component - WITH CACHING
    */
   async getHighestVolumeData(
     mapView: MapView,
@@ -85,23 +145,37 @@ export class VolumeChartDataService {
     limit: number = 10,
     selectedGeometry?: __esri.Geometry | null
   ): Promise<HighestVolumeData> {
-    const sites = await CountSiteProcessingService.getHighestVolumeSites(
-      this.sitesLayer,
-      this.aadtLayer,
-      mapView,
-      filters,
-      dateRange,
-      limit,
-      selectedGeometry
+    const cacheKey = QueryDeduplicator.generateGeometryKey(
+      'highest-volume',
+      selectedGeometry,
+      {
+        showBicyclist: filters.showBicyclist,
+        showPedestrian: filters.showPedestrian,
+        startDate: dateRange.startDate.toISOString().split('T')[0],
+        endDate: dateRange.endDate.toISOString().split('T')[0],
+        limit
+      }
     );
 
-    // Add locality field to match interface
-    const sitesWithLocality = (sites || []).map(site => ({
-      ...site,
-      locality: 'Unknown' // Default value since locality is required in interface
-    }));
-    
-    return { sites: sitesWithLocality };
+    return this.getCachedOrExecute(cacheKey, async () => {
+      const sites = await CountSiteProcessingService.getHighestVolumeSites(
+        this.sitesLayer,
+        this.aadtLayer,
+        mapView,
+        filters,
+        dateRange,
+        limit,
+        selectedGeometry
+      );
+
+      // Add locality field to match interface
+      const sitesWithLocality = (sites || []).map(site => ({
+        ...site,
+        locality: 'Unknown' // Default value since locality is required in interface
+      }));
+      
+      return { sites: sitesWithLocality };
+    });
   }
 
   /**
@@ -138,7 +212,7 @@ export class VolumeChartDataService {
   }
 
   /**
-   * Get data for TimelineSparkline chart component
+   * Get data for TimelineSparkline chart component - WITH CACHING
    */
   async getTimelineSparklineData(
     mapView: MapView,
@@ -146,10 +220,23 @@ export class VolumeChartDataService {
     timeSpan: { start: Date; end: Date },
     selectedGeometry?: __esri.Geometry | null
   ): Promise<TimelineSparklineData> {
-    try {
-      if (!selectedGeometry) {
-        return { sites: [] };
+    if (!selectedGeometry) {
+      return { sites: [] };
+    }
+
+    const cacheKey = QueryDeduplicator.generateGeometryKey(
+      'timeline-sparkline',
+      selectedGeometry,
+      {
+        showBicyclist: filters.showBicyclist,
+        showPedestrian: filters.showPedestrian,
+        startDate: timeSpan.start.toISOString().split('T')[0],
+        endDate: timeSpan.end.toISOString().split('T')[0]
       }
+    );
+
+    return this.getCachedOrExecute(cacheKey, async () => {
+      try {
 
       // Step 1: Get sites within the selected geometry
       const sitesQuery = this.sitesLayer.createQuery();
@@ -217,13 +304,14 @@ export class VolumeChartDataService {
         return result;
       });
 
-      const sites = TimeSeriesPrepService.prepareTimelineSparklineData(timelineData, timeSpan);
-      return { sites };
-      
-    } catch (error) {
-      console.error('Error fetching timeline data:', error);
-      return { sites: [] };
-    }
+        const sites = TimeSeriesPrepService.prepareTimelineSparklineData(timelineData, timeSpan);
+        return { sites };
+        
+      } catch (error) {
+        console.error('Error fetching timeline data:', error);
+        return { sites: [] };
+      }
+    });
   }
 
   /**
@@ -290,6 +378,7 @@ export class VolumeChartDataService {
 
   /**
    * Get data for AggregatedVolumeBreakdown chart component
+   * @deprecated This method is deprecated as the AggregatedVolumeBreakdown component has been removed.
    */
   async getAggregatedVolumeBreakdownData(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

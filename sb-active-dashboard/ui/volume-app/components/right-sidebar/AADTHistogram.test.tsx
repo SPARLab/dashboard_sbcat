@@ -288,8 +288,8 @@ describe('AADVHistogram', () => {
     const chart = screen.getByTestId('echarts-mock');
     fireEvent.click(chart);
     
-    // Should call setSelectedCountSite with the first site (dataIndex: 0)
-    expect(mockSetSelectedCountSite).toHaveBeenCalledWith('Site A');
+    // Should call setSelectedCountSite with the first site's ID (dataIndex: 0)
+    expect(mockSetSelectedCountSite).toHaveBeenCalledWith('1');
   });
 
   it('highlights selected site bin with different color', async () => {

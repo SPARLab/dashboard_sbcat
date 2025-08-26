@@ -1,3 +1,13 @@
+/**
+ * @deprecated This component is marked for deprecation and should not be used in new code.
+ * It has been removed from the UI but the code is preserved for reference.
+ * 
+ * Last used in: NewVolumeRightSidebar.tsx (removed on deprecation)
+ * Deprecation date: 2024
+ * 
+ * TODO: Remove this file entirely after confirming no dependencies remain.
+ */
+
 'use client';
 import Polygon from "@arcgis/core/geometry/Polygon";
 import ReactECharts from 'echarts-for-react';
@@ -25,6 +35,9 @@ interface AggregatedVolumeBreakdownProps {
   dateRange?: DateRangeValue;
 }
 
+/**
+ * @deprecated This component is deprecated and should not be used.
+ */
 export default function AggregatedVolumeBreakdown({ 
   selectedGeometry = null, 
   showBicyclist = true, 
