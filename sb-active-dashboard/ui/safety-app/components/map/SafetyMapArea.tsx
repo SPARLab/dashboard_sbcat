@@ -8,7 +8,6 @@ interface SafetyMapAreaProps {
   onMapViewReady?: (mapView: __esri.MapView) => void;
   onSelectionChange?: (data: { geometry: __esri.Polygon | null; areaName?: string | null } | null) => void;
   selectedAreaName?: string | null;
-  showLoadingOverlay?: boolean;
 }
 
 export default function SafetyMapArea({ 
@@ -16,8 +15,7 @@ export default function SafetyMapArea({
   geographicLevel = 'cities',
   onMapViewReady,
   onSelectionChange,
-  selectedAreaName,
-  showLoadingOverlay = true
+  selectedAreaName
 }: SafetyMapAreaProps) {
   const [activeMapTab, setActiveMapTab] = useState<SafetyVisualizationType>('raw-incidents');
 
@@ -32,7 +30,7 @@ export default function SafetyMapArea({
       {/* Geographic Area Header */}
       <div id="safety-geographic-header" className="bg-gray-100 border-b border-gray-200 px-4 py-[1.15rem] flex-shrink-0">
         <h2 id="safety-current-geographic-area" className="text-base font-bold text-gray-700">
-          {selectedAreaName || 'No area selected'}
+          {selectedAreaName || 'Please select a region on the map'}
         </h2>
       </div>
 
@@ -66,7 +64,6 @@ export default function SafetyMapArea({
             geographicLevel={geographicLevel}
             onMapViewReady={onMapViewReady}
             onSelectionChange={onSelectionChange}
-            showLoadingOverlay={showLoadingOverlay}
           />
         </div>
 

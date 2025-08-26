@@ -107,3 +107,14 @@ button:focus-visible {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
+
+/* Custom text selection colors - light blue highlight */
+::selection {
+  background-color: rgba(59, 130, 246, 0.3); /* Light blue with transparency */
+  color: inherit; /* Keep original text color */
+}
+
+::-moz-selection {
+  background-color: rgba(59, 130, 246, 0.3); /* Light blue with transparency for Firefox */
+  color: inherit; /* Keep original text color */
+}
