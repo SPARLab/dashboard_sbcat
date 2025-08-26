@@ -260,17 +260,26 @@ function DataSourceSection({
         </div>
         <div id="safety-data-source-self-reports-container" className="flex items-center gap-1">
           <SeverityToggle 
-            label="Self-Reports (BikeMaps.org" 
+            label="Self-Reports (" 
             checked={selfReports}
             onChange={() => toggleDataSource('self')}
           />
+          <a 
+            id="safety-data-source-bikemaps-link"
+            href="https://bikemaps.org/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 underline text-sm -ml-1"
+          >
+            BikeMaps.org
+          </a>
           <img 
             id="safety-data-source-bikemaps-logo"
             src="/icons/bike-maps-icon.svg" 
             alt="BikeMaps.org logo" 
             className="w-4 h-4 -ml-1"
           />
-          <span id="safety-data-source-closing-paren" className="text-sm -ml-1 text-gray-700">)</span>
+          <span id="safety-data-source-closing-paren" className="text-sm text-gray-700">)</span>
         </div>
       </div>
     </div>
