@@ -75,6 +75,10 @@ export default function NewSafetyMap({
       mapViewRef.current = mapView;
 
       if (mapView) {
+        // Ensure popups are enabled
+        mapView.popup.autoOpenEnabled = false; // We'll handle popup opening manually
+        mapView.popupEnabled = true;
+        
         mapView.goTo({
           center: [-120, 34.7],
           zoom: 9,
@@ -287,6 +291,10 @@ export default function NewSafetyMap({
       }
     };
   }, [geographicLevel, sketchLayer, viewReady]); // Removed sketchViewModel and onSelectionChange from dependencies
+
+  // Popup handling is now done via popupTemplate on the layers themselves
+  // No need for manual click handlers - ArcGIS handles this automatically
+  // This approach is more reliable and follows the same pattern as the volume page
 
   // Handle selection changes
   useEffect(() => {

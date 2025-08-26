@@ -1,10 +1,14 @@
 import Graphic from "@arcgis/core/Graphic";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import { SafetyIncidentsDataService } from "../../../../../lib/data-services/SafetyIncidentsDataService";
 import { SafetyFilters, SafetyVisualizationType } from "../../../../../lib/safety-app/types";
 import { generateIncidentPopupContent } from "../../../utils/popupContentGenerator";
 
 export class MapClickHandler {
+  private static lastClickTime = 0;
+  private static readonly CLICK_DEBOUNCE_MS = 300; // Prevent rapid clicks
+  
   static setupClickHandler(
     mapView: __esri.MapView,
     incidentsLayer: FeatureLayer | null,
@@ -13,6 +17,13 @@ export class MapClickHandler {
   ): __esri.Handle {
     const handleMapClick = async (event: any) => {
       try {
+        // Debounce rapid clicks to prevent multiple requests
+        const now = Date.now();
+        if (now - this.lastClickTime < this.CLICK_DEBOUNCE_MS) {
+          return;
+        }
+        this.lastClickTime = now;
+        
         // First try hit test for point symbols (works for raw incidents)
         const response = await mapView.hitTest(event);
         
@@ -104,17 +115,23 @@ export class MapClickHandler {
     const attributes = graphic.attributes;
     
     // Skip manual popup for Raw Safety Incidents layer - it has its own popupTemplate
-    if (graphic.layer?.title === "Raw Safety Incidents (Test)") {
+    if (graphic.layer?.title === "Raw Safety Incidents (Test)" || graphic.layer?.title === "Raw Safety Incidents") {
       return;
     }
 
-    // Try to get more detailed incident information if available
+    // Use graphic geometry for better positioning if available
+    const popupLocation = graphic.geometry || mapPoint;
+
+    // For now, skip the enriched data fetch to avoid AbortError issues
+    // The graphic attributes should contain sufficient information for the popup
+    // TODO: Implement proper request cancellation if enriched data is needed
     let enrichedData = null;
-    const incidentId = attributes.id || attributes.incident_id;
     
+    // Uncomment this section if enriched data is needed and AbortError is resolved:
+    /*
+    const incidentId = attributes.id || attributes.incident_id;
     if (incidentId) {
       try {
-        // Get enriched data for this specific incident
         const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
           mapView.extent,
           filters
@@ -124,6 +141,7 @@ export class MapClickHandler {
         console.warn('Could not fetch enriched incident data:', error);
       }
     }
+    */
 
     // Use enriched data if available, otherwise fall back to graphic attributes
     const incidentData = enrichedData || attributes;
@@ -131,28 +149,52 @@ export class MapClickHandler {
     // Create popup content with better styling
     const popupContent = generateIncidentPopupContent(incidentData);
 
-    // Set popup content and location
-    if (mapView.popup) {
+    // Check if popup is initialized before using it
+    if (mapView.popup && typeof mapView.popup.open === 'function') {
       mapView.popup.open({
         title: "Safety Incident Details",
         content: popupContent,
-        location: mapPoint
+        location: popupLocation
       });
     } else {
-      // Alternative approach using openPopup method
-      (mapView as any).openPopup({
-        title: "Safety Incident Details",
-        content: popupContent,
-        location: mapPoint
+      // Fallback: Create a temporary graphic with popup template and simulate a click
+      console.warn('Popup not initialized, using fallback method');
+      
+      // Create a temporary graphic with the popup content
+      const tempGraphic = new Graphic({
+        geometry: popupLocation,
+        attributes: attributes,
+        popupTemplate: {
+          title: "Safety Incident Details",
+          content: popupContent
+        }
       });
+      
+      // Add to map temporarily and trigger popup
+      const tempLayer = new GraphicsLayer();
+      tempLayer.add(tempGraphic);
+      mapView.map.add(tempLayer);
+      
+      // Try to open popup with features array
+      try {
+        mapView.popup.open({
+          features: [tempGraphic],
+          location: popupLocation
+        });
+      } catch (error) {
+        console.error('Failed to open popup with fallback method:', error);
+      }
+      
+      // Clean up after a short delay
+      setTimeout(() => {
+        mapView.map.remove(tempLayer);
+      }, 100);
     }
   }
 
   private static closePopup(mapView: __esri.MapView): void {
-    if (mapView.popup) {
+    if (mapView.popup && typeof mapView.popup.close === 'function') {
       mapView.popup.close();
-    } else if ((mapView as any).closePopup) {
-      (mapView as any).closePopup();
     }
   }
 }

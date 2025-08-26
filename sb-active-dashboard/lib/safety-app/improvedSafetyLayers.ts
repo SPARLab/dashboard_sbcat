@@ -8,6 +8,7 @@ import Graphic from "@arcgis/core/Graphic";
 import Field from "@arcgis/core/layers/support/Field";
 import { RawIncidentRenderer } from "./renderers/RawIncidentRenderer";
 import { SafetyFilters } from "./types";
+import { generateIncidentPopupContent } from "../../ui/safety-app/utils/popupContentGenerator";
 
 // Colors for heatmap visualization
 const colors = [
@@ -196,6 +197,14 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     new Field({ name: "maxSeverity", alias: "Maximum Severity", type: "string" }) // NEW FIELD
   ];
 
+  // Create popup template for safety incidents
+  const popupTemplate = {
+    title: "Safety Incident Details",
+    content: ({ graphic }: { graphic: __esri.Graphic }) => {
+      return generateIncidentPopupContent(graphic.attributes);
+    }
+  };
+
   // Create the enriched feature layer
   const enrichedLayer = new FeatureLayer({
     source: enrichedGraphics,
@@ -204,6 +213,8 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     title: "Safety Incidents (Enriched)",
     renderer: RawIncidentRenderer.createSeverityRenderer(),
     opacity: 1.0,
+    outFields: ["*"],
+    popupTemplate: popupTemplate
   });
 
 
