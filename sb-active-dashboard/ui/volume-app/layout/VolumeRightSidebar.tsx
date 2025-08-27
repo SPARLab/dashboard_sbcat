@@ -5,11 +5,13 @@ import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import React, { useCallback, useEffect, useState } from "react";
 import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDataService";
+import { aadtCache } from "../../../lib/data-services/AADTCacheService";
 import { useSpatialQuery, useVolumeSpatialQuery, useEnhancedAADVSummaryQuery } from "../../../lib/hooks/useSpatialQuery";
 import { useVolumeAppStore } from "../../../lib/stores/volume-app-state";
 import { queryDeduplicator, QueryDeduplicator } from "../../../lib/utilities/shared/QueryDeduplicator";
 import { formatSparklineDateRange } from "../utils/sparklineUtils";
 import AADVHistogram from "../components/right-sidebar/AADTHistogram";
+
 import CompletenessMetrics from "../components/right-sidebar/CompletenessMetrics";
 import EnhancedDataNormalization from "../components/right-sidebar/EnhancedDataNormalization";
 import HighestVolume from "../components/right-sidebar/HighestVolume";
@@ -98,6 +100,31 @@ export default function VolumeRightSidebar({
     title: "AADT Table"
   }));
   const [aadtLayer, setAadtLayer] = useState<FeatureLayer | null>(null);
+  const [aadtCacheStatus, setAadtCacheStatus] = useState<{ isLoaded: boolean; isLoading: boolean; cacheSize: number }>({ 
+    isLoaded: false, 
+    isLoading: false, 
+    cacheSize: 0 
+  });
+
+  // Initialize AADT cache on component mount
+  useEffect(() => {
+    const initializeCache = async () => {
+      try {
+        setAadtCacheStatus(aadtCache.getStatus());
+        if (!aadtCache.isReady()) {
+          console.log('🔄 Initializing AADT cache...');
+          await aadtCache.initialize();
+          console.log('✅ AADT cache ready');
+        }
+        setAadtCacheStatus(aadtCache.getStatus());
+      } catch (error) {
+        console.error('❌ Failed to initialize AADT cache:', error);
+        setAadtCacheStatus({ isLoaded: false, isLoading: false, cacheSize: 0 });
+      }
+    };
+
+    initializeCache();
+  }, []);
 
   // Prefer the passed-in layer; fall back to searching the map
   useEffect(() => {
