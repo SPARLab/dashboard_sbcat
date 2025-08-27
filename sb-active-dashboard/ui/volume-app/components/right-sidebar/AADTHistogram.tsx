@@ -8,10 +8,10 @@ import {
   HistogramBinData,
   SiteAADVData 
 } from '../../../../lib/data-services/AADVHistogramDataService';
-import Tooltip from '../../../components/Tooltip';
 import CollapseExpandIcon from './CollapseExpandIcon';
 import SelectRegionPlaceholder from '../../../components/SelectRegionPlaceholder';
 import { useVolumeAppStore } from '../../../../lib/stores/volume-app-state';
+import InfoTooltipIcon from './MoreInformationIcon';
 
   // Expose debugging functionality to global scope for development
   if (typeof window !== 'undefined') {
@@ -673,15 +673,15 @@ export default function AADVHistogram({
               </div>
             )}
 
-            <div id="aadt-histogram-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
+            <div id="aadv-histogram-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
             <div id="aadv-histogram-description" className="w-full text-sm text-gray-600">
-              Distribution of Average Annual Daily Volume (AADV) across count sites in selected area
-              <span id="aadv-histogram-info-icon-container" className="ml-1 inline-flex align-middle">
-                <Tooltip 
-                  text="AADV is calculated using enhanced normalization with NBPD hourly factors, Santa Cruz daily factors, and Santa Cruz monthly factors for the most accurate annual volume estimates. Click on bars to highlight sites on the map." 
-                  align="right" 
-                />
-              </span>
+              Distribution of Average Annual Daily Volume (AADV) across count sites in selected area. 
+              <InfoTooltipIcon 
+                text="AADV is calculated using enhanced normalization with NBPD hourly factors, Santa Cruz daily factors, and Santa Cruz monthly factors for the most accurate annual volume estimates. Click on bars to highlight sites on the map." 
+                align="center" 
+                yOffset="0"
+                width="w-72"
+              />
             </div>
 
             <div id="aadt-histogram-chart-container" className="relative mt-1">

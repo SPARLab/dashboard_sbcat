@@ -7,15 +7,17 @@ interface TooltipProps {
   children?: ReactNode;
   className?: string;
   align?: 'left' | 'center' | 'right';
+  width?: string;
 }
 
 interface TooltipContentProps {
   text: string;
   align: 'left' | 'center' | 'right';
   triggerRef: React.RefObject<HTMLDivElement | null>;
+  width?: string;
 }
 
-const TooltipContent = ({ text, align, triggerRef }: TooltipContentProps) => {
+const TooltipContent = ({ text, align, triggerRef, width = 'max-w-sm' }: TooltipContentProps) => {
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
@@ -48,18 +50,18 @@ const TooltipContent = ({ text, align, triggerRef }: TooltipContentProps) => {
     switch (align) {
       case 'left':
         return {
-          tooltip: "fixed px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg max-w-sm z-[9999]",
+          tooltip: `fixed px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg ${width} z-[9999]`,
           arrow: "absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-300"
         };
       case 'right':
         return {
-          tooltip: "fixed px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg max-w-sm z-[9999]",
+          tooltip: `fixed px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg ${width} z-[9999]`,
           arrow: "absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-300"
         };
       case 'center':
       default:
         return {
-          tooltip: "fixed px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg max-w-sm z-[9999]",
+          tooltip: `fixed px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg ${width} z-[9999]`,
           arrow: "absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-300"
         };
     }
@@ -83,7 +85,7 @@ const TooltipContent = ({ text, align, triggerRef }: TooltipContentProps) => {
   );
 };
 
-export default function Tooltip({ text, children, className = "", align = 'center' }: TooltipProps) {
+export default function Tooltip({ text, children, className = "", align = 'center', width }: TooltipProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
 
@@ -105,7 +107,7 @@ export default function Tooltip({ text, children, className = "", align = 'cente
           </div>
         )}
       </div>
-      {showTooltip && <TooltipContent text={text} align={align} triggerRef={triggerRef} />}
+      {showTooltip && <TooltipContent text={text} align={align} triggerRef={triggerRef} width={width} />}
     </>
   );
 } 

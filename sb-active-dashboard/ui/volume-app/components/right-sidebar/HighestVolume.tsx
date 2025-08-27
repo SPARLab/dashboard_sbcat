@@ -97,7 +97,12 @@ export default function HighestVolume({
             <h3 id="highest-volume-title" className="text-lg font-medium text-gray-700">
               Highest Volume Areas
             </h3>
-            <InfoTooltipIcon text="Shows the areas with the highest pedestrian and cyclist volumes within your selected region, helping identify the most active locations for active transportation." />
+            <InfoTooltipIcon 
+              text="Shows the areas with the highest pedestrian and cyclist volumes within your selected region, helping identify the most active locations for active transportation."
+              yOffset="0.3rem"
+              width="w-64"
+              iconSize="w-4 h-4"
+            />
         </div>
         <CollapseExpandIcon id="highest-volume-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
       </div>

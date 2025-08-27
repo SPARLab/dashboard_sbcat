@@ -24,8 +24,8 @@ interface SummaryStatisticsProps {
 const StatsRow = ({ label, value, tooltipText, idPrefix }: { label: string, value: string | number, tooltipText?: string, idPrefix: string }) => (
     <div className="grid grid-cols-[1fr,auto] items-center gap-2" id={`${idPrefix}-row`}>
         <div className="flex items-center" id={`${idPrefix}-label-container`}>
-            <p className="text-gray-600 whitespace-nowrap" id={`${idPrefix}-label`}>{label}</p>
-            {tooltipText && <InfoTooltipIcon text={tooltipText} />}
+            <p className="text-gray-600 whitespace-nowrap mr-0.5" id={`${idPrefix}-label`}>{label}</p>
+            {tooltipText && <InfoTooltipIcon text={tooltipText} yOffset="0.3rem" />}
         </div>
         <p className="text-gray-800 font-medium justify-self-end" id={`${idPrefix}-value`}>{value}</p>
     </div>
