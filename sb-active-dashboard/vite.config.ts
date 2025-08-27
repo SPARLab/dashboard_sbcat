@@ -7,7 +7,6 @@ import tailwindcss from "tailwindcss";
 import autoprefixer from "autoprefixer";
 
 export default defineConfig({
-  base: '/dashboard_sbcat/',
   build: {
     rollupOptions: {
       // keep Lumina out of the production bundle
