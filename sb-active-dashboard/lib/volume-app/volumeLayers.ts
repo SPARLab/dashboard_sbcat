@@ -11,6 +11,8 @@ import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 import CIMSymbol from "@arcgis/core/symbols/CIMSymbol";
 import { getVolumeLevelColor } from "../../ui/theme/volumeLevelColors";
+import { aadtCache } from "../data-services/AADTCacheService";
+import CustomContent from "@arcgis/core/popup/content/CustomContent";
 
 // ========================================
 // SMART VIEWPORT-BASED LOADING SYSTEM
@@ -97,36 +99,179 @@ export async function createAADTLayer() {
     }),
   ];
 
-  // Create popup template
+  // Create enhanced popup template with cached AADT data
+  const enrichedAADTContent = new CustomContent({
+    outFields: ["*"],
+    creator: (event) => {
+      if (!event?.graphic) {
+        return "No site data available.";
+      }
+
+      const siteId = event.graphic.attributes.id;
+      const siteName = event.graphic.attributes.name || `Site ${siteId}`;
+      const locality = event.graphic.attributes.locality || '';
+      const dataSource = event.graphic.attributes.source || '';
+      
+      // Get cached AADT data
+      const siteData = aadtCache.getSiteData(siteId);
+      
+      if (!siteData || siteData.yearlyData.length === 0) {
+        return `
+          <div style="padding: 8px 0;">
+            <h4 style="margin: 0 0 8px 0; color: #666;">Survey History</h4>
+            <p style="margin: 0; color: #999; font-style: italic;">No AADT data available for this site.</p>
+          </div>
+        `;
+      }
+
+      // Sort data by year (most recent first) and count type
+      const sortedData = siteData.yearlyData.sort((a, b) => {
+        if (a.year !== b.year) return b.year - a.year; // Year descending
+        return a.countType.localeCompare(b.countType); // Then by count type
+      });
+      
+      // Build survey timeline - one row per observation period
+      const timelineRows = sortedData.map(data => {
+        const dataTypeIcon = data.countType === 'bike' ? '🚴' : '🚶';
+        const dataTypeName = data.countType === 'bike' ? 'Biking' : 'Walking';
+        
+        let periodText = '';
+        if (data.startDate && data.endDate) {
+          const start = new Date(data.startDate).toLocaleDateString('en-US');
+          const end = new Date(data.endDate).toLocaleDateString('en-US');
+          periodText = start === end ? start : `${start} - ${end}`;
+        } else if (data.startDate) {
+          periodText = new Date(data.startDate).toLocaleDateString('en-US');
+        }
+
+        return `
+          <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 6px 8px; font-weight: 500;">${data.year}</td>
+            <td style="padding: 6px 8px; font-size: 12px;">${dataTypeIcon} ${dataTypeName}</td>
+            <td style="padding: 6px 8px; font-size: 11px; color: #666;">${periodText}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Group data by year for AADT table
+      const dataByYear = new Map<number, { bike?: any; ped?: any }>();
+      siteData.yearlyData.forEach(data => {
+        if (!dataByYear.has(data.year)) {
+          dataByYear.set(data.year, {});
+        }
+        dataByYear.get(data.year)![data.countType] = data;
+      });
+
+      const years = Array.from(dataByYear.keys()).sort((a, b) => b - a); // Most recent first
+
+      // Build AADT summary table
+      const aadtRows = years.map(year => {
+        const yearData = dataByYear.get(year)!;
+        const bikeData = yearData.bike;
+        const pedData = yearData.ped;
+        
+        let bikeAADT = bikeData ? `${Math.round(bikeData.allAadt)}` : '-';
+        let pedAADT = pedData ? `${Math.round(pedData.allAadt)}` : '-';
+        
+        return `
+          <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 4px 8px; font-weight: 500;">${year}</td>
+            <td style="padding: 4px 8px; text-align: center;">${bikeAADT}</td>
+            <td style="padding: 4px 8px; text-align: center;">${pedAADT}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Calculate observation periods by type
+      const bikeObservations = siteData.yearlyData.filter(d => d.countType === 'bike').length;
+      const pedObservations = siteData.yearlyData.filter(d => d.countType === 'ped').length;
+      
+      // Format survey date range
+      const firstSurvey = siteData.firstSurvey ? new Date(siteData.firstSurvey).getFullYear() : 'Unknown';
+      const lastSurvey = siteData.lastSurvey ? new Date(siteData.lastSurvey).getFullYear() : 'Unknown';
+      const surveyRange = firstSurvey === lastSurvey ? `${firstSurvey}` : `${firstSurvey} - ${lastSurvey}`;
+
+      // Build observation period summary
+      let observationSummary = [];
+      if (bikeObservations > 0) {
+        observationSummary.push(`🚴 ${bikeObservations} biking period${bikeObservations !== 1 ? 's' : ''}`);
+      }
+      if (pedObservations > 0) {
+        observationSummary.push(`🚶 ${pedObservations} walking period${pedObservations !== 1 ? 's' : ''}`);
+      }
+
+      return `
+        <div style="padding: 0; max-height: 700px; overflow-y: auto;">
+          <div style="margin-bottom: 12px;">
+            <h4 style="margin: 0 0 6px 0; color: #333;">Site Information</h4>
+            <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+              <tbody>
+                <tr>
+                  <th style="padding: 2px 8px 2px 0; text-align: left; font-weight: 500; color: #666; width: 30%;">Location</th>
+                  <td style="padding: 2px 0; font-size: 13px;">${siteName}</td>
+                </tr>
+                ${locality ? `<tr>
+                  <th style="padding: 2px 8px 2px 0; text-align: left; font-weight: 500; color: #666;">Locality</th>
+                  <td style="padding: 2px 0; font-size: 13px;">${locality}</td>
+                </tr>` : ''}
+                <tr>
+                  <th style="padding: 2px 8px 2px 0; text-align: left; font-weight: 500; color: #666;">Data Source</th>
+                  <td style="padding: 2px 0; font-size: 13px;">${dataSource}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div id="survey-summary" style="margin-bottom: 12px;">
+            <h4 style="margin: 0 0 4px 0; color: #333;">Survey Summary</h4>
+            <p style="margin: 0; font-size: 13px; color: #666;">
+              <strong>${siteData.totalObservationPeriods}</strong> total observation period${siteData.totalObservationPeriods !== 1 ? 's' : ''} 
+              from <strong>${surveyRange}</strong>
+            </p>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: #888;">
+              ${observationSummary.join(' • ')}
+            </p>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <h4 style="margin: 0 0 6px 0; color: #333;">Survey Timeline</h4>
+            <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                  <th style="padding: 4px 8px; text-align: left; font-weight: 600;">Year</th>
+                  <th style="padding: 4px 8px; text-align: left; font-weight: 600;">Data Types</th>
+                  <th style="padding: 4px 8px; text-align: left; font-weight: 600;">Period</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${timelineRows}
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <h4 style="margin: 0 0 6px 0; color: #333;">Average Annual Daily Traffic (AADT)</h4>
+            <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                  <th style="padding: 4px 8px; text-align: left; font-weight: 600;">Year</th>
+                  <th style="padding: 4px 8px; text-align: center; font-weight: 600;">🚴 Biking</th>
+                  <th style="padding: 4px 8px; text-align: center; font-weight: 600;">🚶 Walking</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${aadtRows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    },
+  });
+
   const popupTemplate = {
     title: "Count Site: {name}",
-    content: [
-      {
-        type: "fields",
-        fieldInfos: [
-          {
-            fieldName: "name",
-            label: "Location",
-          },
-          {
-            fieldName: "locality",
-            label: "Locality",
-          },
-          {
-            fieldName: "all_aadt",
-            label: "Average Annual Daily Traffic (AADT)",
-          },
-          {
-            fieldName: "weekday_aadt",
-            label: "Weekday AADT",
-          },
-          {
-            fieldName: "weekend_aadt",
-            label: "Weekend AADT",
-          },
-        ],
-      },
-    ],
+    content: [enrichedAADTContent],
   };
 
   // Create renderer with color coding based on AADT values
