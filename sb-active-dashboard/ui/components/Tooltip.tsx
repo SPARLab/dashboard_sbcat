@@ -39,7 +39,7 @@ const TooltipContent = ({ text, align, triggerRef }: TooltipContentProps) => {
     }
 
     setPosition({
-      top: triggerRect.top,
+      top: triggerRect.top - 16,
       left: left
     });
   }, [align, triggerRef]);
@@ -48,18 +48,18 @@ const TooltipContent = ({ text, align, triggerRef }: TooltipContentProps) => {
     switch (align) {
       case 'left':
         return {
-          tooltip: "fixed mb-2 px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg whitespace-nowrap z-[9999]",
+          tooltip: "fixed px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg max-w-sm z-[9999]",
           arrow: "absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-300"
         };
       case 'right':
         return {
-          tooltip: "fixed mb-2 px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg whitespace-nowrap z-[9999]",
+          tooltip: "fixed px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg max-w-sm z-[9999]",
           arrow: "absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-300"
         };
       case 'center':
       default:
         return {
-          tooltip: "fixed mb-2 px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg whitespace-nowrap z-[9999]",
+          tooltip: "fixed px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 text-sm rounded-lg shadow-lg max-w-sm z-[9999]",
           arrow: "absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-300"
         };
     }

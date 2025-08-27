@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import MoreInformationIconCostBenefitTool from "./MoreInformationIcon";
+import InfoTooltipIcon from "./MoreInformationIcon";
 import CollapseExpandIcon from "./CollapseExpandIcon";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import SelectRegionPlaceholder from "../../../components/SelectRegionPlaceholder";
@@ -21,11 +21,11 @@ interface SummaryStatisticsProps {
   showPedestrian?: boolean;
 }
 
-const StatsRow = ({ label, value, tooltip, idPrefix }: { label: string, value: string | number, tooltip?: boolean, idPrefix: string }) => (
+const StatsRow = ({ label, value, tooltipText, idPrefix }: { label: string, value: string | number, tooltipText?: string, idPrefix: string }) => (
     <div className="grid grid-cols-[1fr,auto] items-center gap-2" id={`${idPrefix}-row`}>
         <div className="flex items-center" id={`${idPrefix}-label-container`}>
             <p className="text-gray-600 whitespace-nowrap" id={`${idPrefix}-label`}>{label}</p>
-            {tooltip && <MoreInformationIconCostBenefitTool />}
+            {tooltipText && <InfoTooltipIcon text={tooltipText} />}
         </div>
         <p className="text-gray-800 font-medium justify-self-end" id={`${idPrefix}-value`}>{value}</p>
     </div>
@@ -94,13 +94,13 @@ export default function SummaryStatistics({
                           idPrefix="weekday-ped-aadv" 
                           label="Median Pedestrian AADV" 
                           value={spatialResult ? formatValue(pedWeekdayAADV) : "Select area"} 
-                          tooltip 
+                          tooltipText="Average Annual Daily Volume (AADV) represents the typical number of pedestrians per day on weekdays, calculated from count data within the selected area."
                         />
                         <StatsRow 
                           idPrefix="weekday-bike-aadv" 
                           label="Median Bike AADV" 
                           value={spatialResult ? formatValue(bikeWeekdayAADV) : "Select area"} 
-                          tooltip 
+                          tooltipText="Average Annual Daily Volume (AADV) represents the typical number of cyclists per day on weekdays, calculated from count data within the selected area."
                         />
                     </div>
                   </div>
@@ -112,13 +112,13 @@ export default function SummaryStatistics({
                           idPrefix="weekend-ped-aadv" 
                           label="Median Pedestrian AADV" 
                           value={spatialResult ? formatValue(pedWeekendAADV) : "Select area"} 
-                          tooltip 
+                          tooltipText="Average Annual Daily Volume (AADV) represents the typical number of pedestrians per day on weekends, calculated from count data within the selected area."
                         />
                         <StatsRow 
                           idPrefix="weekend-bike-aadv" 
                           label="Median Bike AADV" 
                           value={spatialResult ? formatValue(bikeWeekendAADV) : "Select area"} 
-                          tooltip 
+                          tooltipText="Average Annual Daily Volume (AADV) represents the typical number of cyclists per day on weekends, calculated from count data within the selected area."
                         />
                     </div>
                   </div>

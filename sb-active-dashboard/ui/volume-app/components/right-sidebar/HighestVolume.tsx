@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import MoreInformationIconCostBenefitTool from "./MoreInformationIcon";
+import InfoTooltipIcon from "./MoreInformationIcon";
 import CollapseExpandIcon from "./CollapseExpandIcon";
 import { VolumeChartDataService } from "../../../../lib/data-services/VolumeChartDataService";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
@@ -97,7 +97,7 @@ export default function HighestVolume({
             <h3 id="highest-volume-title" className="text-lg font-medium text-gray-700">
               Highest Volume Areas
             </h3>
-            <MoreInformationIconCostBenefitTool />
+            <InfoTooltipIcon text="Shows the areas with the highest pedestrian and cyclist volumes within your selected region, helping identify the most active locations for active transportation." />
         </div>
         <CollapseExpandIcon id="highest-volume-collapse-icon" isCollapsed={isCollapsed} onClick={toggleCollapse} />
       </div>
