@@ -233,7 +233,11 @@ export default function SeverityBreakdown({
               <p id="safety-severity-breakdown-description" className="w-full text-sm text-gray-600">
                 Distribution of incident severity levels for the selected area
                 <span id="safety-severity-breakdown-info-icon-container" className="ml-1 inline-flex align-middle">
-                  <MoreInformationIcon />
+                  <MoreInformationIcon 
+                    text="Bar chart showing the distribution of safety incidents by severity level: Fatality (most severe), Severe Injury, Injury, No Injury, and Unknown. Colors range from black (most severe) to lighter colors (less severe) to help identify the safety profile of the selected area."
+                    align="center"
+                    width="w-80"
+                  />
                 </span>
               </p>
 
@@ -242,8 +246,7 @@ export default function SeverityBreakdown({
                 {hoveredBar && (
                   <div
                     id="safety-severity-breakdown-tooltip"
-                    className="absolute -top-1 left-1/2 transform -translate-x-1/2 z-10 text-sm font-medium whitespace-nowrap text-center"
-                    style={{ color: '#3b82f6' }}
+                    className="absolute -top-0 left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
                   >
                     {`${hoveredBar.value.toLocaleString()} ${hoveredBar.name}`}
                   </div>

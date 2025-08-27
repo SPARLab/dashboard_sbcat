@@ -305,7 +305,11 @@ export default function ConflictTypeBreakdown({
                   <p id="safety-conflict-type-description" className="w-full text-sm text-gray-600">
                     Distribution of incident types by conflict category for the selected area
                     <span id="safety-conflict-type-info-icon-container" className="ml-1 inline-flex align-middle">
-                      <MoreInformationIcon />
+                      <MoreInformationIcon 
+                        text="Bar chart showing the breakdown of safety incidents by conflict type (e.g., Bike vs Car, Pedestrian vs Vehicle, etc.). Each conflict type is color-coded using a colorblind-friendly palette. Hover over bars or legend items to highlight specific conflict types and see detailed counts."
+                        align="center"
+                        width="w-80"
+                      />
                     </span>
                   </p>
 
@@ -314,8 +318,7 @@ export default function ConflictTypeBreakdown({
                     {hoveredBar && (
                       <div
                         id="safety-conflict-type-tooltip"
-                        className="absolute -top-1 left-1/2 transform -translate-x-1/2 z-10 text-sm font-medium whitespace-nowrap text-center"
-                        style={{ color: '#3b82f6' }}
+                        className="absolute -top-0 left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
                       >
                         {`${hoveredBar.value.toLocaleString()} ${hoveredBar.name}`}
                       </div>

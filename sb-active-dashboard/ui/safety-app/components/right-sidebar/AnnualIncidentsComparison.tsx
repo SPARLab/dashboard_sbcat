@@ -404,7 +404,11 @@ export default function AnnualIncidentsComparison({
               <p id="safety-annual-incidents-description" className="w-full text-sm text-gray-600">
                 {getTimeScaleDescription(timeScale)}
                 <span id="safety-annual-incidents-info-icon-container" className="ml-1 inline-flex align-middle">
-                  <MoreInformationIcon />
+                  <MoreInformationIcon 
+                    text="Compares safety incident patterns across different time periods. Switch between Day (day of week), Month (monthly patterns), and Year (annual totals) views to identify temporal trends and seasonal variations in incident occurrence."
+                    align="center"
+                    width="w-80"
+                  />
                 </span>
               </p>
 
@@ -412,7 +416,7 @@ export default function AnnualIncidentsComparison({
                 {hoveredPoint && (
                   <div
                     id="safety-incidents-chart-tooltip"
-                    className="absolute top-5 left-1/2 transform -translate-x-1/2 z-10 text-sm font-medium whitespace-nowrap text-blue-600"
+                    className="absolute -top-0 left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
                   >
                     {`${hoveredPoint.value.toLocaleString()} incidents in ${hoveredPoint.seriesName} (${hoveredPoint.name})`}
                   </div>
