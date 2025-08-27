@@ -227,6 +227,24 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
     });
   }, [dateRange]);
 
+  useEffect(() => {
+    if (
+      selection.startDate.getTime() === dateRange.startDate.getTime() &&
+      selection.endDate.getTime() === dateRange.endDate.getTime()
+    ) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      onDateRangeChange({
+        startDate: selection.startDate,
+        endDate: selection.endDate
+      });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [selection, dateRange, onDateRangeChange]);
+
   const handleSelect = useCallback((ranges: RangeKeyDict) => {
     if (ranges.selection) {
       const newSelection = {...selection, ...ranges.selection};
@@ -281,17 +299,12 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
     const days = Math.round((percent / 100) * totalDays);
     const newDate = new Date(startOfPeriod.getTime() + days * 24 * 60 * 60 * 1000);
 
-    let newSelection = { ...selection };
     if (isDragging === 'start' && newDate <= selection.endDate) {
-      newSelection = { ...selection, startDate: newDate };
-      setSelection(newSelection);
-      onDateRangeChange({ startDate: newSelection.startDate, endDate: newSelection.endDate });
+      setSelection(prev => ({ ...prev, startDate: newDate }));
     } else if (isDragging === 'end' && newDate >= selection.startDate) {
-      newSelection = { ...selection, endDate: newDate };
-      setSelection(newSelection);
-      onDateRangeChange({ startDate: newSelection.startDate, endDate: newSelection.endDate });
+      setSelection(prev => ({ ...prev, endDate: newDate }));
     }
-  }, [isDragging, totalDays, startOfPeriod, selection, onDateRangeChange]);
+  }, [isDragging, totalDays, startOfPeriod, selection.endDate, selection.startDate]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(null);
