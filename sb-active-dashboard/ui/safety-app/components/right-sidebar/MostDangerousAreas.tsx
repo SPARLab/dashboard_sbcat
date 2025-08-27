@@ -211,7 +211,7 @@ export default function MostDangerousAreas({
           {selectedGeometry && (
             <>
               <hr className="border-gray-200 mb-2" />
-              <p id="safety-dangerous-areas-description" className="w-full text-sm text-gray-600 mb-1">
+              <div id="safety-dangerous-areas-description" className="w-full text-sm text-gray-600 mb-1">
                 Locations with the highest incident counts and severity scores
                 <span id="safety-dangerous-areas-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
@@ -220,7 +220,7 @@ export default function MostDangerousAreas({
                     width="w-72"
                   />
                 </span>
-              </p>
+              </div>
             </>
           )}
 

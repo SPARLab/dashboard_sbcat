@@ -302,7 +302,7 @@ export default function ConflictTypeBreakdown({
                 {chartData && !error ? (
                 <>
                   <div id="safety-conflict-type-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
-                  <p id="safety-conflict-type-description" className="w-full text-sm text-gray-600">
+                  <div id="safety-conflict-type-description" className="w-full text-sm text-gray-600">
                     Distribution of incident types by conflict category for the selected area
                     <span id="safety-conflict-type-info-icon-container" className="ml-1 inline-flex align-middle">
                       <MoreInformationIcon 
@@ -311,7 +311,7 @@ export default function ConflictTypeBreakdown({
                         width="w-80"
                       />
                     </span>
-                  </p>
+                  </div>
 
                   {/* Bar Chart */}
                   <div id="safety-conflict-type-chart-container" className="relative mb-4">

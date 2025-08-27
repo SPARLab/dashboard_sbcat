@@ -230,7 +230,7 @@ export default function SeverityBreakdown({
                 {chartData && !error ? (
             <>
               <div id="safety-severity-breakdown-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
-              <p id="safety-severity-breakdown-description" className="w-full text-sm text-gray-600">
+              <div id="safety-severity-breakdown-description" className="w-full text-sm text-gray-600">
                 Distribution of incident severity levels for the selected area
                 <span id="safety-severity-breakdown-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
@@ -239,7 +239,7 @@ export default function SeverityBreakdown({
                     width="w-80"
                   />
                 </span>
-              </p>
+              </div>
 
               {/* Bar Chart */}
               <div id="safety-severity-breakdown-chart-container" className="relative">

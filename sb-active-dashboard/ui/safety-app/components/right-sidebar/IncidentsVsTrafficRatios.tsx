@@ -405,7 +405,7 @@ export default function IncidentsVsTrafficRatios({
           {selectedGeometry && (
             <>
               <hr className="border-gray-200 mb-2" />
-              <p id="safety-incidents-vs-traffic-description" className="w-full text-sm text-gray-600 mb-6">
+              <div id="safety-incidents-vs-traffic-description" className="w-full text-sm text-gray-600 mb-6">
                 Relationship between traffic volume levels and incident counts by location
                 <span id="safety-incidents-vs-traffic-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
@@ -414,7 +414,7 @@ export default function IncidentsVsTrafficRatios({
                     width="w-80"
                   />
                 </span>
-              </p>
+              </div>
             </>
           )}
 

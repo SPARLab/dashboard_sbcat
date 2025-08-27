@@ -401,16 +401,16 @@ export default function AnnualIncidentsComparison({
                 ))}
               </div>
               <div id="safety-annual-incidents-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
-              <p id="safety-annual-incidents-description" className="w-full text-sm text-gray-600">
+              <div id="safety-annual-incidents-description" className="w-full text-sm text-gray-600">
                 {getTimeScaleDescription(timeScale)}
                 <span id="safety-annual-incidents-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
                     text="Compares safety incident patterns across different time periods. Switch between Day (day of week), Month (monthly patterns), and Year (annual totals) views to identify temporal trends and seasonal variations in incident occurrence."
-                    align="center"
+                    align="right"
                     width="w-80"
                   />
                 </span>
-              </p>
+              </div>
 
               <div id="safety-annual-incidents-chart-container" className="relative">
                 {hoveredPoint && (
