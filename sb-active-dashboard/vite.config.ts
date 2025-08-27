@@ -9,8 +9,7 @@ import autoprefixer from "autoprefixer";
 export default defineConfig({
   build: {
     rollupOptions: {
-      // keep Lumina out of the production bundle
-      external: ["@arcgis/lumina"],
+      // Note: Removed external @arcgis/lumina for production deployment
     },
   },
 
