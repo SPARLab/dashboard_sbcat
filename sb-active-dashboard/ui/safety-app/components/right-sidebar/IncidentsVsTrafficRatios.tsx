@@ -482,7 +482,7 @@ export default function IncidentsVsTrafficRatios({
                           top: '40px',
                           right: '20px',
                           bottom: '60px',
-                          background: 'linear-gradient(140deg, rgba(239, 68, 68, 0.8) 0%, rgba(239, 68, 68, 0) 51%)'
+                          background: 'linear-gradient(140deg, rgba(251, 146, 60, 0.8) 0%, rgba(251, 146, 60, 0) 51%)'
                         }}
                       />
                       <ReactECharts
