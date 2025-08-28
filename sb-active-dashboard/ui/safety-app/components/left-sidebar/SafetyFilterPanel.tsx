@@ -39,6 +39,29 @@ export default function SafetyFilterPanel({
   };
   return (
     <>
+      {/* Geographic Level - Reused from New Volume */}
+      <GeographicLevelSection 
+        geographicLevel={geographicLevel}
+        onGeographicLevelChange={onGeographicLevelChange}
+      />
+      <hr className="border-gray-200" />
+
+      {/* Custom Draw Tool Instructions - Only show when custom is selected */}
+      {geographicLevel === 'custom' && (
+        <>
+          <div
+            id="safety-custom-draw-tool-instructions"
+            className="px-4 py-4 bg-blue-100 border-l-4 border-blue-500"
+          >
+            <h3 className="text-base font-medium text-gray-900">Custom Draw Tool</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Click on the map to draw a custom area. Click the first point again to complete the polygon.
+            </p>
+          </div>
+          <hr className="border-gray-200" />
+        </>
+      )}
+
       {/* Severity of Incident */}
       <SeverityOfIncidentSection 
         filters={filters}
@@ -78,29 +101,6 @@ export default function SafetyFilterPanel({
       <WeekdaysWeekendsSection 
         filters={filters}
         onFiltersChange={onFiltersChange}
-      />
-      <hr className="border-gray-200" />
-
-      {/* Custom Draw Tool Instructions - Only show when custom is selected */}
-      {geographicLevel === 'custom' && (
-        <>
-          <div
-            id="safety-custom-draw-tool-instructions"
-            className="px-4 py-4 bg-blue-100 border-l-4 border-blue-500"
-          >
-            <h3 className="text-base font-medium text-gray-900">Custom Draw Tool</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Click on the map to draw a custom area. Click the first point again to complete the polygon.
-            </p>
-          </div>
-          <hr className="border-gray-200" />
-        </>
-      )}
-
-      {/* Geographic Level - Reused from New Volume */}
-      <GeographicLevelSection 
-        geographicLevel={geographicLevel}
-        onGeographicLevelChange={onGeographicLevelChange}
       />
     </>
   );
