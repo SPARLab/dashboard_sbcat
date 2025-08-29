@@ -35,7 +35,6 @@ export default function AnnualIncidentsComparison({
   // Cache for preloaded data by time scale
   const [dataCache, setDataCache] = useState<Map<TimeScale, AnnualIncidentsComparisonData>>(new Map());
   const [cacheKey, setCacheKey] = useState<string>('');
-  const [isPreloading, setIsPreloading] = useState(false);
 
   // Create data service instance
   const dataService = useMemo(() => new SafetyChartDataService(), []);
@@ -61,7 +60,6 @@ export default function AnnualIncidentsComparison({
     scalesToPreload: TimeScale[]
   ) => {
     if (!mapViewRef || !geometry || scalesToPreload.length === 0) return;
-    setIsPreloading(true);
     try {
       const results = await Promise.all(
         scalesToPreload.map(async (scale) => {
@@ -79,8 +77,8 @@ export default function AnnualIncidentsComparison({
         results.forEach(({ scale, data }) => updated.set(scale, data));
         return updated;
       });
-    } finally {
-      setIsPreloading(false);
+    } catch (err) {
+      console.error('Error in preload function:', err);
     }
   }, [dataService]);
 
@@ -429,16 +427,7 @@ export default function AnnualIncidentsComparison({
                   </div>
                 )}
 
-                {/* Background preloading indicator */}
-                {isPreloading && !isLoading && (
-                  <div 
-                    id="safety-annual-incidents-preload-indicator" 
-                    className="absolute top-2 right-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full flex items-center z-10"
-                  >
-                    <div className="animate-spin rounded-full h-3 w-3 border border-blue-400 border-t-transparent mr-1"></div>
-                    Loading...
-                  </div>
-                )}
+
 
                 <div id="safety-annual-incidents-chart">
                   <ReactECharts
@@ -487,16 +476,7 @@ export default function AnnualIncidentsComparison({
                   </div>
                 )}
 
-                {/* Background preloading indicator */}
-                {isPreloading && !isLoading && (
-                  <div 
-                    id="safety-annual-incidents-preload-indicator" 
-                    className="absolute top-2 right-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full flex items-center z-10"
-                  >
-                    <div className="animate-spin rounded-full h-3 w-3 border border-blue-400 border-t-transparent mr-1"></div>
-                    Loading...
-                  </div>
-                )}
+
               </div>
             </div>
           )}
