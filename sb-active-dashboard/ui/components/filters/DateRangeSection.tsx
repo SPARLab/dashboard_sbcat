@@ -273,19 +273,17 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
     });
   };
 
-  // Calculate dynamic year range based on selected dates
-  const { startOfPeriod, totalDays, startPercent, endPercent } = useMemo(() => {
-    const startYear = Math.min(selection.startDate.getFullYear(), selection.endDate.getFullYear());
-    const endYear = Math.max(selection.startDate.getFullYear(), selection.endDate.getFullYear());
-    
-    const startOfPeriod = new Date(startYear, 0, 1);
-    const endOfPeriod = new Date(endYear, 11, 31);
+  // Fixed dataset time interval
+  const { startOfPeriod, endOfPeriod, totalDays, startPercent, endPercent } = useMemo(() => {
+    // Dataset bounds: 8/15/2018 11:30 PM to 7/16/2025 9:00 PM
+    const startOfPeriod = new Date('2018-08-15T23:30:00');
+    const endOfPeriod = new Date('2025-07-16T21:00:00');
     const totalDays = (endOfPeriod.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24);
     
     const startPercent = Math.max(0, Math.min(100, ((selection.startDate.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100));
     const endPercent = Math.max(0, Math.min(100, ((selection.endDate.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100));
     
-    return { startOfPeriod, totalDays, startPercent, endPercent };
+    return { startOfPeriod, endOfPeriod, totalDays, startPercent, endPercent };
   }, [selection.startDate, selection.endDate]);
 
   const handleMouseDown = useCallback((type: 'start' | 'end') => {
@@ -299,12 +297,15 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
     const days = Math.round((percent / 100) * totalDays);
     const newDate = new Date(startOfPeriod.getTime() + days * 24 * 60 * 60 * 1000);
 
-    if (isDragging === 'start' && newDate <= selection.endDate) {
-      setSelection(prev => ({ ...prev, startDate: newDate }));
-    } else if (isDragging === 'end' && newDate >= selection.startDate) {
-      setSelection(prev => ({ ...prev, endDate: newDate }));
+    // Constrain dates within dataset bounds
+    const constrainedDate = new Date(Math.max(startOfPeriod.getTime(), Math.min(endOfPeriod.getTime(), newDate.getTime())));
+
+    if (isDragging === 'start' && constrainedDate <= selection.endDate) {
+      setSelection(prev => ({ ...prev, startDate: constrainedDate }));
+    } else if (isDragging === 'end' && constrainedDate >= selection.startDate) {
+      setSelection(prev => ({ ...prev, endDate: constrainedDate }));
     }
-  }, [isDragging, totalDays, startOfPeriod, selection.endDate, selection.startDate]);
+  }, [isDragging, totalDays, startOfPeriod, endOfPeriod, selection.endDate, selection.startDate]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(null);
