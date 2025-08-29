@@ -259,15 +259,16 @@ export default function AnnualIncidentsComparison({
         itemHeight: 12,
       },
       series: chartSeries.map((series, index) => {
-        // Assign colors for different years
-        const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+        // Color-blind friendly palette - avoids red-green combinations
+        // Uses blue, orange, purple, teal, and brown for better accessibility
+        const colors = ['#3b82f6', '#f59e0b', '#8b5cf6', '#0891b2', '#92400e'];
         const color = colors[index % colors.length];
 
         if (timeScale === 'Year') {
           // This is a bar chart, so we need to make sure that we're setting the color
           // for each bar individually. We can do this by setting the color in the itemStyle
           // property of the series.
-          const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+          const colors = ['#3b82f6', '#f59e0b', '#8b5cf6', '#0891b2', '#92400e'];
           return {
             name: series.name,
             data: series.data,
@@ -416,7 +417,7 @@ export default function AnnualIncidentsComparison({
                 {hoveredPoint && (
                   <div
                     id="safety-incidents-chart-tooltip"
-                    className="absolute -top-0 left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
+                    className="absolute top-[1.2rem] left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
                   >
                     {`${hoveredPoint.value.toLocaleString()} incidents in ${hoveredPoint.seriesName} (${hoveredPoint.name})`}
                   </div>

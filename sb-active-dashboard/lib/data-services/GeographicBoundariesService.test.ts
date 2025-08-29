@@ -60,14 +60,14 @@ describe('TIGER Geographic Boundaries Query Tests', () => {
     }, NETWORK_TIMEOUT);
 
     it('should return multiple cities with combined query for target cities', async () => {
-      const cities = ['Santa Barbara', 'Goleta', 'Carpinteria', 'Santa Maria'];
+      const cities = ['Santa Barbara', 'Goleta', 'Carpinteria', 'Santa Maria', 'Lompoc', 'Solvang', 'Buellton', 'Guadalupe'];
       const cityFilter = cities.map(city => `NAME LIKE '%${city}%'`).join(' OR ');
       const whereClause = `STATE = '06' AND (${cityFilter})`;
       
       const result = await queryTigerService(TIGER_URLS.CITIES, whereClause);
       
       expect(result.features).toBeDefined();
-      expect(result.features.length).toBeGreaterThanOrEqual(3); // At least 3 of our target cities
+      expect(result.features.length).toBeGreaterThanOrEqual(7); // At least 7 of our target cities
       
       // Verify we get California cities only
       result.features.forEach((feature: any) => {
@@ -79,7 +79,7 @@ describe('TIGER Geographic Boundaries Query Tests', () => {
       const foundCities = cities.filter(city => 
         cityNames.some((name: string) => name.includes(city))
       );
-      expect(foundCities.length).toBeGreaterThanOrEqual(3);
+      expect(foundCities.length).toBeGreaterThanOrEqual(7);
     }, NETWORK_TIMEOUT);
   });
 
@@ -113,14 +113,19 @@ describe('TIGER Geographic Boundaries Query Tests', () => {
     }, NETWORK_TIMEOUT);
 
     it('should return multiple CDPs with combined query for target places', async () => {
-      const places = ['Isla Vista', 'Montecito', 'Eastern Goleta Valley', 'Toro Canyon', 'Summerland'];
+      const places = [
+        'Isla Vista', 'Montecito', 'Eastern Goleta Valley', 'Toro Canyon', 'Summerland',
+        'Santa Ynez', 'Los Alamos', 'Los Olivos', 'Ballard', 'Mission Hills',
+        'Orcutt', 'Vandenberg Village', 'Vandenberg AFB', 'Casmalia', 'Sisquoc',
+        'Cuyama', 'New Cuyama', 'Garey'
+      ];
       const placeFilter = places.map(place => `NAME LIKE '%${place}%'`).join(' OR ');
       const whereClause = `STATE = '06' AND (${placeFilter})`;
       
       const result = await queryTigerService(TIGER_URLS.SERVICE_AREAS, whereClause);
       
       expect(result.features).toBeDefined();
-      expect(result.features.length).toBeGreaterThanOrEqual(3); // At least 3 of our target CDPs
+      expect(result.features.length).toBeGreaterThanOrEqual(10); // At least 10 of our target CDPs
       
       // Verify we get California places only
       result.features.forEach((feature: any) => {
@@ -132,7 +137,7 @@ describe('TIGER Geographic Boundaries Query Tests', () => {
       const foundPlaces = places.filter(place => 
         placeNames.some((name: string) => name.includes(place))
       );
-      expect(foundPlaces.length).toBeGreaterThanOrEqual(2);
+      expect(foundPlaces.length).toBeGreaterThanOrEqual(10);
     }, NETWORK_TIMEOUT);
   });
 
@@ -228,8 +233,8 @@ describe('TIGER Geographic Boundaries Query Tests', () => {
   describe('Geographic Coverage Integration Test', () => {
     it('should return comprehensive geographic coverage for Santa Barbara and San Luis Obispo counties', async () => {
       // Test the exact queries our service uses
-      const cityQuery = "STATE = '06' AND (NAME LIKE '%Santa Barbara%' OR NAME LIKE '%Goleta%' OR NAME LIKE '%Carpinteria%' OR NAME LIKE '%Santa Maria%')";
-      const cdpQuery = "STATE = '06' AND (NAME LIKE '%Isla Vista%' OR NAME LIKE '%Montecito%' OR NAME LIKE '%Eastern Goleta Valley%' OR NAME LIKE '%Toro Canyon%' OR NAME LIKE '%Summerland%' OR NAME LIKE '%Santa Maria%')";
+      const cityQuery = "STATE = '06' AND (NAME LIKE '%Santa Barbara%' OR NAME LIKE '%Goleta%' OR NAME LIKE '%Carpinteria%' OR NAME LIKE '%Santa Maria%' OR NAME LIKE '%Lompoc%' OR NAME LIKE '%Solvang%' OR NAME LIKE '%Buellton%' OR NAME LIKE '%Guadalupe%')";
+      const cdpQuery = "STATE = '06' AND (NAME LIKE '%Isla Vista%' OR NAME LIKE '%Montecito%' OR NAME LIKE '%Eastern Goleta Valley%' OR NAME LIKE '%Toro Canyon%' OR NAME LIKE '%Summerland%' OR NAME LIKE '%Santa Ynez%' OR NAME LIKE '%Los Alamos%' OR NAME LIKE '%Los Olivos%' OR NAME LIKE '%Ballard%' OR NAME LIKE '%Mission Hills%' OR NAME LIKE '%Orcutt%' OR NAME LIKE '%Vandenberg Village%' OR NAME LIKE '%Vandenberg AFB%' OR NAME LIKE '%Casmalia%' OR NAME LIKE '%Sisquoc%' OR NAME LIKE '%Cuyama%' OR NAME LIKE '%New Cuyama%' OR NAME LIKE '%Garey%' OR NAME LIKE '%Santa Maria%')";
       const countyQuery = "NAME IN ('Santa Barbara County', 'San Luis Obispo County') OR NAME LIKE '%Santa Barbara%' OR NAME LIKE '%San Luis Obispo%'";
       const censusTractQuery = "GEOID LIKE '06083%'"; // Santa Barbara County census tracts only
       
