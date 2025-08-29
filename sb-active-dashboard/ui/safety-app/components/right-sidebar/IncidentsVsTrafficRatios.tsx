@@ -38,10 +38,19 @@ export default function IncidentsVsTrafficRatios({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hoveredPoint, setHoveredPoint] = useState<ScatterDataPoint | null>(null);
+  const [axisTooltip, setAxisTooltip] = useState<{
+    show: boolean;
+    content: string;
+    x: number;
+    y: number;
+    label: string;
+  }>({ show: false, content: '', x: 0, y: 0, label: '' });
+  const [hoveredLabel, setHoveredLabel] = useState<string | null>(null);
   
   // Service and highlight layer refs
   const stravaServiceRef = useRef<StravaSegmentService | null>(null);
   const highlightLayerRef = useRef<GraphicsLayer | null>(null);
+  const chartRef = useRef<any>(null);
 
   // Use spatial query to get filtered data
   const { result, isLoading: spatialLoading, error: spatialError } = useSafetySpatialQuery(selectedGeometry, filters);
@@ -238,6 +247,82 @@ export default function IncidentsVsTrafficRatios({
       highlightLayerRef.current.removeAll();
     }
   }, [selectedGeometry, filters]);
+
+  // Handle overlay hover events
+  const handleOverlayHover = (label: string, event: React.MouseEvent) => {
+    const tooltipContent = getAxisTooltipContent(label);
+    if (!tooltipContent) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const chartContainer = chartRef.current?.ele;
+    if (!chartContainer) return;
+
+    const chartRect = chartContainer.getBoundingClientRect();
+    
+    setHoveredLabel(label);
+    setAxisTooltip({
+      show: true,
+      content: tooltipContent,
+      x: event.clientX - chartRect.left,
+      y: event.clientY - chartRect.top, // Position at cursor
+      label
+    });
+  };
+
+  const handleOverlayMouseMove = (event: React.MouseEvent) => {
+    if (!axisTooltip.show) return;
+    
+    const chartContainer = chartRef.current?.ele;
+    if (!chartContainer) return;
+
+    const chartRect = chartContainer.getBoundingClientRect();
+    
+    setAxisTooltip(prev => ({
+      ...prev,
+      x: event.clientX - chartRect.left,
+      y: event.clientY - chartRect.top // Update to follow cursor
+    }));
+  };
+
+  const handleOverlayLeave = () => {
+    setHoveredLabel(null);
+    setAxisTooltip({ show: false, content: '', x: 0, y: 0, label: '' });
+  };
+
+  // Function to get tooltip content for axis labels
+  const getAxisTooltipContent = (label: string): string | null => {
+    switch (label.toLowerCase()) {
+      case 'low':
+        return `<div class="text-sm">
+          <div class="font-semibold text-green-700 mb-1">Low Volume</div>
+          <div class="text-gray-600 text-xs">
+            • Modeled data: AADV &lt; 50<br/>
+            • Safety data: Subjective assessment<br/>
+            • Based on incident location traffic levels
+          </div>
+        </div>`;
+      case 'medium':
+        return `<div class="text-sm">
+          <div class="font-semibold text-amber-700 mb-1">Medium Volume</div>
+          <div class="text-gray-600 text-xs">
+            • Modeled data: 50 ≤ AADV &lt; 200<br/>
+            • Safety data: Subjective assessment<br/>
+            • Based on incident location traffic levels
+          </div>
+        </div>`;
+      case 'high':
+        return `<div class="text-sm">
+          <div class="font-semibold text-red-700 mb-1">High Volume</div>
+          <div class="text-gray-600 text-xs">
+            • Modeled data: AADV ≥ 200<br/>
+            • Safety data: Subjective assessment<br/>
+            • Based on incident location traffic levels
+          </div>
+        </div>`;
+      default:
+        return null;
+    }
+  };
 
   const onEvents = useMemo(
     () => ({
@@ -490,7 +575,78 @@ export default function IncidentsVsTrafficRatios({
                         style={{ height: '320px', width: '100%', position: 'relative', zIndex: 1 }}
                         opts={{ renderer: 'canvas' }}
                         onEvents={onEvents}
+                        ref={chartRef}
                       />
+                      
+                      {/* Overlay elements for axis label hover detection */}
+                      {hasData && (
+                        <>
+                          {/* Low label overlay */}
+                          <div
+                            className={`absolute z-20 cursor-pointer transition-all duration-150 rounded-md ${
+                              hoveredLabel === 'low' ? 'bg-green-100 bg-opacity-80' : 'bg-transparent'
+                            }`}
+                            style={{
+                              left: '30%',
+                              bottom: '35px',
+                              width: '48px',
+                              height: '24px',
+                              transform: 'translateX(-50%)'
+                            }}
+                            onMouseEnter={(e) => handleOverlayHover('low', e)}
+                            onMouseMove={handleOverlayMouseMove}
+                            onMouseLeave={handleOverlayLeave}
+                          />
+                          
+                          {/* Medium label overlay */}
+                          <div
+                            className={`absolute z-20 cursor-pointer transition-all duration-150 rounded-md ${
+                              hoveredLabel === 'medium' ? 'bg-amber-100 bg-opacity-80' : 'bg-transparent'
+                            }`}
+                            style={{
+                              left: '56%', // center
+                              bottom: '35px',
+                              width: '56px',
+                              height: '24px',
+                              transform: 'translateX(-50%)'
+                            }}
+                            onMouseEnter={(e) => handleOverlayHover('medium', e)}
+                            onMouseMove={handleOverlayMouseMove}
+                            onMouseLeave={handleOverlayLeave}
+                          />
+                          
+                          {/* High label overlay */}
+                          <div
+                            className={`absolute z-20 cursor-pointer transition-all duration-150 rounded-md ${
+                              hoveredLabel === 'high' ? 'bg-red-100 bg-opacity-80' : 'bg-transparent'
+                            }`}
+                            style={{
+                              left: '81%',
+                              bottom: '35px',
+                              width: '48px',
+                              height: '24px',
+                              transform: 'translateX(-50%)'
+                            }}
+                            onMouseEnter={(e) => handleOverlayHover('high', e)}
+                            onMouseMove={handleOverlayMouseMove}
+                            onMouseLeave={handleOverlayLeave}
+                          />
+                        </>
+                      )}
+                      
+                      {/* Custom axis tooltip that follows mouse */}
+                      {axisTooltip.show && (
+                        <div
+                          id="safety-incidents-vs-traffic-axis-tooltip"
+                          className="absolute z-30 bg-white border border-gray-300 rounded-md shadow-lg p-3 pointer-events-none w-[10rem]"
+                          style={{
+                            left: `${axisTooltip.x}px`,
+                            top: `${axisTooltip.y}px`,
+                            transform: 'translate(-50%, -110%)'
+                          }}
+                          dangerouslySetInnerHTML={{ __html: axisTooltip.content }}
+                        />
+                      )}
                     </div>
                   ) : hasError ? (
                     <div id="safety-incidents-vs-traffic-error" className="bg-red-50 border border-red-200 rounded-md p-3 min-h-[320px] flex items-center justify-center">
