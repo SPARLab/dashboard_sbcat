@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import DashboardLayout from "@/ui/dashboard/DashboardLayout";
 import LayerProvider from "@/lib/context/MapContext";
@@ -21,8 +21,8 @@ function App() {
         <CssBaseline enableColorScheme />
         <BrowserRouter>
           <Routes>
-            {/* route not using MapContext */}
-            <Route path="/" element={<HomePage />} />
+            {/* Redirect root to safety dashboard */}
+            <Route path="/" element={<Navigate to="/dashboard/safety" replace />} />
 
             {/* everything that needs useMapContext */}
             <Route
