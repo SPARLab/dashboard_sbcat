@@ -48,29 +48,34 @@ export default function SafetyRightSidebar({
             filters={filters}
           />
           <MostDangerousAreas 
+            mapView={mapView}
+            incidentsLayer={incidentsLayer}
             selectedGeometry={selectedGeometry}
             filters={filters}
-            mapView={mapView}
           />
           <AnnualIncidentsComparison 
+            mapView={mapView}
+            incidentsLayer={incidentsLayer}
             selectedGeometry={selectedGeometry}
             filters={filters}
-            mapView={mapView}
           />
           <IncidentsVsTrafficRatios 
+            mapView={mapView}
+            incidentsLayer={incidentsLayer}
             selectedGeometry={selectedGeometry}
             filters={filters}
-            mapView={mapView}
           />
           <SeverityBreakdown 
+            mapView={mapView}
+            incidentsLayer={incidentsLayer}
             selectedGeometry={selectedGeometry}
             filters={filters}
-            mapView={mapView}
           />
           <ConflictTypeBreakdown 
+            mapView={mapView}
+            incidentsLayer={incidentsLayer}
             selectedGeometry={selectedGeometry}
             filters={filters}
-            mapView={mapView}
           />
         </div>
       </div>

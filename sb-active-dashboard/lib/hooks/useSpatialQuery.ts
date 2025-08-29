@@ -284,11 +284,6 @@ export const useSafetyLayerViewSpatialQuery = (
       return;
     }
 
-    console.log('🔍 [useSafetyLayerViewSpatialQuery] Starting layer view query');
-    console.log('MapView:', !!mapView);
-    console.log('IncidentsLayer:', !!incidentsLayer);
-    console.log('Selected geometry:', selectedGeometry);
-
     let cancelled = false;
     const timer = setTimeout(async () => {
       if (cancelled) return;
@@ -313,7 +308,6 @@ export const useSafetyLayerViewSpatialQuery = (
               incidents: queryResult.incidents,
               summary: queryResult.summary
             });
-            console.log('🔍 [useSafetyLayerViewSpatialQuery] Success:', queryResult.summary.totalIncidents, 'incidents found');
           }
         }
       } catch (err) {

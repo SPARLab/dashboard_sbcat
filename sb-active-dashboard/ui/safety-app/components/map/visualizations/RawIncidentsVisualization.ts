@@ -75,6 +75,13 @@ export class RawIncidentsVisualization {
             bicyclist_involved: incident.bicyclist_involved || 0,
             vehicle_involved: incident.vehicle_involved || 0,
             party_count: incident.parties?.length || 0,
+            // --- Fields needed for sidebar consistency ---
+            loc_desc: incident.loc_desc || 'Unknown Location',
+            incident_date: incident.incident_date,
+            strava_id: incident.strava_id,
+            bike_traffic: incident.bike_traffic,
+            ped_traffic: incident.ped_traffic,
+            severity: incident.severity,
           }
         }));
 
@@ -95,6 +102,13 @@ export class RawIncidentsVisualization {
           { name: "bicyclist_involved", type: "integer" },
           { name: "vehicle_involved", type: "integer" },
           { name: "party_count", type: "integer" },
+          // --- Additional fields for sidebar consistency ---
+          { name: "loc_desc", type: "string" },
+          { name: "incident_date", type: "date" },
+          { name: "strava_id", type: "integer" },
+          { name: "bike_traffic", type: "string" },
+          { name: "ped_traffic", type: "string" },
+          { name: "severity", type: "string" },
         ],
         outFields: ["*"],
         // 5. Apply the severity-based renderer for unique styling

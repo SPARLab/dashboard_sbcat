@@ -2,11 +2,86 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import ReactECharts from 'echarts-for-react';
 import { SafetyFilters, AnnualIncidentsComparisonData } from "../../../../lib/safety-app/types";
 import { SafetyChartDataService } from "../../../../lib/data-services/SafetyChartDataService";
+import { useSafetyLayerViewSpatialQuery } from "../../../../lib/hooks/useSpatialQuery";
 import CollapseExpandIcon from "../../../components/CollapseExpandIcon";
 import MoreInformationIcon from './MoreInformationIcon';
 
 type TimeScale = 'Day' | 'Month' | 'Year';
 const timeScales: TimeScale[] = ['Day', 'Month', 'Year'];
+
+// Helper function to process incidents for different time scales
+const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale): AnnualIncidentsComparisonData => {
+  if (timeScale === 'Year') {
+    // Group by year
+    const yearMap = new Map<number, number>();
+    incidents.forEach(incident => {
+      const date = new Date(incident.incident_date);
+      const year = date.getFullYear();
+      yearMap.set(year, (yearMap.get(year) || 0) + 1);
+    });
+
+    const years = Array.from(yearMap.keys()).sort();
+    const categories = years.map(y => y.toString());
+    const series = years.map((year, index) => {
+      const data = new Array(categories.length).fill(null);
+      data[index] = yearMap.get(year) || 0;
+      return {
+        name: year.toString(),
+        data: data
+      };
+    });
+
+    return { categories, series };
+  } else if (timeScale === 'Month') {
+    // Group by month across years
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const yearMonthMap = new Map<string, Map<number, number>>();
+    
+    incidents.forEach(incident => {
+      const date = new Date(incident.incident_date);
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      
+      if (!yearMonthMap.has(year.toString())) {
+        yearMonthMap.set(year.toString(), new Map());
+      }
+      const monthMap = yearMonthMap.get(year.toString())!;
+      monthMap.set(month, (monthMap.get(month) || 0) + 1);
+    });
+
+    const categories = monthNames;
+    const series = Array.from(yearMonthMap.entries()).map(([year, monthMap]) => ({
+      name: year,
+      data: monthNames.map((_, monthIndex) => monthMap.get(monthIndex) || 0)
+    }));
+
+    return { categories, series };
+  } else { // Day
+    // Group by day of week across years
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const yearDayMap = new Map<string, Map<number, number>>();
+    
+    incidents.forEach(incident => {
+      const date = new Date(incident.incident_date);
+      const year = date.getFullYear();
+      const dayOfWeek = date.getDay();
+      
+      if (!yearDayMap.has(year.toString())) {
+        yearDayMap.set(year.toString(), new Map());
+      }
+      const dayMap = yearDayMap.get(year.toString())!;
+      dayMap.set(dayOfWeek, (dayMap.get(dayOfWeek) || 0) + 1);
+    });
+
+    const categories = dayNames;
+    const series = Array.from(yearDayMap.entries()).map(([year, dayMap]) => ({
+      name: year,
+      data: dayNames.map((_, dayIndex) => dayMap.get(dayIndex) || 0)
+    }));
+
+    return { categories, series };
+  }
+};
 
 interface HoveredPointData {
   value: number;
@@ -15,15 +90,17 @@ interface HoveredPointData {
 }
 
 interface AnnualIncidentsComparisonProps {
+  mapView: __esri.MapView | null;
+  incidentsLayer: __esri.FeatureLayer | null;
   selectedGeometry?: __esri.Polygon | null;
   filters?: Partial<SafetyFilters>;
-  mapView?: __esri.MapView | null;
 }
 
 export default function AnnualIncidentsComparison({ 
+  mapView,
+  incidentsLayer,
   selectedGeometry = null, 
-  filters = {},
-  mapView = null
+  filters = {}
 }: AnnualIncidentsComparisonProps) {
   const [hoveredPoint, setHoveredPoint] = useState<HoveredPointData | null>(null);
   const [timeScale, setTimeScale] = useState<TimeScale>('Year');
@@ -38,6 +115,14 @@ export default function AnnualIncidentsComparison({
 
   // Create data service instance
   const dataService = useMemo(() => new SafetyChartDataService(), []);
+
+  // Use spatial query to get filtered data
+  const { result: spatialResult, isLoading: spatialLoading, error: spatialError } = useSafetyLayerViewSpatialQuery(
+    mapView,
+    incidentsLayer,
+    selectedGeometry,
+    filters
+  );
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -82,64 +167,66 @@ export default function AnnualIncidentsComparison({
     }
   }, [dataService]);
 
-  // Fetch data when selection, filters, or time scale change
+  // Process spatial query result to generate chart data
   useEffect(() => {
-    let isCurrent = true;
-    const run = async () => {
+    const processData = async () => {
       const newCacheKey = generateCacheKey(selectedGeometry, filters);
 
-      if (!selectedGeometry || !mapView) {
-        if (!isCurrent) return;
+      if (!selectedGeometry || !spatialResult?.incidents) {
         setChartData(null);
-        setError(null);
+        setError(spatialError);
+        setDataCache(new Map());
+        setCacheKey('');
         return;
       }
 
       // If we have cached data for current scale and same selection, use it
-      if (newCacheKey === cacheKey && dataCache.has(timeScale)) {
-        if (!isCurrent) return;
-        setChartData(dataCache.get(timeScale) || null);
-        setError(null);
-        return;
+      if (newCacheKey === cacheKey) {
+        const cachedData = dataCache.get(timeScale);
+        if (cachedData) {
+          setChartData(cachedData);
+          setError(null);
+          return;
+        }
       }
 
       setIsLoading(true);
       setError(null);
 
       try {
-        // Fetch current scale first
-        const result = await dataService.getAnnualIncidentsComparisonData(
-          mapView,
-          filters,
-          timeScale,
-          undefined,
-          selectedGeometry
-        );
-        if (!isCurrent) return;
+        // Process incidents data for the current time scale
+        const result = processIncidentsForTimeScale(spatialResult.incidents, timeScale);
+        
         setChartData(result);
+        setCacheKey(newCacheKey);
+
+        // Update cache with current result and preload other scales
+        const others = timeScales.filter(s => s !== timeScale);
         setDataCache(prev => {
           const updated = new Map(prev);
           updated.set(timeScale, result);
+          
+          // Only preload if not already cached
+          others.forEach(scale => {
+            if (!updated.has(scale)) {
+              const otherResult = processIncidentsForTimeScale(spatialResult.incidents, scale);
+              updated.set(scale, otherResult);
+            }
+          });
+          
           return updated;
         });
-        setCacheKey(newCacheKey);
-
-        // Preload the other scales in the background
-        const others = timeScales.filter(s => s !== timeScale);
-        preloadTimeScales(selectedGeometry, filters, mapView, others);
       } catch (err) {
-        if (!isCurrent) return;
-        console.error('Error fetching annual incidents data:', err);
-        setError('Failed to load annual incidents data');
+        console.error('Error processing annual incidents data:', err);
+        setError('Failed to process annual incidents data');
         setChartData(null);
       } finally {
-        if (isCurrent) setIsLoading(false);
+        setIsLoading(false);
       }
     };
 
-    run();
-    return () => { isCurrent = false; };
-  }, [selectedGeometry, mapView, filters, timeScale, cacheKey, dataCache, preloadTimeScales, dataService]);
+    processData();
+  }, [spatialResult, spatialError, selectedGeometry, filters, timeScale, cacheKey, dataService]);
 
   const onEvents = useMemo(
     () => ({
@@ -369,7 +456,7 @@ export default function AnnualIncidentsComparison({
           {selectedGeometry && (
             <div id="safety-annual-incidents-data-container" className="relative">
               {/* Loading overlay */}
-              {isLoading && (
+              {(isLoading || spatialLoading) && (
                 <div 
                   id="safety-annual-incidents-loading-overlay" 
                   className="absolute inset-0 bg-white bg-opacity-75 backdrop-blur-sm flex justify-center items-center z-20 rounded-md"
@@ -383,7 +470,7 @@ export default function AnnualIncidentsComparison({
               )}
 
               {/* Data content */}
-              <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'}`}>
+              <div className={`transition-opacity duration-200 ${(isLoading || spatialLoading) ? 'opacity-40' : 'opacity-100'}`}>
                 {chartData && !error && chartData.categories && chartData.categories.length > 0 ? (
             <>
               <div id="safety-annual-incidents-buttons-container" className="flex space-x-1 mt-2">

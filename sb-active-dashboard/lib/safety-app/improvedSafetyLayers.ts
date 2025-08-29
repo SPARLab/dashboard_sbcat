@@ -194,7 +194,13 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     new Field({ name: "vehicle_involved", alias: "Vehicle Involved", type: "small-integer" }),
     new Field({ name: "data_source", alias: "Data Source", type: "string" }),
     new Field({ name: "strava_id", alias: "Strava ID", type: "integer" }),
-    new Field({ name: "maxSeverity", alias: "Maximum Severity", type: "string" }) // NEW FIELD
+    new Field({ name: "maxSeverity", alias: "Maximum Severity", type: "string" }), // NEW FIELD
+    // Additional fields needed by sidebar components
+    new Field({ name: "loc_desc", alias: "Location Description", type: "string" }),
+    new Field({ name: "incident_date", alias: "Incident Date", type: "date" }),
+    new Field({ name: "bike_traffic", alias: "Bike Traffic", type: "string" }),
+    new Field({ name: "ped_traffic", alias: "Pedestrian Traffic", type: "string" }),
+    new Field({ name: "severity", alias: "Severity", type: "string" })
   ];
 
   // Create popup template for safety incidents
@@ -293,11 +299,13 @@ export class SafetyLayerService {
 
     // Wait for the layer view to be ready
     this.safetyLayerView = await mapView.whenLayerView(incidentsLayer) as __esri.FeatureLayerView;
-    
-    console.log("✅ SafetyLayerService initialized with layer view");
+  }
 
-    // Log successful initialization
-    console.log("✅ SafetyLayerService ready - severity filtering will use data source as proxy");
+  /**
+   * Check if the service is ready to apply filters
+   */
+  isReady(): boolean {
+    return this.safetyLayerView !== null;
   }
 
   /**
@@ -306,7 +314,6 @@ export class SafetyLayerService {
    */
   applyDataSourceFilter(dataSources: ('SWITRS' | 'BikeMaps.org')[]): void {
     if (!this.safetyLayerView) {
-      console.warn("SafetyLayerService: Layer view not initialized");
       return;
     }
 
@@ -339,8 +346,6 @@ export class SafetyLayerService {
     });
 
     this.safetyLayerView.filter = featureFilter;
-
-    console.log(`🎯 Applied FeatureFilter: ${whereClause}`);
   }
 
   /**
@@ -361,7 +366,6 @@ export class SafetyLayerService {
     };
   }): void {
     if (!this.safetyLayerView) {
-      console.warn("SafetyLayerService: Layer view not initialized");
       return;
     }
 
@@ -506,8 +510,6 @@ export class SafetyLayerService {
     });
 
     this.safetyLayerView.filter = featureFilter;
-
-    console.log(`🎯 Applied comprehensive FeatureFilter: ${finalWhereClause}`);
   }
 
   /**
@@ -515,12 +517,10 @@ export class SafetyLayerService {
    */
   clearFilters(): void {
     if (!this.safetyLayerView) {
-      console.warn("SafetyLayerService: Layer view not initialized");
       return;
     }
 
     this.safetyLayerView.filter = null;
-    console.log("🔄 Cleared all filters");
   }
 
   /**

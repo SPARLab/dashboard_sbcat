@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { SafetyFilters, ConflictTypeBreakdownData } from "../../../../lib/safety-app/types";
 import { SafetyChartDataService } from "../../../../lib/data-services/SafetyChartDataService";
+import { useSafetyLayerViewSpatialQuery } from "../../../../lib/hooks/useSpatialQuery";
 import CollapseExpandIcon from "../../../components/CollapseExpandIcon";
 import MoreInformationIcon from './MoreInformationIcon';
 
@@ -12,9 +13,10 @@ interface HoveredBarData {
 }
 
 interface ConflictTypeBreakdownProps {
+  mapView: __esri.MapView | null;
+  incidentsLayer: __esri.FeatureLayer | null;
   selectedGeometry?: __esri.Polygon | null;
   filters?: Partial<SafetyFilters>;
-  mapView?: __esri.MapView | null;
 }
 
 // Function to convert full conflict type names to abbreviated labels
@@ -66,9 +68,10 @@ const getFullName = (fullName: string): string => {
 };
 
 export default function ConflictTypeBreakdown({ 
+  mapView,
+  incidentsLayer,
   selectedGeometry = null, 
-  filters = {},
-  mapView = null
+  filters = {}
 }: ConflictTypeBreakdownProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
@@ -80,38 +83,77 @@ export default function ConflictTypeBreakdown({
   // Create data service instance
   const dataService = useMemo(() => new SafetyChartDataService(), []);
 
+  // Use spatial query to get filtered data
+  const { result: spatialResult, isLoading: spatialLoading, error: spatialError } = useSafetyLayerViewSpatialQuery(
+    mapView,
+    incidentsLayer,
+    selectedGeometry,
+    filters
+  );
+
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
 
-  // Fetch data when selection or filters change
+  // Process spatial query result to generate chart data
   useEffect(() => {
-    const fetchData = async () => {
+    const processData = async () => {
       // Don't load data if there's no selection
-      if (!selectedGeometry || !mapView) {
+      if (!selectedGeometry || !spatialResult?.incidents) {
         setChartData(null);
-        setError(null);
+        setError(spatialError);
         return;
       }
 
-      // Show loading and fetch new data
+      // Show loading and process new data
       setIsLoading(true);
       setError(null);
 
       try {
-        const result = await dataService.getConflictTypeBreakdownData(mapView, filters, selectedGeometry);
+        // Process incidents to create conflict type breakdown
+        const conflictMap = new Map<string, { total: number, bike: number, ped: number }>();
+        
+        spatialResult.incidents.forEach(incident => {
+          const conflictType = incident.conflict_type || 'Unknown';
+          const isBike = incident.parties?.some(p => p.party_type?.toLowerCase().includes('bike')) || false;
+          const isPed = incident.parties?.some(p => p.party_type?.toLowerCase().includes('ped')) || false;
+          
+          if (!conflictMap.has(conflictType)) {
+            conflictMap.set(conflictType, { total: 0, bike: 0, ped: 0 });
+          }
+          
+          const data = conflictMap.get(conflictType)!;
+          data.total += 1;
+          if (isBike) data.bike += 1;
+          if (isPed) data.ped += 1;
+        });
+
+        // Convert to the expected format
+        const totalIncidents = Array.from(conflictMap.values()).reduce((sum, data) => sum + data.total, 0);
+        const data = Array.from(conflictMap.entries())
+          .map(([name, counts]) => ({
+            name,
+            value: counts.total,
+            percentage: totalIncidents > 0 ? (counts.total / totalIncidents) * 100 : 0,
+            bikeCount: counts.bike,
+            pedCount: counts.ped
+          }))
+          .sort((a, b) => b.value - a.value); // Sort by count descending
+
+        const categories = data.map(item => item.name);
+        const result: ConflictTypeBreakdownData = { categories, data };
         setChartData(result);
       } catch (err) {
-        console.error('Error fetching conflict type breakdown data:', err);
-        setError('Failed to load conflict type breakdown data');
+        console.error('Error processing conflict type breakdown data:', err);
+        setError('Failed to process conflict type breakdown data');
         setChartData(null);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchData();
-  }, [selectedGeometry, mapView, filters, dataService]);
+    processData();
+  }, [spatialResult, spatialError, selectedGeometry, filters, dataService]);
 
   const onEvents = useMemo(
     () => ({
@@ -284,7 +326,7 @@ export default function ConflictTypeBreakdown({
           {selectedGeometry && (
             <div id="safety-conflict-type-data-container" className="relative">
               {/* Loading overlay */}
-              {isLoading && (
+              {(isLoading || spatialLoading) && (
                 <div 
                   id="safety-conflict-type-loading-overlay" 
                   className="absolute inset-0 bg-white bg-opacity-75 backdrop-blur-sm flex justify-center items-center z-20 rounded-md"
@@ -298,7 +340,7 @@ export default function ConflictTypeBreakdown({
               )}
 
               {/* Data content */}
-              <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'}`}>
+              <div className={`transition-opacity duration-200 ${(isLoading || spatialLoading) ? 'opacity-40' : 'opacity-100'}`}>
                 {chartData && !error ? (
                 <>
                   <div id="safety-conflict-type-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>

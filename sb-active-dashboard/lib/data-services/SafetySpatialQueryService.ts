@@ -31,17 +31,9 @@ export class SafetySpatialQueryService {
     error?: string;
   }> {
     try {
-      console.group('🔍 [SafetySpatialQueryService] Querying rendered layer');
-      console.log('Polygon:', polygon);
-      console.log('Polygon extent:', polygon.extent);
-      console.log('Applied filters:', filters);
-
       // Get the layer view (this contains only rendered features)
       const layerView = await mapView.whenLayerView(incidentsLayer) as FeatureLayerView;
       
-      console.log('Layer view ready:', !!layerView);
-      console.log('Layer view updating:', layerView.updating);
-
       // Wait for layer view to finish updating if needed
       if (layerView.updating) {
         await layerView.when();
@@ -55,9 +47,6 @@ export class SafetySpatialQueryService {
         outFields: ["*"]
       });
 
-      console.log('Raw query result:', queryResult);
-      console.log('Features found:', queryResult.features.length);
-
       // Convert ArcGIS features to our incident format
       const incidents: EnrichedSafetyIncident[] = queryResult.features.map(feature => {
         const attrs = feature.attributes;
@@ -66,26 +55,27 @@ export class SafetySpatialQueryService {
           objectid: attrs.objectid || attrs.OBJECTID,
           incident_id: attrs.incident_id,
           timestamp: attrs.timestamp,
+          incident_date: attrs.incident_date,
           data_source: attrs.data_source,
           conflict_type: attrs.conflict_type,
           pedestrian_involved: attrs.pedestrian_involved,
           bicyclist_involved: attrs.bicyclist_involved,
           maxSeverity: attrs.maxSeverity || attrs.max_severity,
+          severity: attrs.severity,
           latitude: attrs.latitude,
           longitude: attrs.longitude,
+          loc_desc: attrs.loc_desc,
+          strava_id: attrs.strava_id,
+          bike_traffic: attrs.bike_traffic,
+          ped_traffic: attrs.ped_traffic,
+          parties: attrs.parties, // Assuming parties are attached in some way
           geometry: feature.geometry
         } as EnrichedSafetyIncident;
       });
 
-      console.log('Converted incidents:', incidents.length);
-      console.log('Sample incident:', incidents[0]);
-
       // Calculate summary statistics
       const summary = this.calculateSummaryStatistics(incidents);
       
-      console.log('Summary statistics:', summary);
-      console.groupEnd();
-
       return {
         incidents,
         summary
@@ -93,7 +83,6 @@ export class SafetySpatialQueryService {
 
     } catch (error) {
       console.error('SafetySpatialQueryService error:', error);
-      console.groupEnd();
       
       return {
         incidents: [],

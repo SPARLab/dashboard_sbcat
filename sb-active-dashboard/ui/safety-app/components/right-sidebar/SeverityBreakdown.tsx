@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { SafetyFilters, SeverityBreakdownData } from "../../../../lib/safety-app/types";
 import { SafetyChartDataService } from "../../../../lib/data-services/SafetyChartDataService";
+import { useSafetyLayerViewSpatialQuery } from "../../../../lib/hooks/useSpatialQuery";
 import CollapseExpandIcon from "../../../components/CollapseExpandIcon";
 import MoreInformationIcon from './MoreInformationIcon';
 
@@ -12,15 +13,17 @@ interface HoveredBarData {
 }
 
 interface SeverityBreakdownProps {
+  mapView: __esri.MapView | null;
+  incidentsLayer: __esri.FeatureLayer | null;
   selectedGeometry?: __esri.Polygon | null;
   filters?: Partial<SafetyFilters>;
-  mapView?: __esri.MapView | null;
 }
 
 export default function SeverityBreakdown({ 
+  mapView,
+  incidentsLayer,
   selectedGeometry = null, 
-  filters = {},
-  mapView = null
+  filters = {}
 }: SeverityBreakdownProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [hoveredBar, setHoveredBar] = useState<HoveredBarData | null>(null);
@@ -31,38 +34,84 @@ export default function SeverityBreakdown({
   // Create data service instance
   const dataService = useMemo(() => new SafetyChartDataService(), []);
 
+  // Use spatial query to get filtered data
+  const { result: spatialResult, isLoading: spatialLoading, error: spatialError } = useSafetyLayerViewSpatialQuery(
+    mapView,
+    incidentsLayer,
+    selectedGeometry,
+    filters
+  );
+
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
 
-  // Fetch data when selection or filters change
+  // Process spatial query result to generate chart data
   useEffect(() => {
-    const fetchData = async () => {
+    const processData = async () => {
       // Don't load data if there's no selection
-      if (!selectedGeometry || !mapView) {
+      if (!selectedGeometry || !spatialResult?.incidents) {
         setChartData(null);
-        setError(null);
+        setError(spatialError);
         return;
       }
 
-      // Show loading and fetch new data
+      // Show loading and process new data
       setIsLoading(true);
       setError(null);
 
       try {
-        const result = await dataService.getSeverityBreakdownData(mapView, filters, selectedGeometry);
+        // Process incidents to create severity breakdown
+        const severityMap = new Map<string, { total: number, bike: number, ped: number }>();
+        
+        spatialResult.incidents.forEach(incident => {
+          const severity = incident.severity || 'Unknown';
+          const isBike = incident.parties?.some(p => p.party_type?.toLowerCase().includes('bike')) || false;
+          const isPed = incident.parties?.some(p => p.party_type?.toLowerCase().includes('ped')) || false;
+          
+          if (!severityMap.has(severity)) {
+            severityMap.set(severity, { total: 0, bike: 0, ped: 0 });
+          }
+          
+          const data = severityMap.get(severity)!;
+          data.total += 1;
+          if (isBike) data.bike += 1;
+          if (isPed) data.ped += 1;
+        });
+
+        // Convert to the expected format
+        const categories = ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'];
+        const totalByCategory = categories.map(category => severityMap.get(category)?.total || 0);
+        const bikeData = categories.map(category => severityMap.get(category)?.bike || 0);
+        const pedData = categories.map(category => severityMap.get(category)?.ped || 0);
+        
+        const totalIncidents = totalByCategory.reduce((sum, count) => sum + count, 0);
+        const bikePercentages = bikeData.map(count => totalIncidents > 0 ? (count / totalIncidents) * 100 : 0);
+        const pedPercentages = pedData.map(count => totalIncidents > 0 ? (count / totalIncidents) * 100 : 0);
+
+        const result: SeverityBreakdownData = {
+          categories,
+          totalByCategory,
+          bikeData,
+          pedData,
+          percentages: {
+            bike: bikePercentages,
+            ped: pedPercentages
+          }
+        };
+
         setChartData(result);
       } catch (err) {
-        console.error('Error fetching severity breakdown data:', err);
-        setError('Failed to load severity breakdown data');
+        console.error('Error processing severity breakdown data:', err);
+        setError('Failed to process severity breakdown data');
         setChartData(null);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchData();
-  }, [selectedGeometry, mapView, filters, dataService]);
+    processData();
+  }, [spatialResult, spatialError, selectedGeometry, filters, dataService]);
 
   const onEvents = useMemo(
     () => ({
@@ -212,7 +261,7 @@ export default function SeverityBreakdown({
           {selectedGeometry && (
             <div id="safety-severity-breakdown-data-container" className="relative">
               {/* Loading overlay */}
-              {isLoading && (
+              {(isLoading || spatialLoading) && (
                 <div 
                   id="safety-severity-breakdown-loading-overlay" 
                   className="absolute inset-0 bg-white bg-opacity-75 backdrop-blur-sm flex justify-center items-center z-20 rounded-md"
@@ -226,7 +275,7 @@ export default function SeverityBreakdown({
               )}
 
               {/* Data content */}
-              <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'}`}>
+              <div className={`transition-opacity duration-200 ${(isLoading || spatialLoading) ? 'opacity-40' : 'opacity-100'}`}>
                 {chartData && !error ? (
             <>
               <div id="safety-severity-breakdown-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>

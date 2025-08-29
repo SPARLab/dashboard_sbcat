@@ -5,13 +5,14 @@ import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
 import CollapseExpandIcon from "../../../components/CollapseExpandIcon";
 import MoreInformationIcon from './MoreInformationIcon';
 import { SafetyFilters } from "../../../../lib/safety-app/types";
-import { useSafetySpatialQuery } from "../../../../lib/hooks/useSpatialQuery";
+import { useSafetyLayerViewSpatialQuery } from "../../../../lib/hooks/useSpatialQuery";
 import { StravaSegmentService } from "../../../../lib/data-services/StravaSegmentService";
 
 interface MostDangerousAreasProps {
+  mapView: __esri.MapView | null;
+  incidentsLayer: __esri.FeatureLayer | null;
   selectedGeometry?: __esri.Polygon | null;
   filters?: Partial<SafetyFilters>;
-  mapView?: __esri.MapView | null;
 }
 
 interface DangerousAreaData {
@@ -21,9 +22,10 @@ interface DangerousAreaData {
 }
 
 export default function MostDangerousAreas({ 
+  mapView,
+  incidentsLayer,
   selectedGeometry = null, 
-  filters = {},
-  mapView = null
+  filters = {}
 }: MostDangerousAreasProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [areasData, setAreasData] = useState<DangerousAreaData[]>([]);
@@ -36,7 +38,12 @@ export default function MostDangerousAreas({
   const highlightLayerRef = useRef<GraphicsLayer | null>(null);
 
   // Use spatial query to get filtered data
-  const { result, isLoading: spatialLoading, error: spatialError } = useSafetySpatialQuery(selectedGeometry, filters);
+  const { result, isLoading: spatialLoading, error: spatialError } = useSafetyLayerViewSpatialQuery(
+    mapView,
+    incidentsLayer,
+    selectedGeometry,
+    filters
+  );
 
   // Initialize Strava service and highlight layer
   useEffect(() => {
@@ -67,7 +74,7 @@ export default function MostDangerousAreas({
   // Process data when spatial query result changes
   useEffect(() => {
     const processData = async () => {
-      if (!result?.data || result.data.length === 0) {
+      if (!result?.incidents || result.incidents.length === 0) {
         setAreasData([]);
         setIsProcessing(false);
         setError(null);
@@ -85,7 +92,7 @@ export default function MostDangerousAreas({
         }>();
 
         // Process each incident
-        result.data.forEach(incident => {
+        result.incidents.forEach(incident => {
           const locationKey = incident.loc_desc || 'Unknown Location';
           
           if (!locationMap.has(locationKey)) {

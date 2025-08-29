@@ -40,6 +40,7 @@ export default function NewSafetyMap({
   const [viewReady, setViewReady] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [serviceReady, setServiceReady] = useState(false);
   
   // Services
   const boundaryService = useRef(new GeographicBoundariesService());
@@ -85,7 +86,9 @@ export default function NewSafetyMap({
 
       if (mapView) {
         // Ensure popups are enabled
-        mapView.popup.autoOpenEnabled = false; // We'll handle popup opening manually
+        if (mapView.popup) {
+          mapView.popup.autoCloseEnabled = false; // We'll handle popup opening manually
+        }
         mapView.popupEnabled = true;
         
         mapView.goTo({
@@ -118,6 +121,7 @@ export default function NewSafetyMap({
         // Initialize the safety layer service for efficient DATA SOURCE filtering
         // This provides instant filtering for Police Reports vs BikeMaps.org toggles
         await safetyLayerService.initialize(mapViewRef.current, incidentsLayer);
+        setServiceReady(true);
 
         // Add boundary layers
         const boundaryLayers = boundaryService.current.getBoundaryLayers();
@@ -154,11 +158,11 @@ export default function NewSafetyMap({
   // This single effect handles ALL filter changes by applying a client-side FeatureFilter.
   // It is completely decoupled from the visualization logic and does NOT trigger data reloads.
   useEffect(() => {
-    if (!safetyLayerService) return;
+    if (!safetyLayerService || !serviceReady) {
+      return;
+    }
 
     const applyFilters = () => {
-
-      
       // Apply filter to the main incidents layer (for heatmaps)
       safetyLayerService.applyAdditionalFilters({
         dataSources: filters.dataSource || [],
@@ -174,7 +178,7 @@ export default function NewSafetyMap({
     };
 
     applyFilters();
-  }, [filters, safetyLayerService]);
+  }, [filters, safetyLayerService, serviceReady]);
 
   // Handle visualization type changes using original logic
   useEffect(() => {
