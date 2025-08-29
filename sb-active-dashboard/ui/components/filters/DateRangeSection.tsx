@@ -316,32 +316,29 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
       <div id="date-range-section">
         <h3 className="text-base font-medium text-gray-700 mb-3">Date Range</h3>
         <div ref={datePickerRef} id="date-range-picker" className="bg-gray-100 p-2 rounded-md">
-          <div className="flex justify-between items-center mb-1">
+          <div className="flex justify-between items-center mb-1 group cursor-pointer" onClick={openCalendar}>
             <div 
-              className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300 focus:outline-none active:outline-none"
-              onClick={openCalendar}
+              className="px-2 py-1 bg-gray-200 rounded group-hover:bg-gray-300 transition-colors focus:outline-none active:outline-none"
             >
-              <span id="start-date-label" className="text-sm text-gray-600">
+              <span id="start-date-label" className="text-sm text-gray-600 p-1">
                 {formatDate(selection.startDate)}
               </span>
+            </div>
+            <div 
+              className="flex items-center justify-center group-hover:scale-110 transition-transform"
+            >
               <img 
                 src={calendarIcon} 
-                alt="start date" 
-                className="w-3.5 h-3.5" 
+                alt="open calendar" 
+                className="w-4 h-4" 
               />
             </div>
             <div 
-              className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300 focus:outline-none active:outline-none"
-              onClick={openCalendar}
+              className="px-2 py-1 bg-gray-200 rounded group-hover:bg-gray-300 transition-colors focus:outline-none active:outline-none"
             >
-              <span id="end-date-label" className="text-sm text-gray-600">
+              <span id="end-date-label" className="text-sm text-gray-600 p-1">
                 {formatDate(selection.endDate)}
               </span>
-              <img 
-                src={calendarIcon} 
-                alt="end date" 
-                className="w-3.5 h-3.5" 
-              />
             </div>
           </div>
           
