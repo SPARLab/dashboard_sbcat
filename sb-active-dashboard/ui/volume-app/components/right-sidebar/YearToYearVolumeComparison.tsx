@@ -285,7 +285,7 @@ export default function YearToYearVolumeComparison({
 
             <button
               id="yoy-compare-button"
-              className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+              className={`px-2 py-2 max-h-12 rounded text-sm font-medium transition-colors ${
                 selectedYearA && selectedYearB && comparisonResult?.sharedCount > 0
                   ? 'bg-blue-500 text-white hover:bg-blue-600'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -293,7 +293,7 @@ export default function YearToYearVolumeComparison({
               disabled={!selectedYearA || !selectedYearB || !comparisonResult || comparisonResult.sharedCount === 0}
               onClick={handleCompareClick}
             >
-              Compare
+              Highlight Sites
             </button>
           </div>
         </div>
