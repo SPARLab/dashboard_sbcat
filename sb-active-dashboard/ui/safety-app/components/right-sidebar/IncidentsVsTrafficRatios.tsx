@@ -438,7 +438,7 @@ export default function IncidentsVsTrafficRatios({
       grid: {
         left: '64px',
         right: '20px',
-        top: '40px',
+        top: '10px',
         bottom: '60px',
         containLabel: false,
       },
@@ -490,7 +490,7 @@ export default function IncidentsVsTrafficRatios({
           {selectedGeometry && (
             <>
               <hr className="border-gray-200 mb-2" />
-              <div id="safety-incidents-vs-traffic-description" className="w-full text-sm text-gray-600 mb-6">
+              <div id="safety-incidents-vs-traffic-description" className="w-full text-sm text-gray-600 mb-2">
                 Relationship between traffic volume levels and incident counts by location
                 <span id="safety-incidents-vs-traffic-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
@@ -500,27 +500,29 @@ export default function IncidentsVsTrafficRatios({
                   />
                 </span>
               </div>
+              
+              <div id="safety-incidents-vs-traffic-tooltip-container" className="flex justify-center items-center text-center min-h-[4rem] px-4">
+                {hoveredPoint ? (
+                  <div
+                    id="safety-incidents-vs-traffic-tooltip"
+                    className="text-blue-600 text-sm font-medium"
+                  >
+                    <div id="safety-incidents-vs-traffic-tooltip-location" className="w-[18rem] break-words">{hoveredPoint.location}</div>
+                    <div id="safety-incidents-vs-traffic-tooltip-incidents">{hoveredPoint.incidentCount} incidents</div>
+                  </div>
+                ) : hasData ? (
+                  <div
+                    id="safety-incidents-vs-traffic-hover-hint"
+                    className="text-sm italic text-gray-400"
+                  >
+                    Hover for details <br/> Click to highlight on map
+                  </div>
+                ) : null }
+              </div>
             </>
           )}
 
           <div id="safety-incidents-vs-traffic-chart-container" className="relative">
-            {hoveredPoint ? (
-              <div
-                id="safety-incidents-vs-traffic-tooltip"
-                className="absolute -top-0 left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap text-center"
-              >
-                <div>{hoveredPoint.location}</div>
-                <div>{hoveredPoint.incidentCount} incidents</div>
-              </div>
-            ) : hasData ? (
-              <div
-                id="safety-incidents-vs-traffic-hover-hint"
-                className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 text-sm italic text-gray-400 whitespace-nowrap"
-              >
-                Hover for details • Click to highlight on map
-              </div>
-            ) : null}
-
             {/* No selection state */}
             {!selectedGeometry && (
               <div id="safety-incidents-vs-traffic-no-selection" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[120px]">
