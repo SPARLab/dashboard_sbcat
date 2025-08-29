@@ -631,27 +631,36 @@ export default function VolumeMap({
               <span>📊 Hexagon Areas (Zoom {currentZoomLevel.toFixed(1)})</span>
             )}
           </div>
+          <div className="text-xs text-gray-600 mb-2 font-medium">
+            {selectedMode === 'bike' ? 'Bicyclist' : 'Pedestrian'} Average Annual Daily Volume
+          </div>
           <div className="flex items-center gap-4">
             <div id="legend-low" className="flex items-center gap-1">
               <div 
                 className="w-4 h-4 rounded" 
                 style={{ backgroundColor: VOLUME_LEVEL_CONFIG.low.color }}
               ></div>
-              <span className="text-xs text-gray-600">Low (&lt;50)</span>
+              <span className="text-xs text-gray-600">
+                Low (&lt;{selectedMode === 'bike' ? '150' : '650'})
+              </span>
             </div>
             <div id="legend-medium" className="flex items-center gap-1">
               <div 
                 className="w-4 h-4 rounded" 
                 style={{ backgroundColor: VOLUME_LEVEL_CONFIG.medium.color }}
               ></div>
-              <span className="text-xs text-gray-600">Medium (50-200)</span>
+              <span className="text-xs text-gray-600">
+                Medium ({selectedMode === 'bike' ? '150-299' : '650-1299'})
+              </span>
             </div>
             <div id="legend-high" className="flex items-center gap-1">
               <div 
                 className="w-4 h-4 rounded" 
                 style={{ backgroundColor: VOLUME_LEVEL_CONFIG.high.color }}
               ></div>
-              <span className="text-xs text-gray-600">High (≥200)</span>
+              <span className="text-xs text-gray-600">
+                High (≥{selectedMode === 'bike' ? '300' : '1300'})
+              </span>
             </div>
           </div>
           {shouldShowLineSegments(currentZoomLevel) && (
