@@ -368,7 +368,7 @@ export default function IncidentsVsTrafficRatios({
         nameGap: 40,
         nameTextStyle: {
           color: '#6b7280',
-          fontSize: 12,
+          fontSize: 14,
           fontWeight: 500,
         },
         min: 0.5,
@@ -385,7 +385,7 @@ export default function IncidentsVsTrafficRatios({
         },
         axisLabel: {
           color: '#6b7280',
-          fontSize: 11,
+          fontSize: 14,
           formatter: (value: number) => {
             if (value === 1) return 'Low';
             if (value === 2) return 'Medium';
@@ -404,7 +404,7 @@ export default function IncidentsVsTrafficRatios({
         nameGap: 35,
         nameTextStyle: {
           color: '#6b7280',
-          fontSize: 12,
+          fontSize: 14,
           fontWeight: 500,
         },
         min: 0,
@@ -424,7 +424,7 @@ export default function IncidentsVsTrafficRatios({
         },
         axisLabel: {
           color: '#6b7280',
-          fontSize: 11,
+          fontSize: 14,
         },
         splitLine: {
           show: true,
@@ -436,10 +436,10 @@ export default function IncidentsVsTrafficRatios({
         },
       },
       grid: {
-        left: '64px',
+        left: '70px',
         right: '20px',
-        top: '10px',
-        bottom: '60px',
+        top: '20px',
+        bottom: '70px',
         containLabel: false,
       },
       series: [
@@ -565,10 +565,10 @@ export default function IncidentsVsTrafficRatios({
                       <div 
                         className="absolute pointer-events-none z-0"
                         style={{
-                          left: '64px',
-                          top: '40px',
+                          left: '70px',
+                          top: '20px',
                           right: '20px',
-                          bottom: '60px',
+                          bottom: '70px',
                           background: 'linear-gradient(140deg, rgba(251, 146, 60, 0.8) 0%, rgba(251, 146, 60, 0) 51%)'
                         }}
                       />
