@@ -609,8 +609,8 @@ export default function VolumeMap({
         />
       </MuiBox>
       
-      {/* Map Legend - Hidden for Raw Data View */}
-      {activeTab !== 'raw-data' && (
+      {/* Map Legend - Hidden for Raw Data and Data Completeness Views */}
+      {activeTab !== 'raw-data' && activeTab !== 'data-completeness' && (
         <div id="volume-map-legend" className="absolute bottom-5 right-5 bg-white p-3 rounded border border-gray-300 shadow-sm min-w-[200px]">
           <h4 id="legend-title" className="text-sm font-medium text-gray-700 mb-2">
             {modelCountsBy === "cost-benefit" ? "Cost Benefit Tool Legend" : "Volume Legend"}
