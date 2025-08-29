@@ -6,6 +6,7 @@
 
 import HeatmapRenderer from "@arcgis/core/renderers/HeatmapRenderer";
 import { SafetyFilters } from "../types";
+import { IncidentHeatmapRenderer } from "./IncidentHeatmapRenderer";
 
 export class IncidentVolumeRatioRenderer {
   /**
@@ -15,19 +16,11 @@ export class IncidentVolumeRatioRenderer {
   static createExposureWeightedHeatmap(): HeatmapRenderer {
     return new HeatmapRenderer({
       field: "weightedExposure", // This comes from joined IncidentHeatmapWeights data
-      blurRadius: 25,
-      maxDensity: 0.01, // Reduced to avoid everything being red
+      radius: 15, // Match incident heatmap radius
+      maxDensity: 0.02, // Match incident heatmap maxDensity
       minDensity: 0,
-      colorStops: [
-        { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
-        { ratio: 0.01, color: "rgba(0, 150, 0, 0.3)" }, // Dark green - very low risk
-        { ratio: 0.05, color: "rgba(50, 205, 50, 0.4)" }, // Lime green - low risk
-        { ratio: 0.15, color: "rgba(173, 255, 47, 0.5)" }, // Green yellow - low-medium risk
-        { ratio: 0.3, color: "rgba(255, 255, 0, 0.6)" }, // Yellow - medium risk
-        { ratio: 0.5, color: "rgba(255, 165, 0, 0.7)" }, // Orange - medium-high risk
-        { ratio: 0.7, color: "rgba(255, 69, 0, 0.8)" }, // Orange red - high risk
-        { ratio: 1.0, color: "rgba(220, 20, 60, 1.0)" } // Crimson - very high risk
-      ]
+      referenceScale: 72224, // Match incident heatmap referenceScale for consistency
+      colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Use same colors as incident heatmap
     });
   }
 
@@ -35,38 +28,14 @@ export class IncidentVolumeRatioRenderer {
    * Create a road user specific exposure-weighted heatmap
    */
   static createRoadUserExposureHeatmap(roadUser: 'pedestrian' | 'bicyclist'): HeatmapRenderer {
-    let colorStops;
-    
-    if (roadUser === 'bicyclist') {
-      // Green-to-red gradient for bicycle safety risk
-      colorStops = [
-        { ratio: 0, color: "rgba(255, 255, 255, 0)" },
-        { ratio: 0.1, color: "rgba(0, 128, 0, 0.2)" }, // Dark green - safe
-        { ratio: 0.2, color: "rgba(50, 205, 50, 0.4)" }, // Lime green - low risk
-        { ratio: 0.4, color: "rgba(255, 255, 0, 0.6)" }, // Yellow - medium risk
-        { ratio: 0.6, color: "rgba(255, 140, 0, 0.7)" }, // Dark orange - elevated risk
-        { ratio: 0.8, color: "rgba(255, 69, 0, 0.8)" }, // Orange red - high risk
-        { ratio: 1.0, color: "rgba(178, 34, 34, 1.0)" } // Fire brick - very high risk
-      ];
-    } else {
-      // Blue-to-red gradient for pedestrian safety risk
-      colorStops = [
-        { ratio: 0, color: "rgba(255, 255, 255, 0)" },
-        { ratio: 0.1, color: "rgba(0, 191, 255, 0.2)" }, // Deep sky blue - safe
-        { ratio: 0.2, color: "rgba(135, 206, 235, 0.4)" }, // Sky blue - low risk
-        { ratio: 0.4, color: "rgba(255, 255, 0, 0.6)" }, // Yellow - medium risk
-        { ratio: 0.6, color: "rgba(255, 140, 0, 0.7)" }, // Dark orange - elevated risk
-        { ratio: 0.8, color: "rgba(255, 69, 0, 0.8)" }, // Orange red - high risk
-        { ratio: 1.0, color: "rgba(220, 20, 60, 1.0)" } // Crimson - very high risk
-      ];
-    }
-
+    // Use consistent purple scheme for both road users to match incident heatmap
     return new HeatmapRenderer({
       field: "weightedExposure",
-      blurRadius: 22,
-      maxDensity: 0.015,
+      radius: 16, // Slightly larger for road user differentiation
+      maxDensity: 0.02, // Match incident heatmap
       minDensity: 0,
-      colorStops
+      referenceScale: 72224, // Match incident heatmap
+      colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Same colors as incident heatmap
     });
   }
 
@@ -75,33 +44,14 @@ export class IncidentVolumeRatioRenderer {
    * Different models may have different exposure calculation methods
    */
   static createModelSpecificHeatmap(model: string): HeatmapRenderer {
-    // Adjust visualization based on the exposure model used
-    let blurRadius = 25;
-    let maxDensity = 0.02;
-    
-    // Different models might require different visualization parameters
-    if (model.toLowerCase().includes('urban')) {
-      blurRadius = 20; // Tighter clustering for urban models
-      maxDensity = 0.025;
-    } else if (model.toLowerCase().includes('rural')) {
-      blurRadius = 30; // Wider spread for rural models
-      maxDensity = 0.015;
-    }
-
+    // Use consistent parameters regardless of model type
     return new HeatmapRenderer({
       field: "weightedExposure",
-      blurRadius,
-      maxDensity,
+      radius: 15, // Match incident heatmap
+      maxDensity: 0.02, // Match incident heatmap
       minDensity: 0,
-      colorStops: [
-        { ratio: 0, color: "rgba(255, 255, 255, 0)" },
-        { ratio: 0.15, color: "rgba(34, 139, 34, 0.3)" }, // Forest green - low risk
-        { ratio: 0.3, color: "rgba(154, 205, 50, 0.5)" }, // Yellow green - low-medium risk  
-        { ratio: 0.5, color: "rgba(255, 215, 0, 0.6)" }, // Gold - medium risk
-        { ratio: 0.7, color: "rgba(255, 140, 0, 0.75)" }, // Dark orange - high risk
-        { ratio: 0.85, color: "rgba(255, 69, 0, 0.85)" }, // Orange red - very high risk
-        { ratio: 1.0, color: "rgba(139, 0, 0, 1.0)" } // Dark red - extreme risk
-      ]
+      referenceScale: 72224, // Match incident heatmap
+      colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Same colors as incident heatmap
     });
   }
 
@@ -109,70 +59,14 @@ export class IncidentVolumeRatioRenderer {
    * Create a temporal exposure heatmap (incidents vs volume by time period)
    */
   static createTemporalExposureHeatmap(timePeriod: 'morning_peak' | 'evening_peak' | 'off_peak' | 'night'): HeatmapRenderer {
-    let colorStops;
-    let maxDensity = 0.02;
-    
-    switch (timePeriod) {
-      case 'morning_peak':
-        // Warm morning colors
-        colorStops = [
-          { ratio: 0, color: "rgba(255, 255, 255, 0)" },
-          { ratio: 0.1, color: "rgba(255, 228, 181, 0.3)" }, // Moccasin
-          { ratio: 0.3, color: "rgba(255, 215, 0, 0.5)" }, // Gold
-          { ratio: 0.5, color: "rgba(255, 165, 0, 0.7)" }, // Orange
-          { ratio: 0.7, color: "rgba(255, 99, 71, 0.8)" }, // Tomato
-          { ratio: 1.0, color: "rgba(220, 20, 60, 1.0)" } // Crimson
-        ];
-        maxDensity = 0.025; // Higher density expected during peak
-        break;
-        
-      case 'evening_peak':
-        // Warmer evening colors
-        colorStops = [
-          { ratio: 0, color: "rgba(255, 255, 255, 0)" },
-          { ratio: 0.1, color: "rgba(255, 218, 185, 0.3)" }, // Peach puff
-          { ratio: 0.3, color: "rgba(255, 160, 122, 0.5)" }, // Light salmon
-          { ratio: 0.5, color: "rgba(255, 99, 71, 0.7)" }, // Tomato
-          { ratio: 0.7, color: "rgba(255, 69, 0, 0.8)" }, // Orange red
-          { ratio: 1.0, color: "rgba(178, 34, 34, 1.0)" } // Fire brick
-        ];
-        maxDensity = 0.025;
-        break;
-        
-      case 'night':
-        // Cool nighttime colors
-        colorStops = [
-          { ratio: 0, color: "rgba(255, 255, 255, 0)" },
-          { ratio: 0.1, color: "rgba(176, 196, 222, 0.3)" }, // Light steel blue
-          { ratio: 0.3, color: "rgba(135, 206, 235, 0.5)" }, // Sky blue
-          { ratio: 0.5, color: "rgba(255, 255, 0, 0.7)" }, // Yellow (visibility concern)
-          { ratio: 0.7, color: "rgba(255, 140, 0, 0.8)" }, // Dark orange
-          { ratio: 1.0, color: "rgba(139, 0, 139, 1.0)" } // Dark magenta
-        ];
-        maxDensity = 0.015; // Lower density expected at night
-        break;
-        
-      case 'off_peak':
-      default:
-        // Neutral off-peak colors
-        colorStops = [
-          { ratio: 0, color: "rgba(255, 255, 255, 0)" },
-          { ratio: 0.1, color: "rgba(144, 238, 144, 0.3)" }, // Light green
-          { ratio: 0.3, color: "rgba(173, 255, 47, 0.5)" }, // Green yellow
-          { ratio: 0.5, color: "rgba(255, 255, 0, 0.7)" }, // Yellow
-          { ratio: 0.7, color: "rgba(255, 165, 0, 0.8)" }, // Orange
-          { ratio: 1.0, color: "rgba(255, 69, 0, 1.0)" } // Orange red
-        ];
-        maxDensity = 0.018;
-        break;
-    }
-
+    // Use consistent purple scheme for all time periods to match incident heatmap
     return new HeatmapRenderer({
       field: "weightedExposure",
-      blurRadius: 23,
-      maxDensity,
+      radius: 15, // Match incident heatmap
+      maxDensity: 0.02, // Match incident heatmap
       minDensity: 0,
-      colorStops
+      referenceScale: 72224, // Match incident heatmap
+      colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Same colors as incident heatmap
     });
   }
 
@@ -182,19 +76,11 @@ export class IncidentVolumeRatioRenderer {
   static createComparativeRiskHeatmap(): HeatmapRenderer {
     return new HeatmapRenderer({
       field: "riskRatio", // Computed field: incidents per unit population/volume
-      blurRadius: 30,
-      maxDensity: 0.012,
+      radius: 15, // Match incident heatmap
+      maxDensity: 0.02, // Match incident heatmap
       minDensity: 0,
-      colorStops: [
-        { ratio: 0, color: "rgba(255, 255, 255, 0)" },
-        { ratio: 0.05, color: "rgba(0, 100, 0, 0.2)" }, // Dark green - very safe
-        { ratio: 0.15, color: "rgba(34, 139, 34, 0.3)" }, // Forest green - safe
-        { ratio: 0.3, color: "rgba(173, 255, 47, 0.5)" }, // Green yellow - acceptable
-        { ratio: 0.5, color: "rgba(255, 255, 0, 0.7)" }, // Yellow - caution
-        { ratio: 0.7, color: "rgba(255, 140, 0, 0.8)" }, // Dark orange - concerning
-        { ratio: 0.85, color: "rgba(255, 69, 0, 0.9)" }, // Orange red - dangerous
-        { ratio: 1.0, color: "rgba(139, 0, 0, 1.0)" } // Dark red - very dangerous
-      ]
+      referenceScale: 72224, // Match incident heatmap
+      colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Same colors as incident heatmap
     });
   }
 
@@ -276,40 +162,8 @@ export class IncidentVolumeRatioRenderer {
    * Create data-driven color stops based on actual exposure distribution
    */
   static createDataDrivenColorStops(exposureValues: number[]): any[] {
-    if (exposureValues.length === 0) {
-      return [
-        { ratio: 0, color: "rgba(255, 255, 255, 0)" },
-        { ratio: 1, color: "rgba(220, 20, 60, 1.0)" }
-      ];
-    }
-
-    // Sort exposure values to find percentiles
-    const sortedValues = [...exposureValues].sort((a, b) => a - b);
-    const getPercentile = (p: number) => {
-      const index = Math.floor(p * (sortedValues.length - 1));
-      return sortedValues[index];
-    };
-
-    // Use percentiles to set color boundaries
-    const p10 = getPercentile(0.1);
-    const p25 = getPercentile(0.25);
-    const p50 = getPercentile(0.5);
-    const p75 = getPercentile(0.75);
-    const p90 = getPercentile(0.9);
-    const max = sortedValues[sortedValues.length - 1];
-
-
-
-    return [
-      { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
-      { ratio: 0.01, color: "rgba(0, 150, 0, 0.3)" }, // Dark green - very low risk
-      { ratio: 0.1, color: "rgba(50, 205, 50, 0.4)" }, // Lime green - low risk (p10)
-      { ratio: 0.25, color: "rgba(173, 255, 47, 0.5)" }, // Green yellow - low-medium risk (p25)
-      { ratio: 0.5, color: "rgba(255, 255, 0, 0.6)" }, // Yellow - medium risk (p50)
-      { ratio: 0.75, color: "rgba(255, 165, 0, 0.7)" }, // Orange - medium-high risk (p75)
-      { ratio: 0.9, color: "rgba(255, 69, 0, 0.8)" }, // Orange red - high risk (p90)
-      { ratio: 1.0, color: "rgba(220, 20, 60, 1.0)" } // Crimson - very high risk (max)
-    ];
+    // Always use the consistent purple scheme regardless of data distribution
+    return IncidentHeatmapRenderer.getColorScheme('purple');
   }
 
   /**
@@ -318,25 +172,13 @@ export class IncidentVolumeRatioRenderer {
   static createDataDrivenRenderer(exposureValues: number[]): HeatmapRenderer {
     const colorStops = this.createDataDrivenColorStops(exposureValues);
     
-    // For narrow data ranges, use extremely low maxDensity
-    const range = Math.max(...exposureValues) - Math.min(...exposureValues);
-    const avgValue = exposureValues.reduce((a, b) => a + b, 0) / exposureValues.length;
-    
-    let maxDensity = 0.005;
-    if (range < 5 && avgValue > 2) {
-      // Very narrow range with moderate-high values - use ultra-low density
-      maxDensity = 0.0001;
-    } else if (range < 10) {
-      maxDensity = 0.0005;
-    }
-    
-
-    
+    // Use consistent parameters to match incident heatmap
     return new HeatmapRenderer({
       field: "weightedExposure",
-      blurRadius: 25,
-      maxDensity,
+      radius: 15, // Match incident heatmap
+      maxDensity: 0.02, // Match incident heatmap
       minDensity: 0,
+      referenceScale: 72224, // Match incident heatmap
       colorStops
     });
   }
@@ -345,23 +187,13 @@ export class IncidentVolumeRatioRenderer {
    * Create a normalized renderer that uses 0-1 normalized exposure values
    */
   static createNormalizedRenderer(): HeatmapRenderer {
-
-    
     return new HeatmapRenderer({
       field: "normalizedExposure", // Use the normalized 0-1 values
-      blurRadius: 20, // Slightly tighter for more defined hotspots
-      maxDensity: 0.015, // Slightly higher to show more variation
+      radius: 15, // Match incident heatmap
+      maxDensity: 0.02, // Match incident heatmap
       minDensity: 0,
-      colorStops: [
-        { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
-        { ratio: 0.05, color: "rgba(0, 150, 0, 0.3)" }, // Dark green - very low risk
-        { ratio: 0.2, color: "rgba(50, 205, 50, 0.5)" }, // Lime green - low risk
-        { ratio: 0.4, color: "rgba(173, 255, 47, 0.6)" }, // Yellow-green - low-med risk
-        { ratio: 0.6, color: "rgba(255, 255, 0, 0.7)" }, // Yellow - medium risk
-        { ratio: 0.8, color: "rgba(255, 165, 0, 0.8)" }, // Orange - high risk
-        { ratio: 0.95, color: "rgba(255, 69, 0, 0.9)" }, // Orange-red - very high risk
-        { ratio: 1.0, color: "rgba(220, 20, 60, 1.0)" } // Crimson - extreme risk
-      ]
+      referenceScale: 72224, // Match incident heatmap
+      colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Use consistent purple scheme
     });
   }
 

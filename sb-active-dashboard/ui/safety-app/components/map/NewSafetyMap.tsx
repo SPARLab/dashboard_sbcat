@@ -76,8 +76,10 @@ export default function NewSafetyMap({
 
       if (mapView) {
         // Ensure popups are enabled
-        mapView.popup.autoOpenEnabled = false; // We'll handle popup opening manually
+        mapView.popup.autoCloseEnabled = true; // Auto-close popups when clicking elsewhere
         mapView.popupEnabled = true;
+        
+        // Note: Removed zoom listener - using referenceScale in renderer for consistent visualization
         
         mapView.goTo({
           center: [-120, 34.7],
@@ -196,6 +198,7 @@ export default function NewSafetyMap({
 
           case 'incident-heatmap':
             if (incidentsLayer) {
+              // Use renderer with referenceScale for consistent visualization across zoom levels
               incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
               incidentsLayer.visible = true;
             }

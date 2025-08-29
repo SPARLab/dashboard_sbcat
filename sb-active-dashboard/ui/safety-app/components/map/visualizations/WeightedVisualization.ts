@@ -147,22 +147,14 @@ export class WeightedVisualization {
         // Add the new severity layer
         mapView.map.add(severityLayer);
         
-        // Create a custom renderer for severity-based visualization
+        // Create a custom renderer using consistent purple scheme
         const severityRenderer = new (await import("@arcgis/core/renderers/HeatmapRenderer")).default({
           field: "normalizedSeverityScore", // Use our severity score field
-          blurRadius: 20,
-          maxDensity: 0.015,
+          radius: 15, // Match incident heatmap radius
+          maxDensity: 0.02, // Match incident heatmap maxDensity
           minDensity: 0,
-          colorStops: [
-            { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
-            { ratio: 0.05, color: "rgba(0, 150, 0, 0.3)" }, // Dark green - very low risk
-            { ratio: 0.2, color: "rgba(50, 205, 50, 0.5)" }, // Lime green - low risk
-            { ratio: 0.4, color: "rgba(173, 255, 47, 0.6)" }, // Yellow-green - low-med risk
-            { ratio: 0.6, color: "rgba(255, 255, 0, 0.7)" }, // Yellow - medium risk
-            { ratio: 0.8, color: "rgba(255, 165, 0, 0.8)" }, // Orange - high risk
-            { ratio: 0.95, color: "rgba(255, 69, 0, 0.9)" }, // Orange-red - very high risk
-            { ratio: 1.0, color: "rgba(220, 20, 60, 1.0)" } // Crimson - extreme risk
-          ]
+          referenceScale: 72224, // Match incident heatmap referenceScale
+          colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Use same purple scheme
         });
         
         severityLayer.renderer = severityRenderer;
@@ -245,22 +237,14 @@ export class WeightedVisualization {
       
 
       
-      // Create a custom renderer for traffic-based visualization
+      // Create a custom renderer using consistent purple scheme
       const trafficRenderer = new (await import("@arcgis/core/renderers/HeatmapRenderer")).default({
         field: "normalizedTrafficLevel", // Use our traffic level field
-        blurRadius: 20,
-        maxDensity: 0.015,
+        radius: 15, // Match incident heatmap radius
+        maxDensity: 0.02, // Match incident heatmap maxDensity
         minDensity: 0,
-        colorStops: [
-          { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
-          { ratio: 0.05, color: "rgba(0, 150, 0, 0.3)" }, // Dark green - very low risk
-          { ratio: 0.2, color: "rgba(50, 205, 50, 0.5)" }, // Lime green - low risk
-          { ratio: 0.4, color: "rgba(173, 255, 47, 0.6)" }, // Yellow-green - low-med risk
-          { ratio: 0.6, color: "rgba(255, 255, 0, 0.7)" }, // Yellow - medium risk
-          { ratio: 0.8, color: "rgba(255, 165, 0, 0.8)" }, // Orange - high risk
-          { ratio: 0.95, color: "rgba(255, 69, 0, 0.9)" }, // Orange-red - very high risk
-          { ratio: 1.0, color: "rgba(220, 20, 60, 1.0)" } // Crimson - extreme risk
-        ]
+        referenceScale: 72224, // Match incident heatmap referenceScale
+        colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Use same purple scheme
       });
       
       trafficLayer.renderer = trafficRenderer;
