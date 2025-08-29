@@ -259,15 +259,16 @@ export default function AnnualIncidentsComparison({
         itemHeight: 12,
       },
       series: chartSeries.map((series, index) => {
-        // Assign colors for different years
-        const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+        // Color-blind friendly palette - avoids red-green combinations
+        // Uses blue, orange, purple, teal, and brown for better accessibility
+        const colors = ['#3b82f6', '#f59e0b', '#8b5cf6', '#0891b2', '#92400e'];
         const color = colors[index % colors.length];
 
         if (timeScale === 'Year') {
           // This is a bar chart, so we need to make sure that we're setting the color
           // for each bar individually. We can do this by setting the color in the itemStyle
           // property of the series.
-          const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+          const colors = ['#3b82f6', '#f59e0b', '#8b5cf6', '#0891b2', '#92400e'];
           return {
             name: series.name,
             data: series.data,
