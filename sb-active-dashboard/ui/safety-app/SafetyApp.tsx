@@ -20,6 +20,7 @@ function useDebouncedValue<T>(value: T, delayMs: number = 300): T {
 
 export default function SafetyApp() {
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
+  const [incidentsLayer, setIncidentsLayer] = useState<__esri.FeatureLayer | null>(null);
   const [showDisclaimer, setShowDisclaimer] = useState(true);
   
   // Selection hook for polygon selection (same as volume page)
@@ -60,6 +61,10 @@ export default function SafetyApp() {
     setMapView(view);
   };
 
+  const handleIncidentsLayerReady = (layer: __esri.FeatureLayer) => {
+    setIncidentsLayer(layer);
+  };
+
   const debouncedFilters = useDebouncedValue(filters, 300);
 
 
@@ -86,12 +91,13 @@ export default function SafetyApp() {
           filters={debouncedFilters}
           geographicLevel={geographicLevel}
           onMapViewReady={handleMapViewReady}
+          onIncidentsLayerReady={handleIncidentsLayerReady}
           onSelectionChange={onSelectionChange}
           selectedAreaName={selectedAreaName}
-          showLoadingOverlay={!showDisclaimer}
         />
         <SafetyRightSidebar 
           mapView={mapView}
+          incidentsLayer={incidentsLayer}
           filters={debouncedFilters}
           selectedGeometry={selectedGeometry}
           selectedAreaName={selectedAreaName}

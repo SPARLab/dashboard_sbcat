@@ -9,6 +9,7 @@ import LocationIndicator from "../../components/LocationIndicator";
 
 interface SafetyRightSidebarProps {
   mapView: __esri.MapView | null;
+  incidentsLayer: __esri.FeatureLayer | null;
   filters: Partial<SafetyFilters>;
   selectedGeometry: __esri.Polygon | null;
   selectedAreaName?: string | null;
@@ -16,6 +17,7 @@ interface SafetyRightSidebarProps {
 
 export default function SafetyRightSidebar({
   mapView,
+  incidentsLayer,
   filters,
   selectedGeometry,
   selectedAreaName
@@ -40,6 +42,8 @@ export default function SafetyRightSidebar({
       <div id="safety-analysis-content" className="flex-1 overflow-y-auto no-scrollbar">
         <div id="safety-analysis-components" className="space-y-3 px-3.5 pt-4 pb-2">
           <SummaryStatistics 
+            mapView={mapView}
+            incidentsLayer={incidentsLayer}
             selectedGeometry={selectedGeometry}
             filters={filters}
           />

@@ -88,12 +88,127 @@ export class SafetyIncidentsDataService {
         paginatedQuery.num = pageSize;
         
         if (extent) {
-          paginatedQuery.geometry = extent;
-          paginatedQuery.spatialRelationship = "intersects";
+          // 🔧 TEST: Try the simple approach that works in Volume app
+          console.log('🔧 Testing simple approach (like Volume app)...');
+          
+          // Test 1: Raw polygon without any modifications
+          const rawTestQuery = incidentsLayer.createQuery();
+          rawTestQuery.where = whereClause;
+          rawTestQuery.geometry = extent;
+          rawTestQuery.spatialRelationship = "intersects";
+          const rawTestCount = await incidentsLayer.queryFeatureCount(rawTestQuery);
+          console.log('🔍 Raw polygon query count:', rawTestCount);
+          
+          let queryGeometry = extent;
+          
+          if (rawTestCount > 0) {
+            console.log('✅ SUCCESS: Raw polygon works! Using it directly.');
+            queryGeometry = extent;
+          } else if (extent.type === 'polygon') {
+            const polygon = extent as Polygon;
+            
+            // Test 2: Try with only outer ring if multiple rings
+            if (polygon.rings.length > 1) {
+              console.log('⚠️ Polygon has', polygon.rings.length, 'rings. Trying with outer ring only...');
+              try {
+                const Polygon = (await import("@arcgis/core/geometry/Polygon")).default;
+                const outerRingPolygon = new Polygon({
+                  rings: [polygon.rings[0]], // Use only the first (outer) ring
+                  spatialReference: polygon.spatialReference
+                });
+                
+                const outerRingTestQuery = incidentsLayer.createQuery();
+                outerRingTestQuery.where = whereClause;
+                outerRingTestQuery.geometry = outerRingPolygon;
+                outerRingTestQuery.spatialRelationship = "intersects";
+                const outerRingTestCount = await incidentsLayer.queryFeatureCount(outerRingTestQuery);
+                console.log('🔍 Outer ring only query count:', outerRingTestCount);
+                
+                if (outerRingTestCount > 0) {
+                  console.log('✅ SUCCESS: Using outer ring only works!');
+                  queryGeometry = outerRingPolygon;
+                }
+              } catch (error) {
+                console.error('Failed to test outer ring:', error);
+              }
+            }
+            
+            // Test 3: Try different spatial relationships
+            if (rawTestCount === 0) {
+              console.log('🔧 Testing different spatial relationships...');
+              
+              const relationships = ["within", "contains"];
+              for (const relationship of relationships) {
+                try {
+                  const relTestQuery = incidentsLayer.createQuery();
+                  relTestQuery.where = whereClause;
+                  relTestQuery.geometry = extent;
+                  relTestQuery.spatialRelationship = relationship as any;
+                  const relTestCount = await incidentsLayer.queryFeatureCount(relTestQuery);
+                  console.log(`🔍 "${relationship}" query count:`, relTestCount);
+                  
+                  if (relTestCount > 0) {
+                    console.log(`✅ SUCCESS: "${relationship}" relationship works!`);
+                    paginatedQuery.spatialRelationship = relationship as any;
+                    break;
+                  }
+                } catch (error) {
+                  console.log(`❌ "${relationship}" relationship failed:`, error);
+                }
+              }
+            }
+          }
+          
+          paginatedQuery.geometry = queryGeometry;
+          if (!paginatedQuery.spatialRelationship) {
+            paginatedQuery.spatialRelationship = "intersects";
+          }
+          
+          // 🔍 DEBUG: Log spatial query details for each page
+          if (offsetId === 0) { // Only log on first page to avoid spam
+            console.group('🔍 [SAFETY DEBUG] ArcGIS Spatial Query Details');
+            console.log('Query geometry:', extent);
+            console.log('Query geometry type:', extent.type);
+            console.log('Query geometry spatial reference:', extent.spatialReference?.wkid);
+            console.log('Spatial relationship:', paginatedQuery.spatialRelationship);
+            console.log('Where clause:', paginatedQuery.where);
+            
+            if (extent.type === 'polygon') {
+              const polygon = extent as Polygon;
+              console.log('Polygon extent:', {
+                xmin: polygon.extent?.xmin,
+                ymin: polygon.extent?.ymin,
+                xmax: polygon.extent?.xmax,
+                ymax: polygon.extent?.ymax
+              });
+              
+              if (polygon.rings && polygon.rings.length > 0) {
+                console.log('First ring coordinates (sample):');
+                polygon.rings[0].slice(0, 3).forEach((point, index) => {
+                  console.log(`  Point ${index}: [${point[0]}, ${point[1]}]`);
+                });
+              }
+            }
+            console.groupEnd();
+          }
         }
         
         const pageResult = await incidentsLayer.queryFeatures(paginatedQuery);
         const pageFeatures = pageResult.features;
+        
+        // 🔍 DEBUG: Log query results for each page
+        if (offsetId === 0) { // Only log on first page to avoid spam
+          console.group('🔍 [SAFETY DEBUG] ArcGIS Query Results');
+          console.log('Features returned in first page:', pageFeatures.length);
+          console.log('Page size limit:', pageSize);
+          
+          if (pageFeatures.length > 0) {
+            console.log('Sample feature attributes:', pageFeatures[0].attributes);
+            console.log('Sample feature geometry:', pageFeatures[0].geometry);
+            console.log('Sample feature geometry spatial reference:', pageFeatures[0].geometry?.spatialReference?.wkid);
+          }
+          console.groupEnd();
+        }
         
         if (pageFeatures.length === 0) {
           hasMore = false;
@@ -117,10 +232,169 @@ export class SafetyIncidentsDataService {
       const countQuery = incidentsLayer.createQuery();
       countQuery.where = whereClause;
       if (extent) {
+        // Use the same geometry and spatial relationship that worked for the main query
         countQuery.geometry = extent;
         countQuery.spatialRelationship = "intersects";
       }
       const totalCount = await incidentsLayer.queryFeatureCount(countQuery);
+      
+      // 🔍 DEBUG: Log final count verification
+      console.group('🔍 [SAFETY DEBUG] Final Count Verification');
+      console.log('Total incidents collected via pagination:', incidents.length);
+      console.log('Total count from queryFeatureCount:', totalCount);
+      console.log('Pagination successful:', totalCount === incidents.length);
+      
+      // Test query without spatial filter to compare
+      if (extent && totalCount === 0) {
+        console.log('🔍 Testing query WITHOUT spatial filter...');
+        const testQuery = incidentsLayer.createQuery();
+        testQuery.where = whereClause;
+        // No geometry filter
+        const testCount = await incidentsLayer.queryFeatureCount(testQuery);
+        console.log('Count WITHOUT spatial filter:', testCount);
+        
+        if (testCount > 0) {
+          console.log('⚠️ SPATIAL FILTER ISSUE: Data exists but spatial query returns 0!');
+          
+          // 🔧 FALLBACK: Try using polygon extent as a rectangle instead
+          console.log('🔧 Trying fallback: using polygon extent as rectangle...');
+          try {
+            const Extent = (await import("@arcgis/core/geometry/Extent")).default;
+            const extentGeometry = new Extent({
+              xmin: extent.extent?.xmin,
+              ymin: extent.extent?.ymin,
+              xmax: extent.extent?.xmax,
+              ymax: extent.extent?.ymax,
+              spatialReference: extent.spatialReference
+            });
+            
+            const fallbackQuery = incidentsLayer.createQuery();
+            fallbackQuery.where = whereClause;
+            fallbackQuery.geometry = extentGeometry;
+            fallbackQuery.spatialRelationship = "intersects";
+            const fallbackCount = await incidentsLayer.queryFeatureCount(fallbackQuery);
+            console.log('Fallback extent query count:', fallbackCount);
+            
+            if (fallbackCount > 0) {
+              console.log('✅ SOLUTION FOUND: Extent-based query works! Polygon geometry issue confirmed.');
+            }
+          } catch (error) {
+            console.error('Fallback extent query failed:', error);
+          }
+          
+          // 🔍 DEBUGGING: Find incidents near your polygon area
+          console.log('🔍 Searching for incidents near your polygon area...');
+          
+          // First, check if there are any incidents EXACTLY within the polygon bounds
+          try {
+            const exactBoundsQuery = incidentsLayer.createQuery();
+            exactBoundsQuery.where = whereClause;
+            exactBoundsQuery.outFields = ["*"];
+            exactBoundsQuery.returnGeometry = true;
+            exactBoundsQuery.num = 10;
+            
+            const allIncidents = await incidentsLayer.queryFeatures(exactBoundsQuery);
+            console.log('🔍 Checking all incidents against your polygon bounds...');
+            
+            let insideCount = 0;
+            const polygonBounds = extent.extent;
+            
+            if (allIncidents.features.length > 0 && polygonBounds) {
+              allIncidents.features.forEach((feature, index) => {
+                if (feature.geometry && feature.geometry.type === 'point') {
+                  const point = feature.geometry as __esri.Point;
+                  const isInside = point.x >= polygonBounds.xmin && 
+                                 point.x <= polygonBounds.xmax && 
+                                 point.y >= polygonBounds.ymin && 
+                                 point.y <= polygonBounds.ymax;
+                  
+                  if (isInside) {
+                    insideCount++;
+                    if (insideCount <= 3) {
+                      console.log(`✅ Incident INSIDE bounds at: [${point.x}, ${point.y}]`);
+                    }
+                  }
+                }
+              });
+              
+              console.log(`📊 Manual check: ${insideCount} incidents are within your polygon bounds`);
+              
+              if (insideCount > 0) {
+                console.log('🚨 CRITICAL: Incidents exist within bounds but spatial query fails!');
+                console.log('🔍 This confirms a polygon geometry issue, not a location issue.');
+              }
+            }
+          } catch (error) {
+            console.error('Manual bounds check failed:', error);
+          }
+          
+          try {
+            // Expand search area around your polygon
+            const expandedExtent = {
+              xmin: (extent.extent?.xmin || 0) - 1000, // 1000 meter buffer
+              ymin: (extent.extent?.ymin || 0) - 1000,
+              xmax: (extent.extent?.xmax || 0) + 1000,
+              ymax: (extent.extent?.ymax || 0) + 1000
+            };
+            
+            const nearbyQuery = incidentsLayer.createQuery();
+            nearbyQuery.where = whereClause;
+            nearbyQuery.geometry = new (await import("@arcgis/core/geometry/Extent")).default({
+              ...expandedExtent,
+              spatialReference: extent.spatialReference
+            });
+            nearbyQuery.spatialRelationship = "intersects";
+            nearbyQuery.num = 5;
+            nearbyQuery.returnGeometry = true;
+            
+            const nearbyResult = await incidentsLayer.queryFeatures(nearbyQuery);
+            console.log('Incidents found in expanded area (1km buffer):', nearbyResult.features.length);
+            
+            if (nearbyResult.features.length > 0) {
+              console.log('📍 Nearby incident locations:');
+              nearbyResult.features.slice(0, 3).forEach((feature, index) => {
+                if (feature.geometry && feature.geometry.type === 'point') {
+                  const point = feature.geometry as __esri.Point;
+                  console.log(`  Incident ${index + 1}: [${point.x}, ${point.y}]`);
+                }
+              });
+              console.log('💡 TIP: Try drawing your polygon closer to these coordinates!');
+            }
+          } catch (error) {
+            console.error('Nearby search failed:', error);
+          }
+          
+          // Get a sample feature to compare coordinates
+          const sampleQuery = incidentsLayer.createQuery();
+          sampleQuery.where = whereClause;
+          sampleQuery.num = 1;
+          sampleQuery.returnGeometry = true;
+          const sampleResult = await incidentsLayer.queryFeatures(sampleQuery);
+          if (sampleResult.features.length > 0) {
+            const sampleFeature = sampleResult.features[0];
+            console.log('Sample feature geometry:', sampleFeature.geometry);
+            console.log('Sample feature spatial reference:', sampleFeature.geometry?.spatialReference?.wkid);
+            
+            // Log actual coordinates of sample feature
+            if (sampleFeature.geometry && sampleFeature.geometry.type === 'point') {
+              const point = sampleFeature.geometry as __esri.Point;
+              console.log('Sample feature coordinates: [' + point.x + ', ' + point.y + ']');
+              console.log('🔍 COORDINATE COMPARISON:');
+              console.log('  Your polygon extent: xmin=' + extent.extent?.xmin + ', ymin=' + extent.extent?.ymin + ', xmax=' + extent.extent?.xmax + ', ymax=' + extent.extent?.ymax);
+              console.log('  Sample feature point: x=' + point.x + ', y=' + point.y);
+              
+              // Check if point is within polygon extent
+              const withinExtent = point.x >= (extent.extent?.xmin || 0) && 
+                                 point.x <= (extent.extent?.xmax || 0) && 
+                                 point.y >= (extent.extent?.ymin || 0) && 
+                                 point.y <= (extent.extent?.ymax || 0);
+              console.log('  Point within polygon extent: ' + withinExtent);
+            }
+          }
+        }
+      }
+      
+      console.groupEnd();
       
       if (totalCount > incidents.length) {
         console.warn(`[WARNING] Pagination may have missed some records! Got ${incidents.length} but total is ${totalCount}`);
@@ -243,7 +517,39 @@ export class SafetyIncidentsDataService {
     geometry?: Polygon,
   ): Promise<SafetyAnalysisResult> {
     try {
-      const rawData = await this.querySafetyData(geometry || extent, filters);
+      // 🔍 DEBUG: Log parameters received by getEnrichedSafetyData
+      console.group('🔍 [SAFETY DEBUG] SafetyIncidentsDataService.getEnrichedSafetyData');
+      console.log('Parameters received:');
+      console.log('  extent:', extent);
+      console.log('  geometry:', geometry);
+      console.log('  filters:', filters ? JSON.parse(JSON.stringify(filters)) : 'none');
+      
+      const spatialFilter = geometry || extent;
+      console.log('Using spatial filter:', spatialFilter);
+      
+      if (spatialFilter && spatialFilter.type === 'polygon') {
+        const polygon = spatialFilter as Polygon;
+        console.log('Spatial filter details:');
+        console.log('  Type:', polygon.type);
+        console.log('  Spatial Reference WKID:', polygon.spatialReference?.wkid);
+        console.log('  Extent:', {
+          xmin: polygon.extent?.xmin,
+          ymin: polygon.extent?.ymin,
+          xmax: polygon.extent?.xmax,
+          ymax: polygon.extent?.ymax
+        });
+      }
+      console.groupEnd();
+      
+      const rawData = await this.querySafetyData(spatialFilter, filters);
+      
+      // 🔍 DEBUG: Log raw query results
+      console.group('🔍 [SAFETY DEBUG] Raw Query Results');
+      console.log('Incidents found:', rawData.incidents?.length || 0);
+      console.log('Parties found:', rawData.parties?.length || 0);
+      console.log('Query error:', rawData.error);
+      console.log('Is loading:', rawData.isLoading);
+      console.groupEnd();
       
       if (rawData.error) {
         return {
@@ -262,6 +568,12 @@ export class SafetyIncidentsDataService {
 
       // Calculate summary statistics
       const summary = this.calculateSummaryStatistics(enrichedIncidents);
+
+      // 🔍 DEBUG: Log final results
+      console.group('🔍 [SAFETY DEBUG] Final Enriched Results');
+      console.log('Enriched incidents:', enrichedIncidents.length);
+      console.log('Summary statistics:', summary);
+      console.groupEnd();
 
       return {
         data: enrichedIncidents,
@@ -416,11 +728,25 @@ export class SafetyIncidentsDataService {
     const bikeIncidents = incidents.filter(inc => inc.bicyclist_involved === 1).length;
     const pedIncidents = incidents.filter(inc => inc.pedestrian_involved === 1).length;
     
+    // 🔍 DEBUG: Log all unique severity values to understand data
+    if (total > 0) {
+      const uniqueSeverities = [...new Set(incidents.map(inc => inc.maxSeverity))];
+      console.log('🔍 [SAFETY DEBUG] Unique severity values found:', uniqueSeverities);
+      console.log('🔍 [SAFETY DEBUG] Severity breakdown:');
+      uniqueSeverities.forEach(severity => {
+        const count = incidents.filter(inc => inc.maxSeverity === severity).length;
+        console.log(`  "${severity}": ${count} incidents`);
+      });
+    }
+    
     // Calculate severity statistics based on actual database values
     
     const fatalIncidents = incidents.filter(inc => inc.maxSeverity === 'Fatality').length;
     const injuryIncidents = incidents.filter(inc => 
       inc.maxSeverity === 'Injury' || inc.maxSeverity === 'Severe Injury'
+    ).length;
+    const unknownIncidents = incidents.filter(inc => 
+      inc.maxSeverity === 'Unknown' || inc.maxSeverity === '' || !inc.maxSeverity
     ).length;
     
     // Near misses are "No Injury" incidents from BikeMaps.org
@@ -452,6 +778,7 @@ export class SafetyIncidentsDataService {
       fatalIncidents,
       injuryIncidents,
       nearMissIncidents,
+      unknownIncidents,
       avgSeverityScore,
       incidentsPerDay,
       dataSourceBreakdown: {
@@ -514,6 +841,7 @@ export class SafetyIncidentsDataService {
       fatalIncidents: 0,
       injuryIncidents: 0,
       nearMissIncidents: 0,
+      unknownIncidents: 0,
       avgSeverityScore: 0,
       incidentsPerDay: 0,
       dataSourceBreakdown: {

@@ -1,21 +1,30 @@
 import React, { useState } from "react";
 import { SafetyFilters } from "../../../../lib/safety-app/types";
-import { useSafetySpatialQuery } from "../../../../lib/hooks/useSpatialQuery";
+import { useSafetyLayerViewSpatialQuery } from "../../../../lib/hooks/useSpatialQuery";
 import CollapseExpandIcon from "../../../components/CollapseExpandIcon";
 
 interface SummaryStatisticsProps {
+  mapView: __esri.MapView | null;
+  incidentsLayer: __esri.FeatureLayer | null;
   selectedGeometry?: __esri.Polygon | null;
   filters?: Partial<SafetyFilters>;
 }
 
 export default function SummaryStatistics({ 
+  mapView,
+  incidentsLayer,
   selectedGeometry = null, 
   filters = {} 
 }: SummaryStatisticsProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  // Use spatial query hook to get filtered data based on selection
-  const { result, isLoading, error } = useSafetySpatialQuery(selectedGeometry, filters);
+  // 🚀 NEW: Use fast layer view spatial query hook
+  const { result, isLoading, error } = useSafetyLayerViewSpatialQuery(
+    mapView,
+    incidentsLayer,
+    selectedGeometry,
+    filters
+  );
   
   // Use the summary data from the spatial query only when there's a selection
   const summaryData = result?.summary;
@@ -90,6 +99,10 @@ export default function SummaryStatistics({
                     <div id="safety-summary-near-misses" className="bg-gray-100 flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">
                       <span id="safety-summary-near-misses-label" className="text-gray-900">Near Misses</span>
                       <span id="safety-summary-near-misses-value" className="text-gray-900">{summaryData.nearMissIncidents.toLocaleString()}</span>
+                    </div>
+                    <div id="safety-summary-unknown" className="bg-white flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">
+                      <span id="safety-summary-unknown-label" className="text-gray-900">Unknown Severity</span>
+                      <span id="safety-summary-unknown-value" className="text-gray-900">{summaryData.unknownIncidents.toLocaleString()}</span>
                     </div>
                   </>
                 ) : error ? (

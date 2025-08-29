@@ -20,6 +20,7 @@ interface NewSafetyMapProps {
   activeVisualization: SafetyVisualizationType;
   filters: Partial<SafetyFilters>;
   onMapViewReady?: (mapView: __esri.MapView) => void;
+  onIncidentsLayerReady?: (layer: __esri.FeatureLayer) => void;
   geographicLevel: string;
   onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | null) => void;
   showLoadingOverlay?: boolean;
@@ -29,6 +30,7 @@ export default function NewSafetyMap({
   activeVisualization,
   filters,
   onMapViewReady,
+  onIncidentsLayerReady,
   geographicLevel,
   onSelectionChange,
   showLoadingOverlay = true
@@ -67,6 +69,13 @@ export default function NewSafetyMap({
     setDataLoading,
     setDataError
   );
+
+  // Notify parent when incidents layer is ready
+  useEffect(() => {
+    if (incidentsLayer && onIncidentsLayerReady) {
+      onIncidentsLayerReady(incidentsLayer);
+    }
+  }, [incidentsLayer, onIncidentsLayerReady]);
 
   // Handle ArcGIS view ready
   const handleArcgisViewReadyChange = (event: CustomEvent) => {
@@ -262,8 +271,35 @@ export default function NewSafetyMap({
 
         sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
           if (event.state === 'complete') {
+            const polygon = event.graphic.geometry as Polygon;
+            
+            // 🔍 DEBUG: Log detailed polygon coordinates
+            console.group('🔍 [SAFETY DEBUG] Custom Draw Tool - Polygon Created');
+            console.log('Raw polygon object:', polygon);
+            console.log('Polygon type:', polygon.type);
+            console.log('Spatial Reference WKID:', polygon.spatialReference?.wkid);
+            console.log('Number of rings:', polygon.rings?.length);
+            
+            if (polygon.rings && polygon.rings.length > 0) {
+              console.log('First ring coordinates (first 5 points):');
+              polygon.rings[0].slice(0, 5).forEach((point, index) => {
+                console.log(`  Point ${index}: [${point[0]}, ${point[1]}]`);
+              });
+              console.log('Polygon extent:', {
+                xmin: polygon.extent?.xmin,
+                ymin: polygon.extent?.ymin,
+                xmax: polygon.extent?.xmax,
+                ymax: polygon.extent?.ymax
+              });
+            }
+            console.groupEnd();
+            
             if (onSelectionChange) {
-              onSelectionChange({ geometry: event.graphic.geometry as Polygon });
+              // Match the working VolumeMap.tsx implementation exactly
+              onSelectionChange({ 
+                geometry: polygon,
+                areaName: 'Custom Selected Area'
+              });
             }
           }
         });

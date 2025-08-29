@@ -6,6 +6,7 @@ interface SafetyMapAreaProps {
   filters?: Partial<SafetyFilters>;
   geographicLevel?: string;
   onMapViewReady?: (mapView: __esri.MapView) => void;
+  onIncidentsLayerReady?: (layer: __esri.FeatureLayer) => void;
   onSelectionChange?: (data: { geometry: __esri.Polygon | null; areaName?: string | null } | null) => void;
   selectedAreaName?: string | null;
 }
@@ -14,6 +15,7 @@ export default function SafetyMapArea({
   filters = {},
   geographicLevel = 'cities',
   onMapViewReady,
+  onIncidentsLayerReady,
   onSelectionChange,
   selectedAreaName
 }: SafetyMapAreaProps) {
@@ -63,6 +65,7 @@ export default function SafetyMapArea({
             filters={filters}
             geographicLevel={geographicLevel}
             onMapViewReady={onMapViewReady}
+            onIncidentsLayerReady={onIncidentsLayerReady}
             onSelectionChange={onSelectionChange}
           />
         </div>

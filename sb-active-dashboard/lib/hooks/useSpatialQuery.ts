@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import MapView from "@arcgis/core/views/MapView";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import { queryAADTWithinPolygon, queryVolumeCountSitesWithinPolygon, getSelectedAreaDescription } from '../utilities/spatialQueries';
 import { SafetyIncidentsDataService } from '../data-services/SafetyIncidentsDataService';
-import { SafetyFilters, SafetyAnalysisResult } from '../safety-app/types';
+import { SafetySpatialQueryService } from '../data-services/SafetySpatialQueryService';
+import { SafetyFilters, SafetyAnalysisResult, SafetySummaryData, EnrichedSafetyIncident } from '../safety-app/types';
 import { CountSiteProcessingService } from '../utilities/volume-utils/count-site-processing';
 
 interface SpatialQueryResult {
@@ -177,12 +179,50 @@ export const useSafetySpatialQuery = (
         if (cancelled) return;
         const myRequestId = ++requestIdRef.current;
         setIsLoading(true);
+        
+        // 🔍 DEBUG: Log detailed geometry information before query
+        console.group('🔍 [SAFETY DEBUG] useSafetySpatialQuery - Starting Query');
+        console.log('Query ID:', myRequestId);
+        console.log('Selected geometry:', selectedGeometry);
+        
+        if (selectedGeometry) {
+          console.log('Geometry details:');
+          console.log('  Type:', selectedGeometry.type);
+          console.log('  Spatial Reference WKID:', selectedGeometry.spatialReference?.wkid);
+          console.log('  Number of rings:', selectedGeometry.rings?.length);
+          console.log('  Extent:', {
+            xmin: selectedGeometry.extent?.xmin,
+            ymin: selectedGeometry.extent?.ymin,
+            xmax: selectedGeometry.extent?.xmax,
+            ymax: selectedGeometry.extent?.ymax
+          });
+          
+          if (selectedGeometry.rings && selectedGeometry.rings.length > 0) {
+            console.log('  First ring sample coordinates (first 3 points):');
+            selectedGeometry.rings[0].slice(0, 3).forEach((point, index) => {
+              console.log(`    Point ${index}: [${point[0]}, ${point[1]}]`);
+            });
+          }
+        }
+        
+        console.log('Applied filters:', filters ? JSON.parse(JSON.stringify(filters)) : 'none');
+        console.groupEnd();
+        
         console.debug('[useSafetySpatialQuery] Executing query id', myRequestId);
         try {
           const queryResult = await SafetyIncidentsDataService.getEnrichedSafetyData(
             selectedGeometry,
             filters
           );
+
+          // 🔍 DEBUG: Log query results
+          console.group('🔍 [SAFETY DEBUG] useSafetySpatialQuery - Query Results');
+          console.log('Query ID:', myRequestId);
+          console.log('Result summary:', queryResult?.summary);
+          console.log('Total incidents found:', queryResult?.data?.length || 0);
+          console.log('Is loading:', queryResult?.isLoading);
+          console.log('Error:', queryResult?.error);
+          console.groupEnd();
 
           if (!cancelled && myRequestId === requestIdRef.current) {
             setResult(queryResult);
@@ -210,6 +250,90 @@ export const useSafetySpatialQuery = (
       console.debug('[useSafetySpatialQuery] Cancelled pending timer');
     };
   }, [selectedGeometry, JSON.stringify(filters), debounceMs]); // Stringify filters to ensure proper dependency tracking
+
+  return {
+    result,
+    isLoading,
+    error,
+  };
+};
+
+/**
+ * NEW: Hook for safety spatial queries using rendered layer view (FAST!)
+ * This queries the already-rendered features on the map instead of making server requests
+ */
+export const useSafetyLayerViewSpatialQuery = (
+  mapView: MapView | null,
+  incidentsLayer: FeatureLayer | null,
+  selectedGeometry: Polygon | null,
+  filters?: Partial<SafetyFilters>,
+  debounceMs: number = 300
+): {
+  result: { incidents: EnrichedSafetyIncident[]; summary: SafetySummaryData } | null;
+  isLoading: boolean;
+  error: string | null;
+} => {
+  const [result, setResult] = useState<{ incidents: EnrichedSafetyIncident[]; summary: SafetySummaryData } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!mapView || !incidentsLayer || !selectedGeometry) {
+      setResult(null);
+      setError(null);
+      return;
+    }
+
+    console.log('🔍 [useSafetyLayerViewSpatialQuery] Starting layer view query');
+    console.log('MapView:', !!mapView);
+    console.log('IncidentsLayer:', !!incidentsLayer);
+    console.log('Selected geometry:', selectedGeometry);
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      if (cancelled) return;
+      
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const queryResult = await SafetySpatialQueryService.queryIncidentsWithinPolygon(
+          mapView,
+          incidentsLayer,
+          selectedGeometry,
+          filters
+        );
+
+        if (!cancelled) {
+          if (queryResult.error) {
+            setError(queryResult.error);
+            setResult(null);
+          } else {
+            setResult({
+              incidents: queryResult.incidents,
+              summary: queryResult.summary
+            });
+            console.log('🔍 [useSafetyLayerViewSpatialQuery] Success:', queryResult.summary.totalIncidents, 'incidents found');
+          }
+        }
+      } catch (err) {
+        console.error('Safety layer view spatial query failed:', err);
+        if (!cancelled) {
+          setError('Failed to query safety incidents within selected area');
+          setResult(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }, debounceMs);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [mapView, incidentsLayer, selectedGeometry, filters, debounceMs]);
 
   return {
     result,

@@ -84,6 +84,7 @@ export interface SafetySummaryData {
   fatalIncidents: number;
   injuryIncidents: number;
   nearMissIncidents: number;
+  unknownIncidents: number;
   avgSeverityScore: number;
   incidentsPerDay: number;
   dataSourceBreakdown: {
