@@ -417,7 +417,7 @@ export default function AnnualIncidentsComparison({
                 {hoveredPoint && (
                   <div
                     id="safety-incidents-chart-tooltip"
-                    className="absolute -top-0 left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
+                    className="absolute top-[1.2rem] left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
                   >
                     {`${hoveredPoint.value.toLocaleString()} incidents in ${hoveredPoint.seriesName} (${hoveredPoint.name})`}
                   </div>
