@@ -170,8 +170,14 @@ export default function AnnualIncidentsComparison({
     
     // Calculate dynamic y-axis range
     const allValues = chartSeries.flatMap(series => series.data).filter(v => v !== null && v !== undefined);
-    const minValue = allValues.length > 0 ? Math.min(...allValues) : 0;
-    const maxValue = allValues.length > 0 ? Math.max(...allValues) : 100;
+    
+    // Handle no data case with a reasonable default range
+    if (allValues.length === 0) {
+      return { categories, chartSeries, yAxisMin: 0, yAxisMax: 10 };
+    }
+    
+    const minValue = Math.min(...allValues);
+    const maxValue = Math.max(...allValues);
     const padding = Math.max(1, (maxValue - minValue) * 0.1); // 10% padding, minimum 1
     const yAxisMin = Math.max(0, minValue - padding);
     const yAxisMax = maxValue + padding;
@@ -380,7 +386,7 @@ export default function AnnualIncidentsComparison({
 
               {/* Data content */}
               <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'}`}>
-                {chartData && !error ? (
+                {chartData && !error && chartData.categories && chartData.categories.length > 0 ? (
             <>
               <div id="safety-annual-incidents-buttons-container" className="flex space-x-1 mt-2">
                 {timeScales.map(scale => (
@@ -455,7 +461,7 @@ export default function AnnualIncidentsComparison({
                       </div>
                     </div>
                   </div>
-                ) : chartData && categories.length === 0 ? (
+                ) : chartData && (!chartData.categories || chartData.categories.length === 0) ? (
                   <div id="safety-annual-incidents-no-data" className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center min-h-[120px]">
                     <div id="safety-annual-incidents-no-data-icon" className="mb-2 text-gray-400">
                       <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
