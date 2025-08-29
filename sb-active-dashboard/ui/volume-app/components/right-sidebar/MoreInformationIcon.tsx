@@ -13,7 +13,8 @@ interface InfoTooltipIconProps {
 export default function InfoTooltipIcon({ text, align = 'center', yOffset = '0.15rem', width, iconSize = 'w-3.5 h-3.5' }: InfoTooltipIconProps) {
   return (
     <span 
-      className={`inline-flex items-center transform -translate-y-[${yOffset}]`} 
+      className="inline-flex items-center transform"
+      style={{ transform: `translateY(-${yOffset})` }}
       id="info-tooltip-icon-container"
     >
       <Tooltip text={text} align={align} width={width}>
