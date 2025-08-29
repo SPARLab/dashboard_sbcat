@@ -112,11 +112,12 @@ export class SafetySpatialQueryService {
     const pedIncidents = incidents.filter(inc => inc.pedestrian_involved === 1).length;
     
     // Calculate severity statistics based on actual database values
+    // Note: 'No Injury' in database maps to 'Near Miss' in UI display
     const fatalIncidents = incidents.filter(inc => inc.maxSeverity === 'Fatality').length;
     const injuryIncidents = incidents.filter(inc => 
       inc.maxSeverity === 'Injury' || inc.maxSeverity === 'Severe Injury'
     ).length;
-    const nearMissIncidents = incidents.filter(inc => inc.maxSeverity === 'Near Miss').length;
+    const nearMissIncidents = incidents.filter(inc => inc.maxSeverity === 'No Injury').length;
     const unknownIncidents = incidents.filter(inc => 
       inc.maxSeverity === 'Unknown' || inc.maxSeverity === '' || !inc.maxSeverity
     ).length;
@@ -127,7 +128,7 @@ export class SafetySpatialQueryService {
         case 'Fatality': return 4;
         case 'Severe Injury': return 3;
         case 'Injury': return 2;
-        case 'Near Miss': return 1;
+        case 'No Injury': return 1;
         default: return 0;
       }
     });
