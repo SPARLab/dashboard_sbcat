@@ -17,7 +17,8 @@ import EnhancedDataNormalization from "../components/right-sidebar/EnhancedDataN
 import HighestVolume from "../components/right-sidebar/HighestVolume";
 import LowDataCoverage from "../components/right-sidebar/LowDataCoverage";
 import PercentOfNetworkByVolumeLevelBarChart from "../components/right-sidebar/PercentOfNetworkByVolumeLevelBarChart";
-import ModeBreakdown from "../components/right-sidebar/ModeBreakdown";
+// @deprecated ModeBreakdown component is deprecated and will be removed
+// import ModeBreakdown from "../components/right-sidebar/ModeBreakdown";
 import SummaryStatistics from "../components/right-sidebar/SummaryStatistics";
 import TimelineSparkline from "../components/right-sidebar/TimelineSparkline";
 import TrendsHeader from "../components/right-sidebar/TrendsHeader";
@@ -545,6 +546,7 @@ export default function VolumeRightSidebar({
                 selectedSiteId={selectedCountSite}
                 onSiteSelect={setSelectedCountSite}
               />
+              {/* @deprecated ModeBreakdown component is deprecated and will be removed
               <ModeBreakdown 
                 selectedGeometry={selectedGeometry}
                 showBicyclist={showBicyclist}
@@ -556,6 +558,7 @@ export default function VolumeRightSidebar({
                   showPedestrian,
                 }}
               />
+              */}
             </div>
           </>
         )}

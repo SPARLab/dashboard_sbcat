@@ -38,6 +38,10 @@ interface TimelineSparklineData {
   }>;
 }
 
+/**
+ * @deprecated This interface is deprecated along with the ModeBreakdown component.
+ * Will be removed in a future version.
+ */
 export interface ModeBreakdownData {
   bicycle: { count: number; percentage: number };
   pedestrian: { count: number; percentage: number };
@@ -316,6 +320,8 @@ export class VolumeChartDataService {
 
   /**
    * Get data for ModeBreakdown chart component
+   * @deprecated This method is deprecated along with the ModeBreakdown component.
+   * Will be removed in a future version.
    */
   async getModeBreakdownData(
     mapView: MapView,
