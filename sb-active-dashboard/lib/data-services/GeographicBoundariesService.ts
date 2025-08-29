@@ -95,37 +95,60 @@ export class GeographicBoundariesService {
       return layer;
     };
     
-    // Filter cities to only show those in Santa Barbara and San Luis Obispo counties
-    // Using name-based filtering since TIGER data structure varies across layers
-    // TIGER Places data doesn't have consistent county fields, so we use known city names
-    const sbCountyCities = [
-      'Santa Barbara', 'Goleta', 'Carpinteria','Santa Maria',
-    ];
-    const sloCountyCities: string[] = [
-    ];
-    const allCities = [...sbCountyCities, ...sloCountyCities];
-    const cityNameFilter = allCities.map(city => `NAME LIKE '%${city}%'`).join(' OR ');
+    // Feature flag: Show all California cities vs filtered list
+    const showAllCaliforniaCities = import.meta.env.VITE_SHOW_ALL_CA_CITIES === 'true';
+    
+    let cityWhereClause: string;
+    if (showAllCaliforniaCities) {
+      // Show ALL cities in California
+      cityWhereClause = "STATE = '06'";
+    } else {
+      // Filter cities to only show those in Santa Barbara and San Luis Obispo counties
+      // Using name-based filtering since TIGER data structure varies across layers
+      // TIGER Places data doesn't have consistent county fields, so we use known city names
+      const sbCountyCities = [
+        'Santa Barbara', 'Goleta', 'Carpinteria', 'Santa Maria', 'Lompoc', 'Solvang', 'Buellton', 'Guadalupe'
+      ];
+      const sloCountyCities: string[] = [
+      ];
+      const allCities = [...sbCountyCities, ...sloCountyCities];
+      const cityNameFilter = allCities.map(city => `NAME LIKE '%${city}%'`).join(' OR ');
+      cityWhereClause = `STATE = '06' AND (${cityNameFilter})`;
+    }
     
     this.cityLayer = createBoundaryLayer(
       BOUNDARY_LAYER_URLS.CITIES, 
       "Cities & Towns",
-      `STATE = '06' AND (${cityNameFilter})`
+      cityWhereClause
     );
     
-    // Filter service areas (CDPs) to known communities in these counties
-    const sbCountyPlaces = [
-      'Isla Vista', 'Montecito', 'Eastern Goleta Valley', "Toro Canyon", "Summerland"
-    ];
-    const sloCountyPlaces = [
-      'Santa Maria'  // Simplified to just Santa Maria as requested
-    ];
-    const allPlaces = [...sbCountyPlaces, ...sloCountyPlaces];
-    const placeNameFilter = allPlaces.map(place => `NAME LIKE '%${place}%'`).join(' OR ');
+    // Feature flag: Show all California service areas vs filtered list
+    const showAllCaliforniaServiceAreas = import.meta.env.VITE_SHOW_ALL_CA_SERVICE_AREAS === 'true';
+    
+    let serviceAreaWhereClause: string;
+    if (showAllCaliforniaServiceAreas) {
+      // Show ALL Census Designated Places in California
+      serviceAreaWhereClause = "STATE = '06'";
+    } else {
+      // Filter service areas (CDPs) to known communities in these counties
+      const sbCountyPlaces = [
+        'Isla Vista', 'Montecito', 'Eastern Goleta Valley', 'Toro Canyon', 'Summerland',
+        'Santa Ynez', 'Los Alamos', 'Los Olivos', 'Ballard', 'Mission Hills',
+        'Orcutt', 'Vandenberg Village', 'Vandenberg AFB', 'Casmalia', 'Sisquoc',
+        'Cuyama', 'New Cuyama', 'Garey'
+      ];
+      const sloCountyPlaces = [
+        'Santa Maria'  // Simplified to just Santa Maria as requested
+      ];
+      const allPlaces = [...sbCountyPlaces, ...sloCountyPlaces];
+      const placeNameFilter = allPlaces.map(place => `NAME LIKE '%${place}%'`).join(' OR ');
+      serviceAreaWhereClause = `STATE = '06' AND (${placeNameFilter})`;
+    }
     
     this.serviceAreaLayer = createBoundaryLayer(
       BOUNDARY_LAYER_URLS.SERVICE_AREAS, 
       "Census Designated Places",
-      `STATE = '06' AND (${placeNameFilter})`
+      serviceAreaWhereClause
     );
 
     
