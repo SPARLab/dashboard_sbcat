@@ -193,11 +193,9 @@ async function createIncidentGraphics(
     expressionInfos: [
       {
         name: "timestamp",
-        title: "Date & Time (PST)",
+        title: "Date & Time (PDT)",
         expression: `
-                    var utcDate = $feature.timestamp;
-                    var offset = +7; // PST is UTC-8, PDT is UTC-7 — adjust as needed
-                    var localDate = DateAdd(utcDate, offset, 'hours');
+                    var localDate = $feature.timestamp; // Timestamps are already in PDT
                     return Text(localDate, 'MMM D, YYYY, h:mm a');
                 `,
       },

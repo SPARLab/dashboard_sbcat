@@ -1,5 +1,26 @@
+/**
+ * Formats a timestamp that is already in PDT
+ * Assumes input timestamp is already in Pacific Daylight Time
+ */
+function formatTimestampPDT(timestamp: Date | number): string {
+  const date = new Date(timestamp);
+  
+  // Format as "MMM D, YYYY, h:mm a PDT" - no timezone conversion needed
+  const options: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric', 
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  };
+  
+  return date.toLocaleDateString('en-US', options) + ' PDT';
+}
+
 export interface IncidentPopupData {
   id?: string | number;
+  source_id?: string;
   data_source?: string;
   timestamp?: Date | number;
   conflict_type?: string;
@@ -32,8 +53,8 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   
   // Basic incident information section
   popupContent += '<div class="section">';
-  if (incidentData.id) {
-    popupContent += `<p style="margin: 0 !important;"><strong>Incident ID:</strong> ${incidentData.id}</p>`;
+  if (incidentData.source_id) {
+    popupContent += `<p style="margin: 0 !important;"><strong>Incident ID:</strong> ${incidentData.source_id}</p>`;
   }
   
   if (incidentData.data_source) {
@@ -41,8 +62,8 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   }
   
   if (incidentData.timestamp) {
-    const date = new Date(incidentData.timestamp);
-    popupContent += `<p style="margin: 0 !important;"><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
+    const formattedDateTime = formatTimestampPDT(incidentData.timestamp);
+    popupContent += `<p style="margin: 0 !important;"><strong>Date & Time:</strong> ${formattedDateTime}</p>`;
   }
   popupContent += '</div>';
 
@@ -113,8 +134,8 @@ export function generateRawIncidentPopupContent(
   attributes: any,
   enrichedIncidents?: any[]
 ): string {
-  // Find enriched data from cache
-  const enrichedData = enrichedIncidents?.find(inc => inc.id === attributes.id);
+  // Find enriched data from cache using source_id
+  const enrichedData = enrichedIncidents?.find(inc => inc.source_id === attributes.source_id);
   const incidentData = enrichedData || attributes;
   
   // Build popup content using cached data
@@ -132,8 +153,8 @@ export function generateRawIncidentPopupContent(
     popupContent += `<p style="margin: 0 !important;"><strong>Source:</strong> ${incidentData.data_source}</p>`;
   }
   if (incidentData.timestamp) {
-    const date = new Date(incidentData.timestamp);
-    popupContent += `<p style="margin: 0 !important;"><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
+    const formattedDateTime = formatTimestampPDT(incidentData.timestamp);
+    popupContent += `<p style="margin: 0 !important;"><strong>Date & Time:</strong> ${formattedDateTime}</p>`;
   }
   if (incidentData.conflict_type) {
     popupContent += `<p style="margin: 0 !important;"><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;

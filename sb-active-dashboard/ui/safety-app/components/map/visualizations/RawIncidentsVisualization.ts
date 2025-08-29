@@ -59,13 +59,14 @@ export class RawIncidentsVisualization {
 
       // 3. Create ArcGIS Graphic objects from the processed data
       const rawIncidentGraphics = enrichedIncidents
-        .filter(incident => incident.geometry && incident.id)
+        .filter(incident => incident.geometry && incident.source_id)
         .map((incident, index) => new Graphic({
           geometry: incident.geometry,
           attributes: {
             // --- Core Fields for Layer ---
             objectid: index + 1,
             id: incident.id,
+            source_id: incident.source_id,
             maxSeverity: incident.maxSeverity || 'Unknown',
             data_source: incident.data_source || 'Unknown',
             timestamp: incident.timestamp ? incident.timestamp.getTime() : null,
@@ -87,6 +88,7 @@ export class RawIncidentsVisualization {
           // --- Define schema for all attributes ---
           { name: "objectid", type: "oid" },
           { name: "id", type: "string" },
+          { name: "source_id", type: "string" },
           { name: "maxSeverity", type: "string" },
           { name: "data_source", type: "string" },
           { name: "timestamp", type: "date" },
