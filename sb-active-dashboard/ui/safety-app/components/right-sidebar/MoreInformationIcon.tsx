@@ -18,7 +18,8 @@ export default function MoreInformationIcon({
 }: MoreInformationIconProps) {
   return (
     <span 
-      className={`inline-flex items-center transform -translate-y-[${yOffset}]`} 
+      className="inline-flex items-center transform"
+      style={{ transform: `translateY(${yOffset})` }}
       id="safety-info-tooltip-icon-container"
     >
       <Tooltip text={text} align={align} width={width}>

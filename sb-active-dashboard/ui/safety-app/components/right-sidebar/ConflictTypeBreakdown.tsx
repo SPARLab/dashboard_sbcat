@@ -306,7 +306,7 @@ export default function ConflictTypeBreakdown({
                     Distribution of incident types by conflict category for the selected area
                     <span id="safety-conflict-type-info-icon-container" className="ml-1 inline-flex align-middle">
                       <MoreInformationIcon 
-                        text="Bar chart showing the breakdown of safety incidents by conflict type (e.g., Bike vs Car, Pedestrian vs Vehicle, etc.). Each conflict type is color-coded using a colorblind-friendly palette. Hover over bars or legend items to highlight specific conflict types and see detailed counts."
+                        text="Bar chart showing the breakdown of safety incidents by conflict type (e.g., Bike vs Car, Pedestrian vs Vehicle, etc.). Hover over bars or legend items to highlight specific conflict types and see detailed counts."
                         align="center"
                         width="w-80"
                       />
