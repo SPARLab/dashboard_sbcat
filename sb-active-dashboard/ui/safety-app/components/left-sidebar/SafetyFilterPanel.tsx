@@ -62,27 +62,6 @@ export default function SafetyFilterPanel({
         </>
       )}
 
-      {/* Severity of Incident */}
-      <SeverityOfIncidentSection 
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      />
-      <hr className="border-gray-200" />
-
-      {/* Data Source */}
-      <DataSourceSection 
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      />
-      <hr className="border-gray-200" />
-
-      {/* Conflict Type */}
-      <ConflictTypeSection 
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      />
-      <hr className="border-gray-200" />
-
       {/* Date Range - Reused from New Volume */}
       <DateRangeSection 
         dateRange={dateRangeFromFilters}
@@ -106,6 +85,28 @@ export default function SafetyFilterPanel({
         filters={filters}
         onFiltersChange={onFiltersChange}
       />
+      <hr className="border-gray-200" />
+
+      {/* Severity of Incident */}
+      <SeverityOfIncidentSection 
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
+      <hr className="border-gray-200" />
+
+      {/* Data Source */}
+      <DataSourceSection 
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
+      <hr className="border-gray-200" />
+
+      {/* Conflict Type */}
+      <ConflictTypeSection 
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
+      <hr className="border-gray-200" />
     </>
   );
 }

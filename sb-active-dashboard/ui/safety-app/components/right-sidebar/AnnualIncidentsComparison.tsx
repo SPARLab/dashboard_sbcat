@@ -334,17 +334,24 @@ export default function AnnualIncidentsComparison({
   }, [chartData]);
 
   const option = useMemo(
-    () => ({
-      animation: true,
-      animationDuration: 1000,
-      animationEasing: 'cubicOut',
-      grid: {
-        left: '25px',
-        right: '0px',
-        top: '40px',
-        bottom: '0px',
-        containLabel: true,
-      },
+    () => {
+      // Calculate dynamic top margin based on number of series (years)
+      // For 6+ years, we need more space for the legend and tooltip
+      const baseTopMargin = 40;
+      const extraMarginForManyYears = chartSeries.length >= 6 ? 30 : 0;
+      const dynamicTopMargin = baseTopMargin + extraMarginForManyYears;
+
+      return {
+        animation: true,
+        animationDuration: 1000,
+        animationEasing: 'cubicOut',
+        grid: {
+          left: '25px',
+          right: '0px',
+          top: `${dynamicTopMargin}px`,
+          bottom: '0px',
+          containLabel: true,
+        },
       xAxis: {
         type: 'category',
         data: categories,
@@ -476,9 +483,8 @@ export default function AnnualIncidentsComparison({
       tooltip: {
         show: false,
       },
-    }),
-    [categories, chartSeries, timeScale, yAxisMin, yAxisMax],
-  );
+    };
+    }, [categories, chartSeries, timeScale, yAxisMin, yAxisMax]);
 
   const getTimeScaleDescription = (scale: TimeScale): string => {
     switch(scale) {
@@ -571,7 +577,7 @@ export default function AnnualIncidentsComparison({
                 {hoveredPoint && (
                   <div
                     id="safety-incidents-chart-tooltip"
-                    className="absolute top-[1.2rem] left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap"
+                    className={`absolute ${chartSeries.length >= 6 ? 'top-[2.8rem]' : 'top-[1.2rem]'} left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap`}
                   >
                     {`${hoveredPoint.value.toLocaleString()} incidents in ${hoveredPoint.seriesName} (${hoveredPoint.name})`}
                   </div>
