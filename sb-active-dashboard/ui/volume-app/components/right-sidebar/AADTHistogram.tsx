@@ -69,7 +69,7 @@ export default function AADVHistogram({
   const [individualSitesData, setIndividualSitesData] = useState<SiteAADVData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [numberOfBins, setNumberOfBins] = useState(10);
+  const [numberOfBins, setNumberOfBins] = useState(30);
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>('individual-bars');
 
   // Debounce the date range to prevent rapid refetches
