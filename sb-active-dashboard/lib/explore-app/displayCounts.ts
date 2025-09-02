@@ -363,15 +363,15 @@ async function createAADTGraphics(
           },
           {
             fieldName: "all_aadt",
-            label: "Average Annual Daily Traffic (AADT)",
+            label: "Average Annual Daily Volume (AADV)",
           },
           {
             fieldName: "weekday_aadt",
-            label: "Weekday AADT",
+            label: "Weekday AADV",
           },
           {
             fieldName: "weekend_aadt",
-            label: "Weekend AADT",
+            label: "Weekend AADV",
           },
         ],
       },

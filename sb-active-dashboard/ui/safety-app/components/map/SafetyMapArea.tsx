@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { SafetyFilters, SafetyVisualizationType } from "../../../../lib/safety-app/types";
+import { IncidentHeatmapRenderer } from "../../../../lib/safety-app/renderers/IncidentHeatmapRenderer";
 import NewSafetyMap from "./NewSafetyMap";
+import HeatmapLegend from "./HeatmapLegend";
 
 interface SafetyMapAreaProps {
   filters?: Partial<SafetyFilters>;
@@ -70,31 +72,42 @@ export default function SafetyMapArea({
           />
         </div>
 
-        {/* Legend - positioned in bottom right with proper z-index */}
-        <div id="safety-map-legend" className="absolute bottom-6 right-2 bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-36 z-10">
-          <h4 id="safety-legend-title" className="text-xs font-normal text-gray-900 mb-3">Legend</h4>
-          <div id="safety-legend-items" className="space-y-2">
-            <div id="safety-legend-fatality" className="flex items-center gap-2">
-              <div id="safety-legend-fatality-dot" className="w-3 h-3 bg-safety-fatality rounded-full"></div>
-              <span id="safety-legend-fatality-label" className="text-xs text-gray-700">Fatality</span>
+        {/* Dynamic Legend - positioned in bottom right with proper z-index */}
+        <div id="safety-map-legend" className="absolute bottom-6 right-2 z-10">
+          {(activeMapTab === 'incident-heatmap' || activeMapTab === 'incident-to-volume-ratio') ? (
+            <HeatmapLegend 
+              colorStops={IncidentHeatmapRenderer.createDensityHeatmap().colorStops as Array<{ ratio: number; color: string | __esri.Color }>}
+              title={activeMapTab === 'incident-heatmap' ? "Incident Density" : "Incident to Volume Ratio"}
+              minLabel="Low"
+              maxLabel="High"
+            />
+          ) : (
+            <div id="safety-incident-legend" className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-36">
+              <h4 id="safety-legend-title" className="text-xs font-normal text-gray-900 mb-3">Legend</h4>
+              <div id="safety-legend-items" className="space-y-2">
+                <div id="safety-legend-fatality" className="flex items-center gap-2">
+                  <div id="safety-legend-fatality-dot" className="w-3 h-3 bg-safety-fatality rounded-full"></div>
+                  <span id="safety-legend-fatality-label" className="text-xs text-gray-700">Fatality</span>
+                </div>
+                <div id="safety-legend-severe-injury" className="flex items-center gap-2">
+                  <div id="safety-legend-severe-injury-dot" className="w-3 h-3 bg-safety-severe-injury rounded-full"></div>
+                  <span id="safety-legend-severe-injury-label" className="text-xs text-gray-700">Severe Injury</span>
+                </div>
+                <div id="safety-legend-injury" className="flex items-center gap-2">
+                  <div id="safety-legend-injury-dot" className="w-3 h-3 bg-safety-injury rounded-full"></div>
+                  <span id="safety-legend-injury-label" className="text-xs text-gray-700">Injury</span>
+                </div>
+                <div id="safety-legend-near-miss" className="flex items-center gap-2">
+                  <div id="safety-legend-near-miss-dot" className="w-3 h-3 bg-safety-near-miss rounded-full"></div>
+                  <span id="safety-legend-near-miss-label" className="text-xs text-gray-700">Near Miss</span>
+                </div>
+                <div id="safety-legend-unknown" className="flex items-center gap-2">
+                  <div id="safety-legend-unknown-dot" className="w-3 h-3 bg-safety-unknown rounded-full"></div>
+                  <span id="safety-legend-unknown-label" className="text-xs text-gray-700">Unknown</span>
+                </div>
+              </div>
             </div>
-            <div id="safety-legend-severe-injury" className="flex items-center gap-2">
-              <div id="safety-legend-severe-injury-dot" className="w-3 h-3 bg-safety-severe-injury rounded-full"></div>
-              <span id="safety-legend-severe-injury-label" className="text-xs text-gray-700">Severe Injury</span>
-            </div>
-            <div id="safety-legend-injury" className="flex items-center gap-2">
-              <div id="safety-legend-injury-dot" className="w-3 h-3 bg-safety-injury rounded-full"></div>
-              <span id="safety-legend-injury-label" className="text-xs text-gray-700">Injury</span>
-            </div>
-            <div id="safety-legend-near-miss" className="flex items-center gap-2">
-              <div id="safety-legend-near-miss-dot" className="w-3 h-3 bg-safety-near-miss rounded-full"></div>
-              <span id="safety-legend-near-miss-label" className="text-xs text-gray-700">Near Miss</span>
-            </div>
-            <div id="safety-legend-unknown" className="flex items-center gap-2">
-              <div id="safety-legend-unknown-dot" className="w-3 h-3 bg-safety-unknown rounded-full"></div>
-              <span id="safety-legend-unknown-label" className="text-xs text-gray-700">Unknown</span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

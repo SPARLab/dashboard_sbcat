@@ -1,3 +1,10 @@
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * There doesn't seem to be a need for this component anymore.
+ * 
+ * TODO: Remove this component and all its dependencies once confirmed it's no longer needed.
+ */
+
 'use client';
 import Polygon from "@arcgis/core/geometry/Polygon";
 import ReactECharts from 'echarts-for-react';
@@ -6,6 +13,9 @@ import { VolumeChartDataService } from '../../../../lib/data-services/VolumeChar
 import CollapseExpandIcon from './CollapseExpandIcon';
 import SelectRegionPlaceholder from '../../../components/SelectRegionPlaceholder';
 
+/**
+ * @deprecated This interface is deprecated along with the ModeBreakdown component.
+ */
 interface ModeBreakdownData {
   bicycle: { count: number; percentage: number };
   pedestrian: { count: number; percentage: number };
@@ -18,6 +28,9 @@ interface HoveredBarData {
   name: string;
 }
 
+/**
+ * @deprecated This interface is deprecated along with the ModeBreakdown component.
+ */
 interface ModeBreakdownProps {
   selectedGeometry?: Polygon | null;
   showBicyclist?: boolean;
@@ -27,6 +40,10 @@ interface ModeBreakdownProps {
   filters?: { showBicyclist: boolean; showPedestrian: boolean };
 }
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * There doesn't seem to be a need for this component anymore.
+ */
 export default function ModeBreakdown({ 
   selectedGeometry = null,
   showBicyclist = true,

@@ -91,6 +91,8 @@ export default function NewSafetyMap({
         }
         mapView.popupEnabled = true;
         
+        // Note: Removed zoom listener - using referenceScale in renderer for consistent visualization
+        
         mapView.goTo({
           center: [-120, 34.7],
           zoom: 9,
@@ -209,6 +211,7 @@ export default function NewSafetyMap({
 
           case 'incident-heatmap':
             if (incidentsLayer) {
+              // Use renderer with referenceScale for consistent visualization across zoom levels
               incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
               incidentsLayer.visible = true;
             }

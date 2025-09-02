@@ -273,19 +273,17 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
     });
   };
 
-  // Calculate dynamic year range based on selected dates
-  const { startOfPeriod, totalDays, startPercent, endPercent } = useMemo(() => {
-    const startYear = Math.min(selection.startDate.getFullYear(), selection.endDate.getFullYear());
-    const endYear = Math.max(selection.startDate.getFullYear(), selection.endDate.getFullYear());
-    
-    const startOfPeriod = new Date(startYear, 0, 1);
-    const endOfPeriod = new Date(endYear, 11, 31);
+  // Fixed dataset time interval
+  const { startOfPeriod, endOfPeriod, totalDays, startPercent, endPercent } = useMemo(() => {
+    // Dataset bounds: 8/15/2018 11:30 PM to 7/16/2025 9:00 PM
+    const startOfPeriod = new Date('2018-08-15T23:30:00');
+    const endOfPeriod = new Date('2025-07-16T21:00:00');
     const totalDays = (endOfPeriod.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24);
     
     const startPercent = Math.max(0, Math.min(100, ((selection.startDate.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100));
     const endPercent = Math.max(0, Math.min(100, ((selection.endDate.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100));
     
-    return { startOfPeriod, totalDays, startPercent, endPercent };
+    return { startOfPeriod, endOfPeriod, totalDays, startPercent, endPercent };
   }, [selection.startDate, selection.endDate]);
 
   const handleMouseDown = useCallback((type: 'start' | 'end') => {
@@ -299,12 +297,15 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
     const days = Math.round((percent / 100) * totalDays);
     const newDate = new Date(startOfPeriod.getTime() + days * 24 * 60 * 60 * 1000);
 
-    if (isDragging === 'start' && newDate <= selection.endDate) {
-      setSelection(prev => ({ ...prev, startDate: newDate }));
-    } else if (isDragging === 'end' && newDate >= selection.startDate) {
-      setSelection(prev => ({ ...prev, endDate: newDate }));
+    // Constrain dates within dataset bounds
+    const constrainedDate = new Date(Math.max(startOfPeriod.getTime(), Math.min(endOfPeriod.getTime(), newDate.getTime())));
+
+    if (isDragging === 'start' && constrainedDate <= selection.endDate) {
+      setSelection(prev => ({ ...prev, startDate: constrainedDate }));
+    } else if (isDragging === 'end' && constrainedDate >= selection.startDate) {
+      setSelection(prev => ({ ...prev, endDate: constrainedDate }));
     }
-  }, [isDragging, totalDays, startOfPeriod, selection.endDate, selection.startDate]);
+  }, [isDragging, totalDays, startOfPeriod, endOfPeriod, selection.endDate, selection.startDate]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(null);
@@ -315,32 +316,29 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
       <div id="date-range-section">
         <h3 className="text-base font-medium text-gray-700 mb-3">Date Range</h3>
         <div ref={datePickerRef} id="date-range-picker" className="bg-gray-100 p-2 rounded-md">
-          <div className="flex justify-between items-center mb-1">
+          <div className="flex justify-between items-center mb-1 group cursor-pointer" onClick={openCalendar}>
             <div 
-              className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300 focus:outline-none active:outline-none"
-              onClick={openCalendar}
+              className="px-2 py-1 bg-gray-200 rounded group-hover:bg-gray-300 transition-colors focus:outline-none active:outline-none"
             >
-              <span id="start-date-label" className="text-sm text-gray-600">
+              <span id="start-date-label" className="text-sm text-gray-600 p-1">
                 {formatDate(selection.startDate)}
               </span>
+            </div>
+            <div 
+              className="flex items-center justify-center group-hover:scale-110 transition-transform"
+            >
               <img 
                 src={calendarIcon} 
-                alt="start date" 
-                className="w-3.5 h-3.5" 
+                alt="open calendar" 
+                className="w-4 h-4" 
               />
             </div>
             <div 
-              className="flex items-center gap-1.5 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300 focus:outline-none active:outline-none"
-              onClick={openCalendar}
+              className="px-2 py-1 bg-gray-200 rounded group-hover:bg-gray-300 transition-colors focus:outline-none active:outline-none"
             >
-              <span id="end-date-label" className="text-sm text-gray-600">
+              <span id="end-date-label" className="text-sm text-gray-600 p-1">
                 {formatDate(selection.endDate)}
               </span>
-              <img 
-                src={calendarIcon} 
-                alt="end date" 
-                className="w-3.5 h-3.5" 
-              />
             </div>
           </div>
           

@@ -129,14 +129,14 @@ export class MapClickHandler {
     
     // Uncomment this section if enriched data is needed and AbortError is resolved:
     /*
-    const incidentId = attributes.id || attributes.incident_id;
-    if (incidentId) {
+    const incidentSourceId = attributes.source_id || attributes.incident_id;
+    if (incidentSourceId) {
       try {
         const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
           mapView.extent,
           filters
         );
-        enrichedData = safetyData.data.find(inc => inc.id === incidentId);
+        enrichedData = safetyData.data.find(inc => inc.source_id === incidentSourceId);
       } catch (error) {
         console.warn('Could not fetch enriched incident data:', error);
       }

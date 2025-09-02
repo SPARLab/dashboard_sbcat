@@ -250,7 +250,7 @@ export async function createAADTLayer() {
           </div>
 
           <div>
-            <h4 style="margin: 0 0 6px 0; color: #333;">Average Annual Daily Traffic (AADT)</h4>
+            <h4 style="margin: 0 0 6px 0; color: #333;">Average Annual Daily Volume (AADV)</h4>
             <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
               <thead>
                 <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">

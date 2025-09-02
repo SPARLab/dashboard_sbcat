@@ -39,7 +39,7 @@ function CountRenderer(props: props) {
   return (
     <FormControl>
       <FormLabel id="counts-render-button-group">
-        Average Annual Daily Traffic (AADT)
+        Average Annual Daily Traffic (AADV)
       </FormLabel>
       <RadioGroup
         aria-labelledby="counts-render-button-group"

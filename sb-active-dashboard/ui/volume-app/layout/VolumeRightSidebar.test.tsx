@@ -21,6 +21,7 @@ vi.mock('../components/right-sidebar/PercentOfNetworkByVolumeLevelBarChart', () 
     </div>
   ))
 }));
+// @deprecated ModeBreakdown component is deprecated - mock can be removed when component is deleted
 vi.mock('../components/right-sidebar/ModeBreakdown', () => ({
   default: () => null,
 }));
