@@ -609,7 +609,9 @@ export default function AnnualIncidentsComparison({
                     id="safety-incidents-chart-tooltip"
                     className={`absolute ${chartSeries.length >= 6 ? 'top-[2.8rem]' : 'top-[1.2rem]'} left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap`}
                   >
-                    {`${hoveredPoint.value.toLocaleString()} incidents in ${hoveredPoint.seriesName} (${hoveredPoint.name})`}
+                    {timeScale === 'Year'
+                      ? `${hoveredPoint.value.toLocaleString()} incidents in ${hoveredPoint.seriesName}`
+                      : `${hoveredPoint.value.toLocaleString()} incidents in ${hoveredPoint.seriesName} (${hoveredPoint.name})`}
                   </div>
                 )}
 
