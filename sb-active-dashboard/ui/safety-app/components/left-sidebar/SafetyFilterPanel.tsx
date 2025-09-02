@@ -62,27 +62,6 @@ export default function SafetyFilterPanel({
         </>
       )}
 
-      {/* Severity of Incident */}
-      <SeverityOfIncidentSection 
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      />
-      <hr className="border-gray-200" />
-
-      {/* Data Source */}
-      <DataSourceSection 
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      />
-      <hr className="border-gray-200" />
-
-      {/* Conflict Type */}
-      <ConflictTypeSection 
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      />
-      <hr className="border-gray-200" />
-
       {/* Date Range - Reused from New Volume */}
       <DateRangeSection 
         dateRange={dateRangeFromFilters}
@@ -106,6 +85,28 @@ export default function SafetyFilterPanel({
         filters={filters}
         onFiltersChange={onFiltersChange}
       />
+      <hr className="border-gray-200" />
+
+      {/* Severity of Incident */}
+      <SeverityOfIncidentSection 
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
+      <hr className="border-gray-200" />
+
+      {/* Data Source */}
+      <DataSourceSection 
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
+      <hr className="border-gray-200" />
+
+      {/* Conflict Type */}
+      <ConflictTypeSection 
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+      />
+      <hr className="border-gray-200" />
     </>
   );
 }
@@ -328,11 +329,9 @@ function ConflictTypeSection({
     onFiltersChange({ conflictType: newConflictTypes });
   };
 
-  const handleModeChange = (mode: 'all' | 'none') => {
+  const handleModeChange = (mode: 'all') => {
     if (mode === 'all') {
       onFiltersChange({ conflictType: [...availableConflictTypes] });
-    } else {
-      onFiltersChange({ conflictType: [] });
     }
   };
 
@@ -345,7 +344,7 @@ function ConflictTypeSection({
     <div id="safety-conflict-type-section" className="px-4 py-4">
       <h3 id="safety-conflict-type-title" className="text-base font-medium text-gray-700 mb-2">Conflict Type</h3>
       
-      {/* All/None buttons */}
+      {/* All button */}
       <div id="safety-conflict-type-mode-buttons" className="flex gap-1 mb-2">
         <button 
           id="safety-conflict-type-all-button"
@@ -357,17 +356,6 @@ function ConflictTypeSection({
           }`}
         >
           All
-        </button>
-        <button 
-          id="safety-conflict-type-none-button"
-          onClick={() => handleModeChange('none')}
-          className={`px-2 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none active:outline-none ${
-            currentMode === 'none' 
-              ? 'bg-blue-500 text-white' 
-              : 'bg-white border border-blue-500 text-blue-500 hover:bg-blue-50'
-          }`}
-        >
-          None
         </button>
       </div>
 
