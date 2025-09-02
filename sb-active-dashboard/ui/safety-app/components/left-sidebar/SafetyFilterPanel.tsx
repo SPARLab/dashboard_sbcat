@@ -87,6 +87,10 @@ export default function SafetyFilterPanel({
       <DateRangeSection 
         dateRange={dateRangeFromFilters}
         onDateRangeChange={handleDateRangeChange}
+        datasetBounds={{
+          startOfPeriod: new Date('2013-01-01T02:01:00'),
+          endOfPeriod: new Date('2025-08-05T01:40:00')
+        }}
       />
       <hr className="border-gray-200" />
 

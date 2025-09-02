@@ -199,12 +199,18 @@ interface DateRangeValue {
   endDate: Date;
 }
 
+interface DatasetBounds {
+  startOfPeriod: Date;
+  endOfPeriod: Date;
+}
+
 interface DateRangeSectionProps {
   dateRange: DateRangeValue;
   onDateRangeChange: (dateRange: DateRangeValue) => void;
+  datasetBounds?: DatasetBounds;
 }
 
-function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProps) {
+function DateRangeSection({ dateRange, onDateRangeChange, datasetBounds }: DateRangeSectionProps) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selection, setSelection] = useState({
     startDate: dateRange.startDate,
@@ -273,18 +279,18 @@ function DateRangeSection({ dateRange, onDateRangeChange }: DateRangeSectionProp
     });
   };
 
-  // Fixed dataset time interval
+  // Dataset time interval - use provided bounds or default to volume app bounds
   const { startOfPeriod, endOfPeriod, totalDays, startPercent, endPercent } = useMemo(() => {
-    // Dataset bounds: 8/15/2018 11:30 PM to 7/16/2025 9:00 PM
-    const startOfPeriod = new Date('2018-08-15T23:30:00');
-    const endOfPeriod = new Date('2025-07-16T21:00:00');
+    // Default to volume app bounds if no datasetBounds provided
+    const startOfPeriod = datasetBounds?.startOfPeriod || new Date('2018-08-15T23:30:00');
+    const endOfPeriod = datasetBounds?.endOfPeriod || new Date('2025-07-16T21:00:00');
     const totalDays = (endOfPeriod.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24);
     
     const startPercent = Math.max(0, Math.min(100, ((selection.startDate.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100));
     const endPercent = Math.max(0, Math.min(100, ((selection.endDate.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100));
     
     return { startOfPeriod, endOfPeriod, totalDays, startPercent, endPercent };
-  }, [selection.startDate, selection.endDate]);
+  }, [selection.startDate, selection.endDate, datasetBounds]);
 
   const handleMouseDown = useCallback((type: 'start' | 'end') => {
     setIsDragging(type);
