@@ -15,8 +15,33 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale): A
     // Group by year
     const yearMap = new Map<number, number>();
     incidents.forEach(incident => {
-      const date = new Date(incident.incident_date);
+      // Handle different date formats from ArcGIS
+      let date: Date;
+      if (incident.incident_date) {
+        // If incident_date exists, use it
+        date = new Date(incident.incident_date);
+      } else if (incident.timestamp) {
+        // Fall back to timestamp field
+        date = new Date(incident.timestamp);
+      } else {
+        // Skip incidents without valid dates
+        console.warn('Incident missing date information:', incident);
+        return;
+      }
+      
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date for incident:', incident);
+        return;
+      }
+      
       const year = date.getFullYear();
+      // Sanity check for reasonable years (1900-2030)
+      if (year < 1900 || year > 2030) {
+        console.warn('Unreasonable year detected:', year, 'for incident:', incident);
+        return;
+      }
+      
       yearMap.set(year, (yearMap.get(year) || 0) + 1);
     });
 
@@ -38,9 +63,28 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale): A
     const yearMonthMap = new Map<string, Map<number, number>>();
     
     incidents.forEach(incident => {
-      const date = new Date(incident.incident_date);
+      // Handle different date formats from ArcGIS
+      let date: Date;
+      if (incident.incident_date) {
+        date = new Date(incident.incident_date);
+      } else if (incident.timestamp) {
+        date = new Date(incident.timestamp);
+      } else {
+        return; // Skip incidents without valid dates
+      }
+      
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        return; // Skip invalid dates
+      }
+      
       const year = date.getFullYear();
       const month = date.getMonth();
+      
+      // Sanity check for reasonable years
+      if (year < 1900 || year > 2030) {
+        return; // Skip unreasonable years
+      }
       
       if (!yearMonthMap.has(year.toString())) {
         yearMonthMap.set(year.toString(), new Map());
@@ -62,9 +106,28 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale): A
     const yearDayMap = new Map<string, Map<number, number>>();
     
     incidents.forEach(incident => {
-      const date = new Date(incident.incident_date);
+      // Handle different date formats from ArcGIS
+      let date: Date;
+      if (incident.incident_date) {
+        date = new Date(incident.incident_date);
+      } else if (incident.timestamp) {
+        date = new Date(incident.timestamp);
+      } else {
+        return; // Skip incidents without valid dates
+      }
+      
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        return; // Skip invalid dates
+      }
+      
       const year = date.getFullYear();
       const dayOfWeek = date.getDay();
+      
+      // Sanity check for reasonable years
+      if (year < 1900 || year > 2030) {
+        return; // Skip unreasonable years
+      }
       
       if (!yearDayMap.has(year.toString())) {
         yearDayMap.set(year.toString(), new Map());

@@ -39,13 +39,53 @@ export class SafetySpatialQueryService {
         await layerView.when();
       }
 
-      // Query features within the polygon using the layer view
+      // Build where clause for filters
+      let whereClause = "1=1"; // Default to all records
+      
+      // Apply date range filter if provided
+      if (filters?.dateRange) {
+        const { start, end } = filters.dateRange;
+        const startStr = start.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
+        const endStr = end.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
+        whereClause += ` AND timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}'`;
+      }
+      
+      // Apply data source filter if provided
+      if (filters?.dataSource && filters.dataSource.length > 0 && filters.dataSource.length < 2) {
+        const source = filters.dataSource[0];
+        if (source === 'SWITRS') {
+          whereClause += " AND (data_source = 'SWITRS' OR data_source = 'Police')";
+        } else {
+          whereClause += " AND (data_source = 'BikeMaps.org' OR data_source = 'BikeMaps')";
+        }
+      }
+      
+      // Apply severity filter if provided
+      if (filters?.severityTypes && filters.severityTypes.length > 0 && filters.severityTypes.length < 5) {
+        const severityConditions = filters.severityTypes.map(type => `maxSeverity = '${type}'`);
+        whereClause += ` AND (${severityConditions.join(' OR ')})`;
+      }
+      
+      // Apply conflict type filter if provided
+      if (filters?.conflictType && filters.conflictType.length > 0) {
+        const conflictConditions = filters.conflictType.map(type => `conflict_type = '${type}'`);
+        whereClause += ` AND (${conflictConditions.join(' OR ')})`;
+      }
+
+      // Debug: Log the where clause being applied
+      console.log('[SafetySpatialQueryService] Applying where clause:', whereClause);
+      console.log('[SafetySpatialQueryService] Date range filter:', filters?.dateRange);
+
+      // Query features within the polygon using the layer view with filters
       const queryResult = await layerView.queryFeatures({
         geometry: polygon,
         spatialRelationship: "intersects",
         returnGeometry: true,
-        outFields: ["*"]
+        outFields: ["*"],
+        where: whereClause
       });
+      
+      console.log(`[SafetySpatialQueryService] Query returned ${queryResult.features.length} incidents`);
 
       // Convert ArcGIS features to our incident format
       const incidents: EnrichedSafetyIncident[] = queryResult.features.map(feature => {
@@ -60,6 +100,7 @@ export class SafetySpatialQueryService {
           conflict_type: attrs.conflict_type,
           pedestrian_involved: attrs.pedestrian_involved,
           bicyclist_involved: attrs.bicyclist_involved,
+          vehicle_involved: attrs.vehicle_involved,
           maxSeverity: attrs.maxSeverity || attrs.max_severity,
           severity: attrs.severity,
           latitude: attrs.latitude,
@@ -68,8 +109,16 @@ export class SafetySpatialQueryService {
           strava_id: attrs.strava_id,
           bike_traffic: attrs.bike_traffic,
           ped_traffic: attrs.ped_traffic,
-          parties: attrs.parties, // Assuming parties are attached in some way
-          geometry: feature.geometry
+          parties: attrs.parties || [], // Default to empty array
+          geometry: feature.geometry,
+          // Required fields for EnrichedSafetyIncident
+          OBJECTID: attrs.OBJECTID || attrs.objectid,
+          id: attrs.id || attrs.incident_id,
+          source_id: attrs.source_id || '',
+          totalParties: attrs.parties?.length || 0,
+          hasTrafficData: !!(attrs.bike_traffic || attrs.ped_traffic),
+          bikeTrafficLevel: attrs.bike_traffic,
+          pedTrafficLevel: attrs.ped_traffic
         } as EnrichedSafetyIncident;
       });
 
@@ -121,7 +170,7 @@ export class SafetySpatialQueryService {
         default: return 0;
       }
     });
-    const avgSeverityScore = total > 0 ? severityScores.reduce((sum, score) => sum + score, 0) / total : 0;
+    const avgSeverityScore = total > 0 ? severityScores.reduce((sum: number, score: number) => sum + score, 0) / total : 0;
 
     // Calculate incidents per day (assuming data spans multiple years)
     const incidentsPerDay = total > 0 ? total / 365 : 0; // Rough estimate
