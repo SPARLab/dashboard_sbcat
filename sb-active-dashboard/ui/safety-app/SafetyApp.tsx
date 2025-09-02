@@ -35,7 +35,7 @@ export default function SafetyApp() {
     severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'],
     conflictType: ['Bike vs vehicle', 'Bike vs other', 'Bike vs bike', 'Bike vs pedestrian', 'Bike vs infrastructure', 'Pedestrian vs vehicle', 'Pedestrian vs other'],
     dateRange: {
-      start: new Date(new Date().getFullYear() - 3, 0, 1), // 3 years ago, January 1st
+      start: new Date(2020, 0, 1), // January 1, 2020
       end: new Date() // Today
     },
     timeOfDay: {

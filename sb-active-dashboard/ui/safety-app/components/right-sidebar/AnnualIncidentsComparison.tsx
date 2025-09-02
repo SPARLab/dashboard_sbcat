@@ -10,11 +10,34 @@ type TimeScale = 'Day' | 'Month' | 'Year';
 const timeScales: TimeScale[] = ['Day', 'Month', 'Year'];
 
 // Helper function to process incidents for different time scales
-const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale): AnnualIncidentsComparisonData => {
+const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale, dateRange?: { start: Date; end: Date }): AnnualIncidentsComparisonData => {
+  // Filter incidents by date range if provided (since database filtering isn't working properly)
+  let filteredIncidents = incidents;
+  if (dateRange) {
+    filteredIncidents = incidents.filter(incident => {
+      let date: Date;
+      if (incident.incident_date) {
+        date = new Date(incident.incident_date);
+      } else if (incident.timestamp) {
+        date = new Date(incident.timestamp);
+      } else {
+        return false; // Skip incidents without valid dates
+      }
+      
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        return false; // Skip invalid dates
+      }
+      
+      // Check if incident date is within the selected range
+      return date >= dateRange.start && date <= dateRange.end;
+    });
+  }
   if (timeScale === 'Year') {
     // Group by year
     const yearMap = new Map<number, number>();
-    incidents.forEach(incident => {
+    
+    filteredIncidents.forEach((incident) => {
       // Handle different date formats from ArcGIS
       let date: Date;
       if (incident.incident_date) {
@@ -36,6 +59,7 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale): A
       }
       
       const year = date.getFullYear();
+      
       // Sanity check for reasonable years (1900-2030)
       if (year < 1900 || year > 2030) {
         console.warn('Unreasonable year detected:', year, 'for incident:', incident);
@@ -46,9 +70,14 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale): A
     });
 
     const years = Array.from(yearMap.keys()).sort();
+
+    // The categories are the years themselves for the x-axis
     const categories = years.map(y => y.toString());
+
+    // To enable toggling years from the legend, we create a separate series for each year.
+    // Each series will have data only at the position corresponding to its year.
     const series = years.map((year, index) => {
-      const data = new Array(categories.length).fill(null);
+      const data = new Array(years.length).fill(null);
       data[index] = yearMap.get(year) || 0;
       return {
         name: year.toString(),
@@ -62,7 +91,7 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale): A
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const yearMonthMap = new Map<string, Map<number, number>>();
     
-    incidents.forEach(incident => {
+    filteredIncidents.forEach(incident => {
       // Handle different date formats from ArcGIS
       let date: Date;
       if (incident.incident_date) {
@@ -105,7 +134,7 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale): A
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const yearDayMap = new Map<string, Map<number, number>>();
     
-    incidents.forEach(incident => {
+    filteredIncidents.forEach(incident => {
       // Handle different date formats from ArcGIS
       let date: Date;
       if (incident.incident_date) {
@@ -232,63 +261,64 @@ export default function AnnualIncidentsComparison({
 
   // Process spatial query result to generate chart data
   useEffect(() => {
-    const processData = async () => {
-      const newCacheKey = generateCacheKey(selectedGeometry, filters);
+    const newCacheKey = generateCacheKey(selectedGeometry, filters);
 
-      if (!selectedGeometry || !spatialResult?.incidents) {
-        setChartData(null);
-        setError(spatialError);
-        setDataCache(new Map());
-        setCacheKey('');
+    if (!selectedGeometry || !spatialResult?.incidents) {
+      setChartData(null);
+      setError(spatialError);
+      setDataCache(new Map());
+      setCacheKey('');
+      return;
+    }
+
+    // If cache key changed, clear the cache to force reprocessing
+    if (newCacheKey !== cacheKey) {
+      setDataCache(new Map());
+    }
+
+    // If we have cached data for current scale and same selection, use it
+    if (newCacheKey === cacheKey) {
+      const cachedData = dataCache.get(timeScale);
+      if (cachedData) {
+        setChartData(cachedData);
+        setError(null);
         return;
       }
+    }
 
-      // If we have cached data for current scale and same selection, use it
-      if (newCacheKey === cacheKey) {
-        const cachedData = dataCache.get(timeScale);
-        if (cachedData) {
-          setChartData(cachedData);
-          setError(null);
-          return;
-        }
-      }
+    setIsLoading(true);
+    setError(null);
 
-      setIsLoading(true);
-      setError(null);
+    try {
+      // Process incidents data for the current time scale
+      const result = processIncidentsForTimeScale(spatialResult.incidents, timeScale, filters.dateRange);
+      
+      setChartData(result);
+      setCacheKey(newCacheKey);
 
-      try {
-        // Process incidents data for the current time scale
-        const result = processIncidentsForTimeScale(spatialResult.incidents, timeScale);
+      // Update cache with current result and preload other scales
+      const others = timeScales.filter(s => s !== timeScale);
+      setDataCache(prev => {
+        const updated = new Map(prev);
+        updated.set(timeScale, result);
         
-        setChartData(result);
-        setCacheKey(newCacheKey);
-
-        // Update cache with current result and preload other scales
-        const others = timeScales.filter(s => s !== timeScale);
-        setDataCache(prev => {
-          const updated = new Map(prev);
-          updated.set(timeScale, result);
-          
-          // Only preload if not already cached
-          others.forEach(scale => {
-            if (!updated.has(scale)) {
-              const otherResult = processIncidentsForTimeScale(spatialResult.incidents, scale);
-              updated.set(scale, otherResult);
-            }
-          });
-          
-          return updated;
+        // Only preload if not already cached
+        others.forEach(scale => {
+          if (!updated.has(scale)) {
+            const otherResult = processIncidentsForTimeScale(spatialResult.incidents, scale, filters.dateRange);
+            updated.set(scale, otherResult);
+          }
         });
-      } catch (err) {
-        console.error('Error processing annual incidents data:', err);
-        setError('Failed to process annual incidents data');
-        setChartData(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    processData();
+        
+        return updated;
+      });
+    } catch (err) {
+      console.error('Error processing annual incidents data:', err);
+      setError('Failed to process annual incidents data');
+      setChartData(null);
+    } finally {
+      setIsLoading(false);
+    }
   }, [spatialResult, spatialError, selectedGeometry, filters, timeScale, cacheKey, dataService]);
 
   const onEvents = useMemo(
@@ -338,7 +368,12 @@ export default function AnnualIncidentsComparison({
       // Calculate dynamic top margin based on number of series (years)
       // For 6+ years, we need more space for the legend and tooltip
       const baseTopMargin = 40;
-      const extraMarginForManyYears = chartSeries.length >= 6 ? 30 : 0;
+      let extraMarginForManyYears = 0;
+      if (chartSeries.length > 12) { // 13+ years, 3 legend rows
+        extraMarginForManyYears = 60;
+      } else if (chartSeries.length > 6) { // 7-12 years, 2 legend rows
+        extraMarginForManyYears = 30;
+      }
       const dynamicTopMargin = baseTopMargin + extraMarginForManyYears;
 
       return {
@@ -409,7 +444,7 @@ export default function AnnualIncidentsComparison({
         },
       },
       legend: {
-        show: chartSeries.length > 0,
+        show: chartSeries.length > 1, // Show legend when there are multiple series (years)
         top: 0,
         right: 0,
         textStyle: {
@@ -426,17 +461,17 @@ export default function AnnualIncidentsComparison({
         const color = colors[index % colors.length];
 
         if (timeScale === 'Year') {
-          // This is a bar chart, so we need to make sure that we're setting the color
-          // for each bar individually. We can do this by setting the color in the itemStyle
-          // property of the series.
-          const colors = ['#3b82f6', '#f59e0b', '#8b5cf6', '#0891b2', '#92400e'];
+          // Bar chart for year view - each series represents one year
           return {
             name: series.name,
             data: series.data,
             type: 'bar',
-            stack: 'year',
+            // By stacking the series, we ensure they render as distinct bars side-by-side.
+            // Since only one series has a value at each x-axis category, this creates
+            // the effect of a normal bar chart with an interactive legend.
+            stack: 'yearStack',
             itemStyle: {
-              color: colors[index % colors.length],
+              color: color,
               borderRadius: [4, 4, 0, 0],
             },
             barWidth: '60%',
@@ -577,9 +612,17 @@ export default function AnnualIncidentsComparison({
                 {hoveredPoint && (
                   <div
                     id="safety-incidents-chart-tooltip"
-                    className={`absolute ${chartSeries.length >= 6 ? 'top-[2.8rem]' : 'top-[1.2rem]'} left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap`}
+                    className={`absolute ${
+                      chartSeries.length > 12
+                        ? 'top-[4.4rem]'
+                        : chartSeries.length > 6
+                        ? 'top-[2.8rem]'
+                        : 'top-[1.2rem]'
+                    } left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap`}
                   >
-                    {`${hoveredPoint.value.toLocaleString()} incidents in ${hoveredPoint.seriesName} (${hoveredPoint.name})`}
+                    {timeScale === 'Year'
+                      ? `${hoveredPoint.value.toLocaleString()} incidents in ${hoveredPoint.seriesName}`
+                      : `${hoveredPoint.value.toLocaleString()} incidents in ${hoveredPoint.seriesName} (${hoveredPoint.name})`}
                   </div>
                 )}
 
@@ -588,6 +631,8 @@ export default function AnnualIncidentsComparison({
                 <div id="safety-annual-incidents-chart">
                   <ReactECharts
                     option={option}
+                    notMerge={true} // `notMerge` is crucial to ensure options are not merged with previous state
+                    lazyUpdate={true}
                     style={{ height: '300px', width: '100%' }}
                     opts={{ renderer: 'canvas' }}
                     onEvents={onEvents}
