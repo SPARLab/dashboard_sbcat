@@ -23,7 +23,7 @@ export default function SafetyFilterPanel({
 }: SafetyFilterPanelProps) {
   // Convert SafetyFilters dateRange format to DateRangeValue format for the component
   const dateRangeFromFilters: DateRangeValue = {
-    startDate: filters.dateRange?.start || new Date(new Date().getFullYear() - 3, 0, 1),
+    startDate: filters.dateRange?.start || new Date(2020, 0, 1), // January 1, 2020
     endDate: filters.dateRange?.end || new Date()
   };
 

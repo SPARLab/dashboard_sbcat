@@ -43,11 +43,10 @@ export class SafetySpatialQueryService {
       let whereClause = "1=1"; // Default to all records
       
       // Apply date range filter if provided
+      // NOTE: Temporarily removing date filtering from database query since ArcGIS has issues
+      // comparing Unix timestamps with date strings. We'll filter in the component instead.
       if (filters?.dateRange) {
-        const { start, end } = filters.dateRange;
-        const startStr = start.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
-        const endStr = end.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
-        whereClause += ` AND timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}'`;
+        console.log('[SafetySpatialQueryService] Date range requested but filtering in component instead:', filters.dateRange);
       }
       
       // Apply data source filter if provided
@@ -71,10 +70,6 @@ export class SafetySpatialQueryService {
         const conflictConditions = filters.conflictType.map(type => `conflict_type = '${type}'`);
         whereClause += ` AND (${conflictConditions.join(' OR ')})`;
       }
-
-      // Debug: Log the where clause being applied
-      console.log('[SafetySpatialQueryService] Applying where clause:', whereClause);
-      console.log('[SafetySpatialQueryService] Date range filter:', filters?.dateRange);
 
       // Query features within the polygon using the layer view with filters
       const queryResult = await layerView.queryFeatures({
