@@ -30,6 +30,7 @@ export interface IncidentPopupData {
   bicyclist_involved?: boolean | number;
   vehicle_involved?: boolean | number;
   weightedExposure?: number;
+  loc_desc?: string;
   parties?: Array<{
     party_number?: number;
     party_type?: string;
@@ -64,6 +65,10 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   if (incidentData.timestamp) {
     const formattedDateTime = formatTimestampPDT(incidentData.timestamp);
     popupContent += `<p style="margin: 0 !important;"><strong>Date & Time:</strong> ${formattedDateTime}</p>`;
+  }
+  
+  if (incidentData.loc_desc) {
+    popupContent += `<p style="margin: 0 !important;"><strong>Location:</strong> ${incidentData.loc_desc}</p>`;
   }
   popupContent += '</div>';
 
@@ -155,6 +160,9 @@ export function generateRawIncidentPopupContent(
   if (incidentData.timestamp) {
     const formattedDateTime = formatTimestampPDT(incidentData.timestamp);
     popupContent += `<p style="margin: 0 !important;"><strong>Date & Time:</strong> ${formattedDateTime}</p>`;
+  }
+  if (incidentData.loc_desc) {
+    popupContent += `<p style="margin: 0 !important;"><strong>Location:</strong> ${incidentData.loc_desc}</p>`;
   }
   if (incidentData.conflict_type) {
     popupContent += `<p style="margin: 0 !important;"><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;
