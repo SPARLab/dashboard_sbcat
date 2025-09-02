@@ -368,7 +368,12 @@ export default function AnnualIncidentsComparison({
       // Calculate dynamic top margin based on number of series (years)
       // For 6+ years, we need more space for the legend and tooltip
       const baseTopMargin = 40;
-      const extraMarginForManyYears = chartSeries.length >= 6 ? 30 : 0;
+      let extraMarginForManyYears = 0;
+      if (chartSeries.length > 12) { // 13+ years, 3 legend rows
+        extraMarginForManyYears = 60;
+      } else if (chartSeries.length > 6) { // 7-12 years, 2 legend rows
+        extraMarginForManyYears = 30;
+      }
       const dynamicTopMargin = baseTopMargin + extraMarginForManyYears;
 
       return {
@@ -607,7 +612,13 @@ export default function AnnualIncidentsComparison({
                 {hoveredPoint && (
                   <div
                     id="safety-incidents-chart-tooltip"
-                    className={`absolute ${chartSeries.length >= 6 ? 'top-[2.8rem]' : 'top-[1.2rem]'} left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap`}
+                    className={`absolute ${
+                      chartSeries.length > 12
+                        ? 'top-[4.4rem]'
+                        : chartSeries.length > 6
+                        ? 'top-[2.8rem]'
+                        : 'top-[1.2rem]'
+                    } left-1/2 transform -translate-x-1/2 z-10 text-blue-600 text-sm font-medium whitespace-nowrap`}
                   >
                     {timeScale === 'Year'
                       ? `${hoveredPoint.value.toLocaleString()} incidents in ${hoveredPoint.seriesName}`
