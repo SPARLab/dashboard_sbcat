@@ -222,7 +222,7 @@ export default function MostDangerousAreas({
                 Locations with the highest incident counts and severity scores
                 <span id="safety-dangerous-areas-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
-                    text="Shows the top 5 locations with the highest number of safety incidents within the selected area. Click on any location to highlight it on the map and zoom to its position. Data is grouped by location description from incident reports."
+                    text="Highlights areas within the selected region that have the highest number of safety incidents. Click on a location for a closer view."
                     align="center"
                     width="w-72"
                     yOffset="-0.15rem"
