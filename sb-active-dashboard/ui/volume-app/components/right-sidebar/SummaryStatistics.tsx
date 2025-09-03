@@ -94,13 +94,13 @@ export default function SummaryStatistics({
                           idPrefix="weekday-ped-aadv" 
                           label="Median Pedestrian AADV" 
                           value={spatialResult ? formatValue(pedWeekdayAADV) : "Select area"} 
-                          tooltipText="Average Annual Daily Volume (AADV) represents the typical number of pedestrians per day on weekdays, calculated from count data within the selected area."
+                          tooltipText="Typical number of pedestrians within the selected area per day on a weekday"
                         />
                         <StatsRow 
                           idPrefix="weekday-bike-aadv" 
                           label="Median Bike AADV" 
                           value={spatialResult ? formatValue(bikeWeekdayAADV) : "Select area"} 
-                          tooltipText="Average Annual Daily Volume (AADV) represents the typical number of cyclists per day on weekdays, calculated from count data within the selected area."
+                          tooltipText="Typical number of cyclists within the selected area per day on a weekday"
                         />
                     </div>
                   </div>
@@ -112,13 +112,13 @@ export default function SummaryStatistics({
                           idPrefix="weekend-ped-aadv" 
                           label="Median Pedestrian AADV" 
                           value={spatialResult ? formatValue(pedWeekendAADV) : "Select area"} 
-                          tooltipText="Average Annual Daily Volume (AADV) represents the typical number of pedestrians per day on weekends, calculated from count data within the selected area."
+                          tooltipText="Typical number of pedestrians within the selected area per day on weekends"
                         />
                         <StatsRow 
                           idPrefix="weekend-bike-aadv" 
                           label="Median Bike AADV" 
                           value={spatialResult ? formatValue(bikeWeekendAADV) : "Select area"} 
-                          tooltipText="Average Annual Daily Volume (AADV) represents the typical number of cyclists per day on weekends, calculated from count data within the selected area."
+                          tooltipText="Typical number of cyclists within the selected area per day on weekends"
                         />
                     </div>
                   </div>
