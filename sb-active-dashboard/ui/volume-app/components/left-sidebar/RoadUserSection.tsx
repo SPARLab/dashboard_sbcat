@@ -40,7 +40,7 @@ export default function RoadUserSection({
                 )}
               </div>
               <span className="ml-2.5 text-[14px] font-normal leading-6 text-gray-700">
-                🚴 Bicyclist
+                🚲 Bicyclist
               </span>
             </label>
             
@@ -58,7 +58,7 @@ export default function RoadUserSection({
                 )}
               </div>
               <span className="ml-2.5 text-[14px] font-normal leading-6 text-gray-700">
-                🚶 Pedestrian
+                👟 Pedestrian
               </span>
             </label>
             
@@ -104,7 +104,7 @@ export default function RoadUserSection({
                     </svg>
                   )}
                 </div>
-                <span className="ml-2.5 text-[14px] font-normal leading-6 text-gray-700">🚶 Pedestrian</span>
+                <span className="ml-2.5 text-[14px] font-normal leading-6 text-gray-700">👟 Pedestrian</span>
               </label>
             </div>
             
@@ -128,7 +128,7 @@ export default function RoadUserSection({
                     </svg>
                   )}
                 </div>
-                <span className="ml-2.5 text-[14px] font-normal leading-6 text-gray-700">🚴 Bicyclist</span>
+                <span className="ml-2.5 text-[14px] font-normal leading-6 text-gray-700">🚲 Bicyclist</span>
               </label>
             </div>
           </div>
