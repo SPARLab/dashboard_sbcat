@@ -74,7 +74,7 @@ export default function SafetyApp() {
         id="safety-data-disclaimer"
         isOpen={showDisclaimer}
         onClose={() => setShowDisclaimer(false)}
-        title="Safety Data Information"
+        title="Safety Data Overview"
       >
         <SafetyDataDisclaimer />
       </DisclaimerModal>
