@@ -132,7 +132,7 @@ export async function createAADTLayer() {
       
       // Build survey timeline - one row per observation period
       const timelineRows = sortedData.map(data => {
-        const dataTypeIcon = data.countType === 'bike' ? '🚴' : '🚶';
+        const dataTypeIcon = data.countType === 'bike' ? '🚲' : '👟';
         const dataTypeName = data.countType === 'bike' ? 'Biking' : 'Walking';
         
         let periodText = '';
@@ -194,10 +194,10 @@ export async function createAADTLayer() {
       // Build observation period summary
       let observationSummary = [];
       if (bikeObservations > 0) {
-        observationSummary.push(`🚴 ${bikeObservations} biking period${bikeObservations !== 1 ? 's' : ''}`);
+        observationSummary.push(`🚲 ${bikeObservations} biking period${bikeObservations !== 1 ? 's' : ''}`);
       }
       if (pedObservations > 0) {
-        observationSummary.push(`🚶 ${pedObservations} walking period${pedObservations !== 1 ? 's' : ''}`);
+        observationSummary.push(`👟 ${pedObservations} walking period${pedObservations !== 1 ? 's' : ''}`);
       }
 
       return `
@@ -255,8 +255,8 @@ export async function createAADTLayer() {
               <thead>
                 <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
                   <th style="padding: 4px 8px; text-align: left; font-weight: 600;">Year</th>
-                  <th style="padding: 4px 8px; text-align: center; font-weight: 600;">🚴 Biking</th>
-                  <th style="padding: 4px 8px; text-align: center; font-weight: 600;">🚶 Walking</th>
+                  <th style="padding: 4px 8px; text-align: center; font-weight: 600;">🚲 Biking</th>
+                  <th style="padding: 4px 8px; text-align: center; font-weight: 600;">👟 Walking</th>
                 </tr>
               </thead>
               <tbody>

@@ -552,7 +552,7 @@ export default function StatsView() {
                   variant="subtitle1"
                   sx={{ fontWeight: "bold", mb: 1 }}
                 >
-                  🚶 Walking
+                  👟 Walking
                 </Typography>
 
                 {pedCountStats.filtered !== null && (
@@ -630,7 +630,7 @@ export default function StatsView() {
                   variant="subtitle1"
                   sx={{ fontWeight: "bold", mb: 1 }}
                 >
-                  🚴 Biking
+                  🚲 Biking
                 </Typography>
 
                 {bikeCountStats.filtered !== null && (
