@@ -634,7 +634,7 @@ export default function AnnualIncidentsComparison({
                 {getTimeScaleDescription(timeScale)}
                 <span id="safety-annual-incidents-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
-                    text="Compares safety incident patterns across different time periods. Switch between Day (day of week), Month (monthly patterns), and Year (annual totals) views to identify temporal trends and seasonal variations in incident occurrence."
+                    text="Switch between Day, Month, and Year views to compare safety incident patterns and identify temporal trends."
                     align="right"
                     width="w-80"
                     yOffset="-0.15rem"
