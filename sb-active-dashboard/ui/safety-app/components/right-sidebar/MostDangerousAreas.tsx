@@ -225,6 +225,7 @@ export default function MostDangerousAreas({
                     text="Shows the top 5 locations with the highest number of safety incidents within the selected area. Click on any location to highlight it on the map and zoom to its position. Data is grouped by location description from incident reports."
                     align="center"
                     width="w-72"
+                    yOffset="-0.15rem"
                   />
                 </span>
               </div>

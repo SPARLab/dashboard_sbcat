@@ -2,6 +2,7 @@ import { useState } from "react";
 import { SafetyFilters } from "../../../../lib/safety-app/types";
 import DateRangeSection from "../../../components/filters/DateRangeSection";
 import GeographicLevelSection from "../../../components/filters/GeographicLevelSection";
+import MoreInformationIcon from "../right-sidebar/MoreInformationIcon";
 
 interface DateRangeValue {
   startDate: Date;
@@ -256,12 +257,30 @@ function DataSourceSection({
     <div id="safety-data-source-section" className="px-4 py-4">
       <h3 id="safety-data-source-title" className="text-base font-medium text-gray-700 mb-3">Data Source</h3>
       <div id="safety-data-source-toggles" className="space-y-1.5">
-        <div id="safety-data-source-police-container">
+        <div id="safety-data-source-police-container" className="flex items-center gap-1">
           <SeverityToggle 
-            label="Police Reports" 
+            label="Police Reports (" 
             checked={policeReports}
             onChange={() => toggleDataSource('police')}
           />
+          <a 
+            id="safety-data-source-switrs-link"
+            href="https://tims.berkeley.edu/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 underline text-sm -ml-1"
+          >
+            SWITRS
+          </a>
+          <span id="safety-data-source-police-closing-paren" className="text-sm text-gray-700 -ml-1">)</span>
+          <span id="safety-data-source-police-info-icon-container" className="inline-flex align-middle">
+                          <MoreInformationIcon 
+                text="SWITRS (Statewide Integrated Traffic Records System) contains official police reports of traffic incidents in California. Data is sourced from UC Berkeley's Transportation Injury Mapping System (TIMS). Note: There is typically a 5-month delay in the data due to processing."
+                align="center"
+                width="w-80"
+                yOffset="-0.15rem"
+              />
+          </span>
         </div>
         <div id="safety-data-source-self-reports-container" className="flex items-center gap-1">
           <SeverityToggle 

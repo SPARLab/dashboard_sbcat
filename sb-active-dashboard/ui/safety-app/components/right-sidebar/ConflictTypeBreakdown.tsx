@@ -351,6 +351,7 @@ export default function ConflictTypeBreakdown({
                         text="Bar chart showing the breakdown of safety incidents by conflict type (e.g., Bike vs Car, Pedestrian vs Vehicle, etc.). Hover over bars or legend items to highlight specific conflict types and see detailed counts."
                         align="center"
                         width="w-80"
+                        yOffset="-0.15rem"
                       />
                     </span>
                   </div>

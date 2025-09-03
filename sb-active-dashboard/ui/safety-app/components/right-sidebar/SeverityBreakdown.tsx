@@ -286,6 +286,7 @@ export default function SeverityBreakdown({
                     text="Bar chart showing the distribution of safety incidents by severity level: Fatality (most severe), Severe Injury, Injury, No Injury, and Unknown."
                     align="center"
                     width="w-80"
+                    yOffset="-0.15rem"
                   />
                 </span>
               </div>
