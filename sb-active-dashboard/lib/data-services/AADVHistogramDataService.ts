@@ -747,8 +747,8 @@ export class AADVHistogramDataService {
               return acc;
             }, {} as Record<string, number>);
             
-            console.log(`  🚴 Bike records: ${countsByType.bike || 0}`);
-            console.log(`  🚶 Ped records: ${countsByType.ped || 0}`);
+            console.log(`  🚲 Bike records: ${countsByType.bike || 0}`);
+            console.log(`  👟 Ped records: ${countsByType.ped || 0}`);
             
             const totalCounts = aadvCountsResult.features.reduce((sum, f) => sum + (f.attributes.counts || 0), 0);
             const avgCount = totalCounts / aadvCountsResult.features.length;
@@ -815,7 +815,7 @@ export class AADVHistogramDataService {
     console.group('🔍 DEBUG: Missing Count Sites Investigation');
     console.log('🎯 Objective: Identify why AADV Distribution shows fewer sites than expected');
     console.log('📅 Date Range:', dateRange.startDate.toISOString().split('T')[0], 'to', dateRange.endDate.toISOString().split('T')[0]);
-    console.log('🚴 Filters: Bicyclist =', showBicyclist, ', Pedestrian =', showPedestrian);
+    console.log('🚲 Filters: Bicyclist =', showBicyclist, ', Pedestrian =', showPedestrian);
 
     try {
       // Step 1: Compare with working component
