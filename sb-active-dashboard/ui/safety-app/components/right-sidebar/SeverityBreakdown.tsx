@@ -280,10 +280,10 @@ export default function SeverityBreakdown({
             <>
               <div id="safety-severity-breakdown-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
               <div id="safety-severity-breakdown-description" className="w-full text-sm text-gray-600">
-                Distribution of incident severity levels for the selected area
+                Safety incidents are distributed by severity level for the selected area
                 <span id="safety-severity-breakdown-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
-                    text="Bar chart showing the distribution of safety incidents by severity level: Fatality (most severe), Severe Injury, Injury, No Injury, and Unknown."
+                    text="Bar chart showing the distribution of safety incidents by severity level: Fatality (most severe), Severe Injury, Injury, No Injury, and Unknown. The colors range from dark (most severe) to light (least severe)"
                     align="center"
                     width="w-80"
                     yOffset="-0.15rem"
