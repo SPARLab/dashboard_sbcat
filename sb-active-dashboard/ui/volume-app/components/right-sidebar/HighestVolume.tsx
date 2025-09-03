@@ -98,7 +98,7 @@ export default function HighestVolume({
               Highest Volume Areas
             </h3>
             <InfoTooltipIcon 
-              text="Shows the areas with the highest pedestrian and cyclist volumes within your selected region, helping identify the most active locations for active transportation."
+              text="Highlights areas within the selected region that have the highest volumes of pedestrians and cyclists, helping to identify the most active locations for walking and biking."
               yOffset="0.3rem"
               width="w-64"
               iconSize="w-4 h-4"
