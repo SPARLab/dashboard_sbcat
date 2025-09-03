@@ -36,7 +36,7 @@ export default function SafetyApp() {
     conflictType: ['Bike vs vehicle', 'Bike vs other', 'Bike vs bike', 'Bike vs pedestrian', 'Bike vs infrastructure', 'Pedestrian vs vehicle', 'Pedestrian vs other'],
     dateRange: {
       start: new Date(2020, 0, 1), // January 1, 2020
-      end: new Date('2024-12-31') // December 31, 2024
+      end: new Date(2024, 11, 31) // December 31, 2024 (local time)
     },
     timeOfDay: {
       enabled: true,

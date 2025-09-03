@@ -213,8 +213,8 @@ interface DateRangeSectionProps {
 function DateRangeSection({ dateRange, onDateRangeChange, datasetBounds }: DateRangeSectionProps) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selection, setSelection] = useState({
-    startDate: dateRange.startDate || new Date('2020-01-01'),
-    endDate: dateRange.endDate || new Date('2024-12-31'),
+    startDate: dateRange.startDate || new Date(2020, 0, 1),
+    endDate: dateRange.endDate || new Date(2024, 11, 31),
     key: 'selection'
   });
   const [focusedRange, setFocusedRange] = useState<[number, 0 | 1]>([0, 0]);
@@ -275,8 +275,7 @@ function DateRangeSection({ dateRange, onDateRangeChange, datasetBounds }: DateR
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric', 
-      year: 'numeric',
-      timeZone: 'UTC'
+      year: 'numeric'
     });
   };
 
