@@ -604,6 +604,7 @@ export default function AnnualIncidentsComparison({
                     text="Compares safety incident patterns across different time periods. Switch between Day (day of week), Month (monthly patterns), and Year (annual totals) views to identify temporal trends and seasonal variations in incident occurrence."
                     align="right"
                     width="w-80"
+                    yOffset="-0.15rem"
                   />
                 </span>
               </div>

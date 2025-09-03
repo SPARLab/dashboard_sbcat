@@ -504,6 +504,7 @@ export default function IncidentsVsTrafficRatios({
                     text="Scatter plot showing the relationship between traffic volume levels (Low, Medium, High) and incident counts at different locations. Each point represents a location with its traffic level and number of incidents. Click on points to highlight the corresponding Strava segment on the map."
                     align="center"
                     width="w-80"
+                    yOffset="-0.15rem"
                   />
                 </span>
               </div>
