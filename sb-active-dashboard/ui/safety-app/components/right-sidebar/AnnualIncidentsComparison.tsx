@@ -36,6 +36,7 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale, da
   if (timeScale === 'Year') {
     // Group by year
     const yearMap = new Map<number, number>();
+    const currentYear = new Date().getFullYear();
     
     filteredIncidents.forEach((incident) => {
       // Handle different date formats from ArcGIS
@@ -60,8 +61,8 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale, da
       
       const year = date.getFullYear();
       
-      // Sanity check for reasonable years (1900-2030)
-      if (year < 1900 || year > 2030) {
+      // Sanity check for reasonable years (1900-current year)
+      if (year < 1900 || year > currentYear) {
         console.warn('Unreasonable year detected:', year, 'for incident:', incident);
         return;
       }
@@ -69,7 +70,10 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale, da
       yearMap.set(year, (yearMap.get(year) || 0) + 1);
     });
 
-    const years = Array.from(yearMap.keys()).sort();
+    // Filter out future years and sort
+    const years = Array.from(yearMap.keys())
+      .filter(year => year <= currentYear)
+      .sort();
 
     // The categories are the years themselves for the x-axis
     const categories = years.map(y => y.toString());
@@ -90,6 +94,9 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale, da
     // Group by month across years
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const yearMonthMap = new Map<string, Map<number, number>>();
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth(); // 0-based (0 = January, 11 = December)
     
     filteredIncidents.forEach(incident => {
       // Handle different date formats from ArcGIS
@@ -122,11 +129,37 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale, da
       monthMap.set(month, (monthMap.get(month) || 0) + 1);
     });
 
+    // Determine which months to show - exclude future months for current year
+    const getValidMonthsForYear = (year: number): number[] => {
+      if (year < currentYear) {
+        // Past years: show all months
+        return Array.from({ length: 12 }, (_, i) => i);
+      } else if (year === currentYear) {
+        // Current year: only show months up to current month
+        return Array.from({ length: currentMonth + 1 }, (_, i) => i);
+      } else {
+        // Future years: show no months (shouldn't happen with reasonable data)
+        return [];
+      }
+    };
+
+    // Always show all 12 months in categories
     const categories = monthNames;
-    const series = Array.from(yearMonthMap.entries()).map(([year, monthMap]) => ({
-      name: year,
-      data: monthNames.map((_, monthIndex) => monthMap.get(monthIndex) || 0)
-    }));
+    const series = Array.from(yearMonthMap.entries()).map(([year, monthMap]) => {
+      const yearNum = parseInt(year);
+      const validMonths = getValidMonthsForYear(yearNum);
+      
+      return {
+        name: year,
+        data: monthNames.map((_, monthIndex) => {
+          // Only include data for months that are valid for this year
+          if (validMonths.includes(monthIndex)) {
+            return monthMap.get(monthIndex) || 0;
+          }
+          return null; // Use null for future months in current year - no dots will be shown
+        })
+      };
+    });
 
     return { categories, series };
   } else { // Day

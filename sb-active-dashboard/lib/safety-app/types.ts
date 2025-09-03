@@ -132,7 +132,7 @@ export interface AnnualIncidentsComparisonData {
   categories: string[]; // Years
   series: Array<{
     name: string; // 'Bicycle Incidents' | 'Pedestrian Incidents'
-    data: number[];
+    data: (number | null)[]; // Allow null for months/periods that shouldn't be displayed
   }>;
 }
 
