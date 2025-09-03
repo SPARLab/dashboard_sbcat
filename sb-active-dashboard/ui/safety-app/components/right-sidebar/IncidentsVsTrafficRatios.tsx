@@ -155,22 +155,19 @@ export default function IncidentsVsTrafficRatios({
               return 'low';
             };
 
-            // Get the highest traffic level between bike and pedestrian traffic
+            // Get the bike traffic level for this location
             const bikeLevel = getHighestTrafficLevel(data.bikeTrafficLevels);
-            const pedLevel = getHighestTrafficLevel(data.pedTrafficLevels);
             
-            // Use the highest level between the two
-            const trafficLevels = [bikeLevel, pedLevel];
-            const highestLevel = trafficLevels.includes('high') ? 'high' : 
-                               trafficLevels.includes('medium') ? 'medium' : 'low';
+            // Use only the bike traffic level
+            const trafficLevel = bikeLevel;
 
             // Convert traffic level to x-coordinate
-            const x = highestLevel === 'low' ? 1 : highestLevel === 'medium' ? 2 : 3;
+            const x = trafficLevel === 'low' ? 1 : trafficLevel === 'medium' ? 2 : 3;
 
             return {
               location: locationName,
               incidentCount: data.incidents,
-              trafficLevel: highestLevel as 'low' | 'medium' | 'high',
+              trafficLevel: trafficLevel as 'low' | 'medium' | 'high',
               x: x,
               stravaId: data.stravaId
             };
@@ -301,29 +298,23 @@ export default function IncidentsVsTrafficRatios({
     switch (label.toLowerCase()) {
       case 'low':
         return `<div class="text-sm">
-          <div class="font-semibold text-green-700 mb-1">Low Volume</div>
+          <div class="font-semibold text-green-700 mb-1">Low Bike Volume</div>
           <div class="text-gray-600 text-xs">
-            • Modeled data: AADV &lt; 50<br/>
-            • Safety data: Subjective assessment<br/>
-            • Based on incident location traffic levels
+            Bicyclist AADV &lt; 150<br/>
           </div>
         </div>`;
       case 'medium':
         return `<div class="text-sm">
-          <div class="font-semibold text-amber-700 mb-1">Medium Volume</div>
+          <div class="font-semibold text-amber-700 mb-1">Medium Bike Volume</div>
           <div class="text-gray-600 text-xs">
-            • Modeled data: 50 ≤ AADV &lt; 200<br/>
-            • Safety data: Subjective assessment<br/>
-            • Based on incident location traffic levels
+            Bicyclist AADV: 150-299<br/>
           </div>
         </div>`;
       case 'high':
         return `<div class="text-sm">
-          <div class="font-semibold text-red-700 mb-1">High Volume</div>
+          <div class="font-semibold text-red-700 mb-1">High Bike Volume</div>
           <div class="text-gray-600 text-xs">
-            • Modeled data: AADV ≥ 200<br/>
-            • Safety data: Subjective assessment<br/>
-            • Based on incident location traffic levels
+            Bicyclist AADV ≥ 300<br/>
           </div>
         </div>`;
       default:
@@ -498,11 +489,11 @@ export default function IncidentsVsTrafficRatios({
             <>
               <hr className="border-gray-200 mb-2" />
               <div id="safety-incidents-vs-traffic-description" className="w-full text-sm text-gray-600 mb-2">
-                Relationship between traffic volume levels and incident counts by location
+                Compares bike volume levels and incident counts by location.
                 <span id="safety-incidents-vs-traffic-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
-                    text="With each point representing a single location, see the relationship between traffic volume (Low, Medium, High) and incident counts at various locations. Click on a point to highlight its corresponding Strava segment on the map."
-                    align="center"
+                    text="With each point representing a single location, see the relationship between bike traffic volume (Low, Medium, High) and incident counts at various locations. Click on a point to highlight its corresponding Strava segment on the map."
+                    align="right"
                     width="w-80"
                     yOffset="-0.15rem"
                   />
@@ -597,8 +588,8 @@ export default function IncidentsVsTrafficRatios({
                               hoveredLabel === 'low' ? 'bg-green-100 bg-opacity-80' : 'bg-transparent'
                             }`}
                             style={{
-                              left: '30%',
-                              bottom: '35px',
+                              left: '32.5%',
+                              bottom: '41px',
                               width: '48px',
                               height: '24px',
                               transform: 'translateX(-50%)'
@@ -614,9 +605,9 @@ export default function IncidentsVsTrafficRatios({
                               hoveredLabel === 'medium' ? 'bg-amber-100 bg-opacity-80' : 'bg-transparent'
                             }`}
                             style={{
-                              left: '56%', // center
-                              bottom: '35px',
-                              width: '56px',
+                              left: '57%', // center
+                              bottom: '41px',
+                              width: '64px',
                               height: '24px',
                               transform: 'translateX(-50%)'
                             }}
@@ -631,8 +622,8 @@ export default function IncidentsVsTrafficRatios({
                               hoveredLabel === 'high' ? 'bg-red-100 bg-opacity-80' : 'bg-transparent'
                             }`}
                             style={{
-                              left: '81%',
-                              bottom: '35px',
+                              left: '82%',
+                              bottom: '41px',
                               width: '48px',
                               height: '24px',
                               transform: 'translateX(-50%)'
