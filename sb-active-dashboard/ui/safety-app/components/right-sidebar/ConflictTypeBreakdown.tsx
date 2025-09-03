@@ -221,7 +221,7 @@ export default function ConflictTypeBreakdown({
           left: '3px',
           right: '15px',
           top: '15px',
-          bottom: '40px',
+          bottom: '15px',
           containLabel: true,
         },
         xAxis: {
@@ -348,7 +348,7 @@ export default function ConflictTypeBreakdown({
                     Distribution of incident types by conflict category for the selected area
                     <span id="safety-conflict-type-info-icon-container" className="ml-1 inline-flex align-middle">
                       <MoreInformationIcon 
-                        text="Bar chart showing the breakdown of safety incidents by conflict type (e.g., Bike vs Car, Pedestrian vs Vehicle, etc.). Hover over bars or legend items to highlight specific conflict types and see detailed counts."
+                        text="Safety incidents are broken down and color-coded by conflict type. Hover over a bar or legend item to highlight a specific conflict type and view detailed counts."
                         align="center"
                         width="w-80"
                         yOffset="-0.15rem"
@@ -357,7 +357,7 @@ export default function ConflictTypeBreakdown({
                   </div>
 
                   {/* Bar Chart */}
-                  <div id="safety-conflict-type-chart-container" className="relative mb-4">
+                  <div id="safety-conflict-type-chart-container" className="relative">
                     {hoveredBar && (
                       <div
                         id="safety-conflict-type-tooltip"
@@ -378,7 +378,7 @@ export default function ConflictTypeBreakdown({
                   </div>
 
                   {/* Legend */}
-                  <div id="safety-conflict-type-legend" className="grid grid-cols-2 gap-1.5">
+                  <div id="safety-conflict-type-legend" className="ml-4 grid grid-cols-2 gap-1.5">
                     {chartData.data.map((conflict, index) => {
                       const isOtherHovered = hoveredIndex !== null && hoveredIndex !== index;
                       const opacity = isOtherHovered ? 0.3 : 1.0;
