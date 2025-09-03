@@ -37,8 +37,8 @@ export default function VolumeApp() {
   
   // Date range state for timeline and filtering
   const [dateRange, setDateRange] = useState({
-    startDate: new Date(2018, 7, 15), // 8/15/2018
-    endDate: new Date(2025, 6, 16),   // 7/16/2025
+    startDate: new Date('2020-01-01'), // 1/1/2020
+    endDate: new Date('2024-12-31'),   // 12/31/2024
   });
 
   // Year selection state for modeled data
