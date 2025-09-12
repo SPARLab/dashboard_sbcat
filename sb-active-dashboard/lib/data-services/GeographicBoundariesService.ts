@@ -18,12 +18,21 @@ const BOUNDARY_LAYER_URLS = {
   CITIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/25", // Incorporated Places
   SERVICE_AREAS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/26", // Census Designated Places
   COUNTIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1", // Counties
-  CENSUS_TRACTS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0" // Census Tracts
+  CENSUS_TRACTS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0", // Census Tracts
+  SCHOOL_DISTRICTS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_school_districts/FeatureServer" // Santa Barbara School Districts
 };
 
 interface GeographicLevel {
-  id: 'city' | 'county' | 'census-tract' | 'hexagons' | 'custom' | 'city-service-area';
+  id: 'city' | 'county' | 'census-tract' | 'hexagons' | 'custom' | 'city-service-area' | 'school-districts';
   name: string;
+}
+
+export interface SchoolDistrictFilter {
+  gradeFilter: 'all' | 'elementary' | 'high-school' | 'unified' | 'custom';
+  customGradeRange?: {
+    minGrade: number;
+    maxGrade: number;
+  };
 }
 
 export class GeographicBoundariesService {
@@ -31,6 +40,7 @@ export class GeographicBoundariesService {
   private serviceAreaLayer: FeatureLayer;
   private countyLayer: FeatureLayer;
   private censusTractLayer: FeatureLayer;
+  private schoolDistrictsLayer: FeatureLayer;
   private highlightLayer: GraphicsLayer;
   
   private mapView: MapView | null = null;
@@ -167,6 +177,24 @@ export class GeographicBoundariesService {
       "GEOID LIKE '06083%'"
     );
 
+    // School Districts layer - using the Santa Barbara specific service
+    // The service has lowercase field names, so we need to handle that in the interactivity
+    this.schoolDistrictsLayer = new FeatureLayer({
+      url: BOUNDARY_LAYER_URLS.SCHOOL_DISTRICTS + "/0", // Specify layer 0
+      title: "School Districts",
+      visible: false,
+      popupEnabled: false,
+      outFields: ["*"], // Request all fields
+      minScale: 0,
+      maxScale: 0,
+      renderer: new SimpleRenderer({
+        symbol: new SimpleFillSymbol({
+          color: [0, 0, 0, 0], // Transparent fill to match other layers
+          outline: new SimpleLineSymbol({ color: [70, 130, 180, 0.8], width: 2 })
+        })
+      })
+    });
+
     this.highlightLayer = new GraphicsLayer({
         title: "Boundary Highlights",
         listMode: "hide"
@@ -174,7 +202,7 @@ export class GeographicBoundariesService {
   }
 
   getBoundaryLayers(): (FeatureLayer | GraphicsLayer)[] {
-    return [this.cityLayer, this.serviceAreaLayer, this.countyLayer, this.censusTractLayer, this.highlightLayer];
+    return [this.cityLayer, this.serviceAreaLayer, this.countyLayer, this.censusTractLayer, this.schoolDistrictsLayer, this.highlightLayer];
   }
   
   setSelectionChangeCallback(callback: (data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void) {
@@ -278,10 +306,53 @@ export class GeographicBoundariesService {
       this.censusTractLayer.visible = true;
       layers.push(this.censusTractLayer);
     }
+    if (level === 'school-districts') {
+      this.schoolDistrictsLayer.visible = true;
+      layers.push(this.schoolDistrictsLayer);
+    }
 
     if (layers.length > 0) {
       this.setupInteractivity(mapView, layers);
     }
+  }
+
+  /**
+   * Apply school district filtering based on grade levels
+   */
+  applySchoolDistrictFilter(filter: SchoolDistrictFilter) {
+    if (!this.schoolDistrictsLayer.visible) {
+      return; // Only apply filter if school districts are currently visible
+    }
+
+    let whereClause = "1=1"; // Default: show all
+
+    switch (filter.gradeFilter) {
+      case 'elementary':
+        // Elementary districts typically serve K-8, so grade_levels_high <= 8
+        whereClause = "CAST(grade_levels_high AS INTEGER) <= 8";
+        break;
+      case 'high-school':
+        // High school districts typically serve 9-12, so grade_levels >= 9
+        whereClause = "CAST(grade_levels AS INTEGER) >= 9";
+        break;
+      case 'unified':
+        // Unified districts serve K-12, so grade_levels = 0 (K) and grade_levels_high = 12
+        whereClause = "CAST(grade_levels AS INTEGER) = 0 AND CAST(grade_levels_high AS INTEGER) = 12";
+        break;
+      case 'custom':
+        if (filter.customGradeRange) {
+          const { minGrade, maxGrade } = filter.customGradeRange;
+          // Show districts that serve any grades within the specified range
+          whereClause = `CAST(grade_levels AS INTEGER) <= ${maxGrade} AND CAST(grade_levels_high AS INTEGER) >= ${minGrade}`;
+        }
+        break;
+      case 'all':
+      default:
+        whereClause = "1=1"; // Show all districts
+        break;
+    }
+
+    this.schoolDistrictsLayer.definitionExpression = whereClause;
   }
   
   private hideAllBoundaryLayers() {
@@ -290,6 +361,7 @@ export class GeographicBoundariesService {
     this.serviceAreaLayer.visible = false;
     this.countyLayer.visible = false;
     this.censusTractLayer.visible = false;
+    this.schoolDistrictsLayer.visible = false;
   }
   
   /**
@@ -676,7 +748,9 @@ export class GeographicBoundariesService {
       this.hoveredGraphic = null;
     }
     
-    const isSelected = newlyHovered?.attributes.OBJECTID === this.selectedFeature?.objectId;
+    // Handle both uppercase (census layers) and lowercase (school districts) field names
+    const hoveredObjectId = newlyHovered?.attributes.OBJECTID || newlyHovered?.attributes.objectid1 || newlyHovered?.attributes.objectid;
+    const isSelected = hoveredObjectId === this.selectedFeature?.objectId;
     if (newlyHovered && !isSelected) {
         this.hoveredGraphic = new Graphic({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -711,13 +785,16 @@ export class GeographicBoundariesService {
         return;
     }
     
+    // Handle both uppercase (census layers) and lowercase (school districts) field names
+    const clickedObjectId = clickedGraphic.attributes.OBJECTID || clickedGraphic.attributes.objectid1 || clickedGraphic.attributes.objectid;
+    
     // If clicking the same boundary, keep it selected (don't toggle)
-    if (clickedGraphic.attributes.OBJECTID === this.selectedFeature?.objectId) {
+    if (clickedObjectId === this.selectedFeature?.objectId) {
         return;
     }
 
     this.selectedFeature = {
-        objectId: clickedGraphic.attributes.OBJECTID,
+        objectId: clickedObjectId,
         layer: clickedGraphic.layer as FeatureLayer
     };
 
@@ -737,7 +814,8 @@ export class GeographicBoundariesService {
     
     // Notify about the new selection with area name
     if (this.onSelectionChange && clickedGraphic.geometry) {
-      const areaName = clickedGraphic.attributes.NAME || null;
+      // Handle both uppercase (census layers) and lowercase (school districts) field names
+      const areaName = clickedGraphic.attributes.NAME || clickedGraphic.attributes.name || null;
       this.onSelectionChange({
         geometry: clickedGraphic.geometry as Polygon,
         areaName: areaName

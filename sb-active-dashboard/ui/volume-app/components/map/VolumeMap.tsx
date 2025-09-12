@@ -19,6 +19,7 @@ import { VOLUME_LEVEL_CONFIG } from "../../../theme/volumeLevelColors";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 import SketchViewModel from "@arcgis/core/widgets/Sketch/SketchViewModel";
+import { SchoolDistrictFilter } from "../../components/filters/GeographicLevelSection";
 
 interface VolumeMapProps {
   activeTab: string;
@@ -30,6 +31,7 @@ interface VolumeMapProps {
   onMapViewReady?: (mapView: __esri.MapView) => void;
   onAadtLayerReady?: (layer: FeatureLayer) => void;
   geographicLevel: string;
+  schoolDistrictFilter?: SchoolDistrictFilter;
   onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void;
   selectedCountSite?: string | null;
   highlightedBinSites?: string[];
@@ -46,6 +48,7 @@ export default function VolumeMap({
   onMapViewReady,
   onAadtLayerReady,
   geographicLevel,
+  schoolDistrictFilter,
   onSelectionChange,
   selectedCountSite: selectedCountSiteProp, // Keep for compatibility
   highlightedBinSites: highlightedBinSitesProp = [], // Keep for compatibility
@@ -289,6 +292,13 @@ export default function VolumeMap({
       }
     };
   }, [geographicLevel, sketchLayer, onSelectionChange]);
+
+  // Apply school district filtering when filter changes
+  useEffect(() => {
+    if (geographicLevel === 'school-districts' && schoolDistrictFilter && boundaryService) {
+      boundaryService.applySchoolDistrictFilter(schoolDistrictFilter);
+    }
+  }, [schoolDistrictFilter, geographicLevel, boundaryService]);
 
   // Update selection callback when it changes
   useEffect(() => {

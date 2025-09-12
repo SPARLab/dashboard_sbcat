@@ -7,6 +7,7 @@ import VolumeRightSidebar from "./layout/VolumeRightSidebar";
 import VolumeSubHeader from "./layout/VolumeSubHeader";
 import DisclaimerModal from "../components/DisclaimerModal";
 import VolumeDataDisclaimer from "../components/VolumeDataDisclaimer";
+import { SchoolDistrictFilter } from "../components/filters/GeographicLevelSection";
 
 export default function VolumeApp() {
   const [activeTab, setActiveTab] = useState('raw-data');
@@ -34,6 +35,7 @@ export default function VolumeApp() {
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const [aadtLayer, setAadtLayer] = useState<__esri.FeatureLayer | null>(null);
   const [geographicLevel, setGeographicLevel] = useState('city-service-area');
+  const [schoolDistrictFilter, setSchoolDistrictFilter] = useState<SchoolDistrictFilter>({ gradeFilter: 'all' });
   
   // Date range state for timeline and filtering
   const [dateRange, setDateRange] = useState({
@@ -92,6 +94,8 @@ export default function VolumeApp() {
           setModelCountsBy={setModelCountsBy}
           geographicLevel={geographicLevel}
           onGeographicLevelChange={setGeographicLevel}
+          schoolDistrictFilter={schoolDistrictFilter}
+          onSchoolDistrictFilterChange={setSchoolDistrictFilter}
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
           selectedYear={selectedYear}
@@ -107,6 +111,7 @@ export default function VolumeApp() {
           onMapViewReady={handleMapViewReady}
           onAadtLayerReady={setAadtLayer}
           geographicLevel={geographicLevel}
+          schoolDistrictFilter={schoolDistrictFilter}
           onSelectionChange={onSelectionChange}
           selectedCountSite={selectedCountSite}
           highlightedBinSites={highlightedBinSites}

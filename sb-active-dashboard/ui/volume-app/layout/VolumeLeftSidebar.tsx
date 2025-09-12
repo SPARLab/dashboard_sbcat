@@ -1,6 +1,6 @@
 import DateRangeSection from "../../components/filters/DateRangeSection";
 import YearSelector from "../../components/filters/YearSelector";
-import GeographicLevelSection from "../../components/filters/GeographicLevelSection";
+import GeographicLevelSection, { SchoolDistrictFilter } from "../../components/filters/GeographicLevelSection";
 import ModelCountTypeSection from "../components/left-sidebar/ModelCountTypeSection";
 import RoadUserSection from "../components/left-sidebar/RoadUserSection";
 import SortDataSection from "../components/left-sidebar/SortDataSection";
@@ -22,6 +22,8 @@ interface VolumeLeftSidebarProps {
   setModelCountsBy: (type: string) => void;
   geographicLevel: string;
   onGeographicLevelChange: (level: string) => void;
+  schoolDistrictFilter?: SchoolDistrictFilter;
+  onSchoolDistrictFilterChange?: (filter: SchoolDistrictFilter) => void;
   dateRange: DateRangeValue;
   onDateRangeChange: (dateRange: DateRangeValue) => void;
   selectedYear: number;
@@ -40,6 +42,8 @@ export default function VolumeLeftSidebar({
   setModelCountsBy,
   geographicLevel,
   onGeographicLevelChange,
+  schoolDistrictFilter,
+  onSchoolDistrictFilterChange,
   dateRange,
   onDateRangeChange,
   selectedYear,
@@ -52,6 +56,8 @@ export default function VolumeLeftSidebar({
       <GeographicLevelSection 
         geographicLevel={geographicLevel}
         onGeographicLevelChange={onGeographicLevelChange}
+        schoolDistrictFilter={schoolDistrictFilter}
+        onSchoolDistrictFilterChange={onSchoolDistrictFilterChange}
       />
       {geographicLevel === 'custom' && (
         <>
