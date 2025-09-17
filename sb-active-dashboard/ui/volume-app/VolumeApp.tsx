@@ -37,6 +37,7 @@ export default function VolumeApp() {
   const [geographicLevel, setGeographicLevel] = useState('city-service-area');
   const [schoolDistrictFilter, setSchoolDistrictFilter] = useState<SchoolDistrictFilter>({ gradeFilter: 'all' });
   
+  
   // Date range state for timeline and filtering
   const [dateRange, setDateRange] = useState({
     startDate: new Date(2020, 0, 1), // 1/1/2020 (local time)

@@ -6,6 +6,7 @@ import SafetyLeftSidebar from "./layout/SafetyLeftSidebar";
 import SafetyRightSidebar from "./layout/SafetyRightSidebar";
 import DisclaimerModal from "../components/DisclaimerModal";
 import SafetyDataDisclaimer from "../components/SafetyDataDisclaimer";
+import { SchoolDistrictFilter } from "../components/filters/GeographicLevelSection";
 
 function useDebouncedValue<T>(value: T, delayMs: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -27,6 +28,7 @@ export default function SafetyApp() {
   const { selectedGeometry, selectedAreaName, onSelectionChange } = useSelection();
   
   const [geographicLevel, setGeographicLevel] = useState('city-service-area');
+  const [schoolDistrictFilter, setSchoolDistrictFilter] = useState<SchoolDistrictFilter>({ gradeFilter: 'all' });
   const [filters, setFilters] = useState<Partial<SafetyFilters>>({
     showPedestrian: true,
     showBicyclist: true,
@@ -86,6 +88,8 @@ export default function SafetyApp() {
           onFiltersChange={handleFiltersChange}
           geographicLevel={geographicLevel}
           onGeographicLevelChange={setGeographicLevel}
+          schoolDistrictFilter={schoolDistrictFilter}
+          onSchoolDistrictFilterChange={setSchoolDistrictFilter}
         />
         <SafetyMapArea 
           filters={debouncedFilters}

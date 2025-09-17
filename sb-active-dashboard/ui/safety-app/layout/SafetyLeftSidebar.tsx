@@ -1,18 +1,23 @@
 import { SafetyFilters } from "../../../lib/safety-app/types";
 import SafetyFilterPanel from "../components/left-sidebar/SafetyFilterPanel";
+import { SchoolDistrictFilter } from "../../components/filters/GeographicLevelSection";
 
 interface SafetyLeftSidebarProps {
   filters: Partial<SafetyFilters>;
   onFiltersChange: (filters: Partial<SafetyFilters>) => void;
   geographicLevel: string;
   onGeographicLevelChange: (level: string) => void;
+  schoolDistrictFilter?: SchoolDistrictFilter;
+  onSchoolDistrictFilterChange?: (filter: SchoolDistrictFilter) => void;
 }
 
 export default function SafetyLeftSidebar({
   filters,
   onFiltersChange,
   geographicLevel,
-  onGeographicLevelChange
+  onGeographicLevelChange,
+  schoolDistrictFilter,
+  onSchoolDistrictFilterChange
 }: SafetyLeftSidebarProps) {
   return (
     <div id="safety-filters-sidebar" className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
@@ -28,6 +33,8 @@ export default function SafetyLeftSidebar({
           onFiltersChange={onFiltersChange}
           geographicLevel={geographicLevel}
           onGeographicLevelChange={onGeographicLevelChange}
+          schoolDistrictFilter={schoolDistrictFilter}
+          onSchoolDistrictFilterChange={onSchoolDistrictFilterChange}
         />
       </div>
     </div>

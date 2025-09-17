@@ -23,7 +23,7 @@ interface VolumeLeftSidebarProps {
   geographicLevel: string;
   onGeographicLevelChange: (level: string) => void;
   schoolDistrictFilter?: SchoolDistrictFilter;
-  onSchoolDistrictFilterChange?: (filter: SchoolDistrictFilter) => void;
+  onSchoolDistrictFilterChange?: (filter: SchoolDistrictFilter) => void; // Make optional
   dateRange: DateRangeValue;
   onDateRangeChange: (dateRange: DateRangeValue) => void;
   selectedYear: number;

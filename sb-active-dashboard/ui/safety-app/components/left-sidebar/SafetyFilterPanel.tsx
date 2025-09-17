@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { SafetyFilters } from "../../../../lib/safety-app/types";
 import DateRangeSection from "../../../components/filters/DateRangeSection";
-import GeographicLevelSection from "../../../components/filters/GeographicLevelSection";
+import GeographicLevelSection, { SchoolDistrictFilter } from "../../../components/filters/GeographicLevelSection";
 import MoreInformationIcon from "../right-sidebar/MoreInformationIcon";
 
 interface DateRangeValue {
@@ -14,13 +14,17 @@ interface SafetyFilterPanelProps {
   onFiltersChange: (newFilters: Partial<SafetyFilters>) => void;
   geographicLevel: string;
   onGeographicLevelChange: (level: string) => void;
+  schoolDistrictFilter?: SchoolDistrictFilter;
+  onSchoolDistrictFilterChange?: (filter: SchoolDistrictFilter) => void;
 }
 
 export default function SafetyFilterPanel({
   filters,
   onFiltersChange,
   geographicLevel,
-  onGeographicLevelChange
+  onGeographicLevelChange,
+  schoolDistrictFilter,
+  onSchoolDistrictFilterChange
 }: SafetyFilterPanelProps) {
   // Convert SafetyFilters dateRange format to DateRangeValue format for the component
   const dateRangeFromFilters: DateRangeValue = {
@@ -44,6 +48,8 @@ export default function SafetyFilterPanel({
       <GeographicLevelSection 
         geographicLevel={geographicLevel}
         onGeographicLevelChange={onGeographicLevelChange}
+        schoolDistrictFilter={schoolDistrictFilter}
+        onSchoolDistrictFilterChange={onSchoolDistrictFilterChange}
       />
       <hr className="border-gray-200" />
 

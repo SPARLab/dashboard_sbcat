@@ -4,7 +4,7 @@ interface GeographicLevelSectionProps {
   geographicLevel: string;
   onGeographicLevelChange: (level: string) => void;
   schoolDistrictFilter?: SchoolDistrictFilter;
-  onSchoolDistrictFilterChange?: (filter: SchoolDistrictFilter) => void;
+  onSchoolDistrictFilterChange?: (filter: SchoolDistrictFilter) => void; // Make optional for Safety app
 }
 
 export interface SchoolDistrictFilter {
@@ -29,6 +29,7 @@ export default function GeographicLevelSection({
   onSchoolDistrictFilterChange,
 }: GeographicLevelSectionProps) {
   const [showCustomGradeRange, setShowCustomGradeRange] = useState(false);
+  
 
   const geographicOptions: GeographicOption[] = [
     { id: 'county', label: 'County', icon: '/icons/region-icon.svg' },
@@ -46,7 +47,10 @@ export default function GeographicLevelSection({
         : {})
     };
     
-    onSchoolDistrictFilterChange?.(newFilter);
+    if (onSchoolDistrictFilterChange) {
+      onSchoolDistrictFilterChange(newFilter);
+    }
+    
     setShowCustomGradeRange(gradeFilter === 'custom');
   };
 
