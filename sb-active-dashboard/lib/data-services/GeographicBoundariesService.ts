@@ -4,6 +4,7 @@
  * performant method for complex, interactive feature layers.
  */
 import Polygon from "@arcgis/core/geometry/Polygon";
+import Polyline from "@arcgis/core/geometry/Polyline";
 import Graphic from "@arcgis/core/Graphic";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
@@ -20,11 +21,12 @@ const BOUNDARY_LAYER_URLS = {
   COUNTIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1", // Counties
   CENSUS_TRACTS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0", // Census Tracts
   SCHOOL_DISTRICTS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_school_districts/FeatureServer", // Santa Barbara School Districts
-  UNINCORPORATED_AREAS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/SB_UnincorporatedAreas/FeatureServer" // Santa Barbara Unincorporated Areas
+  UNINCORPORATED_AREAS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/SB_UnincorporatedAreas/FeatureServer", // Santa Barbara Unincorporated Areas
+  CALTRANS_HIGHWAYS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/SB_CaltransHighways_Real/FeatureServer" // Santa Barbara Caltrans Highways
 };
 
 interface GeographicLevel {
-  id: 'city' | 'county' | 'census-tract' | 'hexagons' | 'custom' | 'city-service-area' | 'school-districts' | 'unincorporated-areas';
+  id: 'city' | 'county' | 'census-tract' | 'hexagons' | 'custom' | 'city-service-area' | 'school-districts' | 'unincorporated-areas' | 'caltrans-highways';
   name: string;
 }
 
@@ -43,6 +45,7 @@ export class GeographicBoundariesService {
   private censusTractLayer: FeatureLayer;
   private schoolDistrictsLayer: FeatureLayer;
   private unincorporatedAreasLayer: FeatureLayer;
+  private caltransHighwaysLayer: FeatureLayer;
   private highlightLayer: GraphicsLayer;
   
   private mapView: MapView | null = null;
@@ -71,7 +74,7 @@ export class GeographicBoundariesService {
   private selectedFeature: { objectId: number, layer: FeatureLayer } | null = null;
   
   // Selection change callback - supports both legacy and new format
-  private onSelectionChange: ((data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void) | null = null;
+  private onSelectionChange: ((data: { geometry: Polygon | Polyline | null; areaName?: string | null } | Polygon | Polyline | null) => void) | null = null;
 
   private hoverSymbol = new SimpleFillSymbol({
     color: [0, 0, 0, 0],
@@ -81,6 +84,17 @@ export class GeographicBoundariesService {
   private selectionSymbol = new SimpleFillSymbol({
     color: [0, 0, 0, 0],
     outline: new SimpleLineSymbol({ color: [30, 144, 255, 1], width: 4 })
+  });
+
+  // Line-based symbols for highways
+  private lineHoverSymbol = new SimpleLineSymbol({
+    color: [255, 255, 0, 1], // Yellow for hover
+    width: 6
+  });
+
+  private lineSelectionSymbol = new SimpleLineSymbol({
+    color: [0, 123, 255, 1], // Blue for selection
+    width: 6
   });
 
   constructor() {
@@ -214,6 +228,24 @@ export class GeographicBoundariesService {
       })
     });
 
+    // Caltrans Highways layer - using the Santa Barbara specific service
+    // This is a line-based layer, so we use SimpleLineSymbol directly
+    this.caltransHighwaysLayer = new FeatureLayer({
+      url: BOUNDARY_LAYER_URLS.CALTRANS_HIGHWAYS + "/0", // Specify layer 0
+      title: "Caltrans Highways",
+      visible: false,
+      popupEnabled: false,
+      outFields: ["*"], // Request all fields
+      minScale: 0,
+      maxScale: 0,
+      renderer: new SimpleRenderer({
+        symbol: new SimpleLineSymbol({
+          color: [70, 130, 180, 0.8], // Blue color to match other layers
+          width: 3 // Slightly thicker for highways
+        })
+      })
+    });
+
     this.highlightLayer = new GraphicsLayer({
         title: "Boundary Highlights",
         listMode: "hide"
@@ -221,10 +253,10 @@ export class GeographicBoundariesService {
   }
 
   getBoundaryLayers(): (FeatureLayer | GraphicsLayer)[] {
-    return [this.cityLayer, this.serviceAreaLayer, this.countyLayer, this.censusTractLayer, this.schoolDistrictsLayer, this.unincorporatedAreasLayer, this.highlightLayer];
+    return [this.cityLayer, this.serviceAreaLayer, this.countyLayer, this.censusTractLayer, this.schoolDistrictsLayer, this.unincorporatedAreasLayer, this.caltransHighwaysLayer, this.highlightLayer];
   }
   
-  setSelectionChangeCallback(callback: (data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void) {
+  setSelectionChangeCallback(callback: (data: { geometry: Polygon | Polyline | null; areaName?: string | null } | Polygon | Polyline | null) => void) {
     this.onSelectionChange = callback;
   }
 
@@ -333,6 +365,10 @@ export class GeographicBoundariesService {
       this.unincorporatedAreasLayer.visible = true;
       layers.push(this.unincorporatedAreasLayer);
     }
+    if (level === 'caltrans-highways') {
+      this.caltransHighwaysLayer.visible = true;
+      layers.push(this.caltransHighwaysLayer);
+    }
 
     if (layers.length > 0) {
       this.setupInteractivity(mapView, layers);
@@ -409,7 +445,7 @@ export class GeographicBoundariesService {
         // Use the first polygon's geometry for the callback
         // In practice, the consuming code should handle this as a special case
         this.onSelectionChange({
-          geometry: firstFeature.geometry as Polygon,
+          geometry: firstFeature.geometry as Polygon | Polyline,
           areaName: areaName
         });
       }
@@ -426,6 +462,7 @@ export class GeographicBoundariesService {
     this.censusTractLayer.visible = false;
     this.schoolDistrictsLayer.visible = false;
     this.unincorporatedAreasLayer.visible = false;
+    this.caltransHighwaysLayer.visible = false;
   }
   
   /**
@@ -868,11 +905,14 @@ export class GeographicBoundariesService {
     if (clickedGraphic.layer === this.unincorporatedAreasLayer) {
       this.selectAllUnincorporatedAreas();
     } else {
-      // Normal single polygon selection
+      // Normal single polygon/line selection - choose appropriate symbol
+      const isLineLayer = clickedGraphic.layer === this.caltransHighwaysLayer;
+      const symbol = isLineLayer ? this.lineSelectionSymbol : this.selectionSymbol;
+      
       this.selectedGraphic = new Graphic({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           geometry: clickedGraphic.geometry as any,
-          symbol: this.selectionSymbol,
+          symbol: symbol,
           attributes: clickedGraphic.attributes
       });
       this.highlightLayer.add(this.selectedGraphic);
@@ -885,7 +925,7 @@ export class GeographicBoundariesService {
       // Handle both uppercase (census layers) and lowercase (school districts) field names
       const areaName = clickedGraphic.attributes.NAME || clickedGraphic.attributes.name || null;
       this.onSelectionChange({
-        geometry: clickedGraphic.geometry as Polygon,
+        geometry: clickedGraphic.geometry as Polygon | Polyline,
         areaName: areaName
       });
     }
