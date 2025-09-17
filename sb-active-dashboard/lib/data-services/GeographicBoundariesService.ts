@@ -19,11 +19,12 @@ const BOUNDARY_LAYER_URLS = {
   SERVICE_AREAS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/26", // Census Designated Places
   COUNTIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1", // Counties
   CENSUS_TRACTS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0", // Census Tracts
-  SCHOOL_DISTRICTS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_school_districts/FeatureServer" // Santa Barbara School Districts
+  SCHOOL_DISTRICTS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_school_districts/FeatureServer", // Santa Barbara School Districts
+  UNINCORPORATED_AREAS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/SB_UnincorporatedAreas/FeatureServer" // Santa Barbara Unincorporated Areas
 };
 
 interface GeographicLevel {
-  id: 'city' | 'county' | 'census-tract' | 'hexagons' | 'custom' | 'city-service-area' | 'school-districts';
+  id: 'city' | 'county' | 'census-tract' | 'hexagons' | 'custom' | 'city-service-area' | 'school-districts' | 'unincorporated-areas';
   name: string;
 }
 
@@ -41,6 +42,7 @@ export class GeographicBoundariesService {
   private countyLayer: FeatureLayer;
   private censusTractLayer: FeatureLayer;
   private schoolDistrictsLayer: FeatureLayer;
+  private unincorporatedAreasLayer: FeatureLayer;
   private highlightLayer: GraphicsLayer;
   
   private mapView: MapView | null = null;
@@ -195,6 +197,23 @@ export class GeographicBoundariesService {
       })
     });
 
+    // Unincorporated Areas layer - using the Santa Barbara specific service
+    this.unincorporatedAreasLayer = new FeatureLayer({
+      url: BOUNDARY_LAYER_URLS.UNINCORPORATED_AREAS + "/0", // Specify layer 0
+      title: "Unincorporated Areas",
+      visible: false,
+      popupEnabled: false,
+      outFields: ["*"], // Request all fields
+      minScale: 0,
+      maxScale: 0,
+      renderer: new SimpleRenderer({
+        symbol: new SimpleFillSymbol({
+          color: [0, 0, 0, 0], // Transparent fill to match other layers
+          outline: new SimpleLineSymbol({ color: [70, 130, 180, 0.8], width: 2 })
+        })
+      })
+    });
+
     this.highlightLayer = new GraphicsLayer({
         title: "Boundary Highlights",
         listMode: "hide"
@@ -202,7 +221,7 @@ export class GeographicBoundariesService {
   }
 
   getBoundaryLayers(): (FeatureLayer | GraphicsLayer)[] {
-    return [this.cityLayer, this.serviceAreaLayer, this.countyLayer, this.censusTractLayer, this.schoolDistrictsLayer, this.highlightLayer];
+    return [this.cityLayer, this.serviceAreaLayer, this.countyLayer, this.censusTractLayer, this.schoolDistrictsLayer, this.unincorporatedAreasLayer, this.highlightLayer];
   }
   
   setSelectionChangeCallback(callback: (data: { geometry: Polygon | null; areaName?: string | null } | Polygon | null) => void) {
@@ -310,6 +329,10 @@ export class GeographicBoundariesService {
       this.schoolDistrictsLayer.visible = true;
       layers.push(this.schoolDistrictsLayer);
     }
+    if (level === 'unincorporated-areas') {
+      this.unincorporatedAreasLayer.visible = true;
+      layers.push(this.unincorporatedAreasLayer);
+    }
 
     if (layers.length > 0) {
       this.setupInteractivity(mapView, layers);
@@ -354,6 +377,46 @@ export class GeographicBoundariesService {
 
     this.schoolDistrictsLayer.definitionExpression = whereClause;
   }
+
+  /**
+   * Select all unincorporated area polygons when any one is clicked
+   */
+  private async selectAllUnincorporatedAreas() {
+    try {
+      // Query all features from the unincorporated areas layer
+      const query = this.unincorporatedAreasLayer.createQuery();
+      query.returnGeometry = true;
+      query.outFields = ["*"];
+      
+      const featureSet = await this.unincorporatedAreasLayer.queryFeatures(query);
+      
+      // Create selection graphics for all features
+      featureSet.features.forEach(feature => {
+        const selectionGraphic = new Graphic({
+          geometry: feature.geometry,
+          symbol: this.selectionSymbol,
+          attributes: feature.attributes
+        });
+        this.highlightLayer.add(selectionGraphic);
+      });
+
+      // For the callback, we'll use the combined geometry of all polygons
+      // or just use the first polygon's name since they're all "Unincorporated Areas"
+      if (this.onSelectionChange && featureSet.features.length > 0) {
+        const firstFeature = featureSet.features[0];
+        const areaName = firstFeature.attributes.NAME || firstFeature.attributes.name || "Unincorporated Areas";
+        
+        // Use the first polygon's geometry for the callback
+        // In practice, the consuming code should handle this as a special case
+        this.onSelectionChange({
+          geometry: firstFeature.geometry as Polygon,
+          areaName: areaName
+        });
+      }
+    } catch (error) {
+      console.error("Failed to select all unincorporated areas:", error);
+    }
+  }
   
   private hideAllBoundaryLayers() {
     this.cleanupInteractivity();
@@ -362,6 +425,7 @@ export class GeographicBoundariesService {
     this.countyLayer.visible = false;
     this.censusTractLayer.visible = false;
     this.schoolDistrictsLayer.visible = false;
+    this.unincorporatedAreasLayer.visible = false;
   }
   
   /**
@@ -800,17 +864,21 @@ export class GeographicBoundariesService {
 
     this.clearSelection();
     
-    // Optimistic update
-     
-    this.selectedGraphic = new Graphic({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        geometry: clickedGraphic.geometry as any,
-        symbol: this.selectionSymbol,
-        attributes: clickedGraphic.attributes
-    });
-    this.highlightLayer.add(this.selectedGraphic);
+    // Special handling for unincorporated areas - select all polygons
+    if (clickedGraphic.layer === this.unincorporatedAreasLayer) {
+      this.selectAllUnincorporatedAreas();
+    } else {
+      // Normal single polygon selection
+      this.selectedGraphic = new Graphic({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          geometry: clickedGraphic.geometry as any,
+          symbol: this.selectionSymbol,
+          attributes: clickedGraphic.attributes
+      });
+      this.highlightLayer.add(this.selectedGraphic);
 
-    this.refreshHighlight();
+      this.refreshHighlight();
+    }
     
     // Notify about the new selection with area name
     if (this.onSelectionChange && clickedGraphic.geometry) {

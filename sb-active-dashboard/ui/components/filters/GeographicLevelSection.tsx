@@ -36,6 +36,7 @@ export default function GeographicLevelSection({
     { id: 'city-service-area', label: 'City / Service Area', icon: '/icons/city-service-area-icon.svg' },
     { id: 'census-tract', label: 'Census Tract', icon: '/icons/census-tract-icon.svg' },
     { id: 'school-districts', label: 'School Districts', icon: '/icons/region-icon.svg', hasSubOptions: true },
+    { id: 'unincorporated-areas', label: 'Unincorporated Areas', icon: '/icons/region-icon.svg' },
     { id: 'custom', label: 'Custom Draw Tool', icon: '/icons/custom-draw-tool-icon.svg' }
   ];
 
