@@ -15,6 +15,7 @@ import { RawIncidentRenderer } from "../../../../lib/safety-app/renderers/RawInc
 import { WeightedVisualization } from "./visualizations/WeightedVisualization";
 import { useLayerCache } from "../../hooks/useLayerCache";
 import { useSafetyLayers } from "../../hooks/useSafetyLayers";
+import { SchoolDistrictFilter } from "../../../components/filters/GeographicLevelSection";
 
 interface NewSafetyMapProps {
   activeVisualization: SafetyVisualizationType;
@@ -22,6 +23,7 @@ interface NewSafetyMapProps {
   onMapViewReady?: (mapView: __esri.MapView) => void;
   onIncidentsLayerReady?: (layer: __esri.FeatureLayer) => void;
   geographicLevel: string;
+  schoolDistrictFilter?: SchoolDistrictFilter;
   onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | null) => void;
   showLoadingOverlay?: boolean;
 }
@@ -32,6 +34,7 @@ export default function NewSafetyMap({
   onMapViewReady,
   onIncidentsLayerReady,
   geographicLevel,
+  schoolDistrictFilter,
   onSelectionChange,
   showLoadingOverlay = true
 }: NewSafetyMapProps) {
@@ -340,6 +343,13 @@ export default function NewSafetyMap({
       }
     };
   }, [geographicLevel, sketchLayer, viewReady]); // Removed sketchViewModel and onSelectionChange from dependencies
+
+  // Apply school district filtering when filter changes
+  useEffect(() => {
+    if (geographicLevel === 'school-districts' && schoolDistrictFilter && boundaryService.current) {
+      boundaryService.current.applySchoolDistrictFilter(schoolDistrictFilter);
+    }
+  }, [schoolDistrictFilter, geographicLevel]);
 
   // Popup handling is now done via popupTemplate on the layers themselves
   // No need for manual click handlers - ArcGIS handles this automatically

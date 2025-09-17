@@ -3,10 +3,12 @@ import { SafetyFilters, SafetyVisualizationType } from "../../../../lib/safety-a
 import { IncidentHeatmapRenderer } from "../../../../lib/safety-app/renderers/IncidentHeatmapRenderer";
 import NewSafetyMap from "./NewSafetyMap";
 import HeatmapLegend from "./HeatmapLegend";
+import { SchoolDistrictFilter } from "../../../components/filters/GeographicLevelSection";
 
 interface SafetyMapAreaProps {
   filters?: Partial<SafetyFilters>;
   geographicLevel?: string;
+  schoolDistrictFilter?: SchoolDistrictFilter;
   onMapViewReady?: (mapView: __esri.MapView) => void;
   onIncidentsLayerReady?: (layer: __esri.FeatureLayer) => void;
   onSelectionChange?: (data: { geometry: __esri.Polygon | null; areaName?: string | null } | null) => void;
@@ -16,6 +18,7 @@ interface SafetyMapAreaProps {
 export default function SafetyMapArea({ 
   filters = {},
   geographicLevel = 'cities',
+  schoolDistrictFilter,
   onMapViewReady,
   onIncidentsLayerReady,
   onSelectionChange,
@@ -66,6 +69,7 @@ export default function SafetyMapArea({
             activeVisualization={activeMapTab}
             filters={filters}
             geographicLevel={geographicLevel}
+            schoolDistrictFilter={schoolDistrictFilter}
             onMapViewReady={onMapViewReady}
             onIncidentsLayerReady={onIncidentsLayerReady}
             onSelectionChange={onSelectionChange}

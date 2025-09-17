@@ -94,6 +94,7 @@ export default function SafetyApp() {
         <SafetyMapArea 
           filters={debouncedFilters}
           geographicLevel={geographicLevel}
+          schoolDistrictFilter={schoolDistrictFilter}
           onMapViewReady={handleMapViewReady}
           onIncidentsLayerReady={handleIncidentsLayerReady}
           onSelectionChange={onSelectionChange}
