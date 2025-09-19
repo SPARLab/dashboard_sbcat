@@ -305,6 +305,7 @@ function ConflictTypeSection({
   ];
 
   const currentConflictTypes = filters.conflictType || [];
+  const isEbikeMode = filters.ebikeMode || false;
   
   const toggleConflictType = (conflictType: string) => {
     let newConflictTypes: string[];
@@ -324,24 +325,45 @@ function ConflictTypeSection({
     onFiltersChange({ conflictType: newConflictTypes });
   };
 
-  const handleModeChange = (mode: 'all' | 'none') => {
+  const handleModeChange = (mode: 'all' | 'none' | 'ebike') => {
     if (mode === 'all') {
-      onFiltersChange({ conflictType: [...availableConflictTypes] });
-    } else {
+      // Reset to all conflict types and turn off e-bike mode
+      onFiltersChange({ 
+        conflictType: [...availableConflictTypes],
+        ebikeMode: false
+      });
+    } else if (mode === 'none') {
       onFiltersChange({ conflictType: [] });
+    } else if (mode === 'ebike') {
+      // Enable e-bike mode and keep only bike-related conflicts initially
+      const bikeConflictTypes = availableConflictTypes.filter(type => 
+        type.startsWith('Bike vs')
+      );
+      onFiltersChange({ 
+        conflictType: bikeConflictTypes,
+        ebikeMode: true
+      });
     }
   };
 
-  // Determine current mode based on selected conflict types
-  const allSelected = availableConflictTypes.every(type => currentConflictTypes.includes(type));
+  // Determine current mode based on selected conflict types and e-bike mode
+  const allSelected = availableConflictTypes.every(type => currentConflictTypes.includes(type)) && !isEbikeMode;
   const noneSelected = currentConflictTypes.length === 0;
-  const currentMode = allSelected ? 'all' : noneSelected ? 'none' : 'individual';
+  const currentMode = isEbikeMode ? 'ebike' : allSelected ? 'all' : noneSelected ? 'none' : 'individual';
+
+  // Get display labels based on e-bike mode
+  const getDisplayLabel = (conflictType: string): string => {
+    if (isEbikeMode && conflictType.startsWith('Bike vs')) {
+      return conflictType.replace('Bike vs', 'E-bike vs');
+    }
+    return conflictType;
+  };
 
   return (
     <div id="safety-conflict-type-section" className="px-4 py-4">
       <h3 id="safety-conflict-type-title" className="text-base font-medium text-gray-700 mb-2">Conflict Type</h3>
       
-      {/* All/None buttons */}
+      {/* All/None/E-bike buttons */}
       <div id="safety-conflict-type-mode-buttons" className="flex gap-1 mb-2">
         <button 
           id="safety-conflict-type-all-button"
@@ -365,16 +387,36 @@ function ConflictTypeSection({
         >
           None
         </button>
+        <button 
+          id="safety-conflict-type-ebike-button"
+          onClick={() => handleModeChange('ebike')}
+          className={`px-2 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none active:outline-none ${
+            currentMode === 'ebike' 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-white border border-blue-500 text-blue-500 hover:bg-blue-50'
+          }`}
+        >
+          E-bike
+        </button>
       </div>
+
+      {/* E-bike mode disclaimer */}
+      {isEbikeMode && (
+        <div id="safety-ebike-disclaimer" className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+          <p>⚠️ E-bike data available from 2022+. Earlier incidents may include unclassified e-bikes in general bike category.</p>
+        </div>
+      )}
 
       {/* Individual conflict toggles */}
       <div id="safety-conflict-type-toggles" className="space-y-0.5">
         {availableConflictTypes.map((conflictType) => {
           const labelId = conflictType.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          const displayLabel = getDisplayLabel(conflictType);
+          
           return (
             <div key={conflictType} id={`safety-conflict-type-${labelId}-container`}>
               <ConflictToggle 
-                label={conflictType} 
+                label={displayLabel} 
                 checked={currentConflictTypes.includes(conflictType)}
                 onChange={() => toggleConflictType(conflictType)}
               />

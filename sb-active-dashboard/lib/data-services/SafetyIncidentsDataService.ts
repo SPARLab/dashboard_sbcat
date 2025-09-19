@@ -257,7 +257,8 @@ export class SafetyIncidentsDataService {
       // Join the data
       const enrichedIncidents = this.joinIncidentData(
         rawData.incidents,
-        rawData.parties
+        rawData.parties,
+        filters
       );
 
       // Calculate summary statistics
@@ -325,6 +326,13 @@ export class SafetyIncidentsDataService {
       }
     }
 
+    // Handle e-bike mode filtering - this requires joining with parties table
+    // For now, we'll handle this in the post-processing step since e-bike info is in parties table
+    if (filters?.ebikeMode) {
+      // Add a comment for future enhancement - e-bike filtering requires parties join
+      // This will be handled in the joinIncidentData method
+    }
+
     return conditions.join(' AND ');
   }
 
@@ -367,7 +375,8 @@ export class SafetyIncidentsDataService {
    */
   static joinIncidentData(
     incidents: SafetyIncident[],
-    parties: IncidentParty[]
+    parties: IncidentParty[],
+    filters?: Partial<SafetyFilters>
   ): EnrichedSafetyIncident[] {
     // Create lookup maps for efficient joining
     const partiesByIncident = new Map<number, IncidentParty[]>();
@@ -379,7 +388,7 @@ export class SafetyIncidentsDataService {
     });
 
     // Join data and compute derived fields
-    return incidents.map(incident => {
+    let enrichedIncidents = incidents.map(incident => {
       const incidentParties = partiesByIncident.get(incident.id) || [];
 
       // Calculate max severity from all parties or use incident severity
@@ -406,6 +415,21 @@ export class SafetyIncidentsDataService {
         pedTrafficLevel: incident.ped_traffic
       };
     });
+
+    // Apply e-bike filtering if enabled
+    if (filters?.ebikeMode && filters.roadUser?.includes('bicyclist')) {
+      enrichedIncidents = enrichedIncidents.filter(incident => {
+        // Check if this incident has any parties with e-bike bicycle_type
+        return incident.parties.some(party => 
+          party.bicycle_type && 
+          (party.bicycle_type.toLowerCase().includes('e-bike') || 
+           party.bicycle_type.toLowerCase().includes('ebike') ||
+           party.bicycle_type.toLowerCase().includes('electric'))
+        );
+      });
+    }
+
+    return enrichedIncidents;
   }
 
   /**

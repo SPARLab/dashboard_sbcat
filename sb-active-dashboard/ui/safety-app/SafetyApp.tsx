@@ -33,6 +33,7 @@ export default function SafetyApp() {
     dataSource: ['SWITRS', 'BikeMaps.org'],
     severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'],
     conflictType: ['Bike vs vehicle', 'Bike vs other', 'Bike vs bike', 'Bike vs pedestrian', 'Bike vs infrastructure', 'Pedestrian vs vehicle', 'Pedestrian vs other'],
+    ebikeMode: false, // Default to regular bike mode
     dateRange: {
       start: new Date(new Date().getFullYear() - 3, 0, 1), // 3 years ago, January 1st
       end: new Date() // Today
