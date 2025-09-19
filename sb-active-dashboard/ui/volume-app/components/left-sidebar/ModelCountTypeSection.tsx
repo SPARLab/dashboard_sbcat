@@ -70,10 +70,19 @@ export default function ModelCountTypeSection({
             </div>
             <div className="ml-2.5 flex items-start">
               <span className="text-[14px] font-normal leading-6 text-gray-700">
-                Cost Benefit Tool
+                Cost Benefit Tool ({''}
+                <a 
+                  href="https://activetravelbenefits.ucdavis.edu/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  link
+                </a>
+                )
               </span>
               <Tooltip 
-                text="Additional information about Cost Benefit Tool"
+                text="Additional information about Cost Benefit Tool can be found here: https://activetravelbenefits.ucdavis.edu/"
                 className="ml-[2px]"
                 align="left"
               />
