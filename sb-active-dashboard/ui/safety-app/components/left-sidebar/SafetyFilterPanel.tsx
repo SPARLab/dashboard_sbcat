@@ -321,27 +321,58 @@ function ConflictTypeSection({
     // Sort the array to ensure the cache key is consistent
     newConflictTypes.sort();
     
-    // Only pass the conflictType change, not the entire filters object
-    onFiltersChange({ conflictType: newConflictTypes });
+    // When toggling conflict types, also update roadUser based on what's selected
+    const hasAnyPedConflicts = newConflictTypes.some(type => type.startsWith('Pedestrian vs'));
+    const hasAnyBikeConflicts = newConflictTypes.some(type => type.startsWith('Bike vs'));
+    
+    const updatedFilters: Partial<SafetyFilters> = {
+      conflictType: newConflictTypes
+    };
+    
+    // Update roadUser based on selected conflict types
+    if (!isEbikeMode) {
+      const newRoadUser = [];
+      if (hasAnyPedConflicts) newRoadUser.push('pedestrian');
+      if (hasAnyBikeConflicts) newRoadUser.push('bicyclist');
+      
+      if (newRoadUser.length > 0) {
+        updatedFilters.roadUser = newRoadUser;
+        updatedFilters.showPedestrian = hasAnyPedConflicts;
+        updatedFilters.showBicyclist = hasAnyBikeConflicts;
+      }
+    }
+    
+    onFiltersChange(updatedFilters);
   };
 
   const handleModeChange = (mode: 'all' | 'none' | 'ebike') => {
     if (mode === 'all') {
       // Reset to all conflict types and turn off e-bike mode
+      // Also ensure both pedestrian and bicyclist are included
       onFiltersChange({ 
         conflictType: [...availableConflictTypes],
-        ebikeMode: false
+        ebikeMode: false,
+        roadUser: ['pedestrian', 'bicyclist'],
+        showPedestrian: true,
+        showBicyclist: true
       });
     } else if (mode === 'none') {
-      onFiltersChange({ conflictType: [] });
+      onFiltersChange({ 
+        conflictType: [],
+        ebikeMode: false
+      });
     } else if (mode === 'ebike') {
       // Enable e-bike mode and keep only bike-related conflicts initially
+      // But allow pedestrian toggles to be added later
       const bikeConflictTypes = availableConflictTypes.filter(type => 
         type.startsWith('Bike vs')
       );
       onFiltersChange({ 
         conflictType: bikeConflictTypes,
-        ebikeMode: true
+        ebikeMode: true,
+        roadUser: ['bicyclist'],  // Start with bicyclist only
+        showBicyclist: true
+        // Don't change showPedestrian - let user toggle it
       });
     }
   };

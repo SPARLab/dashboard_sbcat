@@ -1,3 +1,5 @@
+import { hasEbikeParty } from "../../../lib/safety-app/utils/ebikeDetection";
+
 export interface IncidentPopupData {
   id?: string | number;
   data_source?: string;
@@ -14,10 +16,14 @@ export interface IncidentPopupData {
     party_type?: string;
     injury_severity?: string;
     age?: number;
+    bicycle_type?: string;
   }>;
 }
 
 export function generateIncidentPopupContent(incidentData: IncidentPopupData): string {
+  // Check if this is an e-bike incident
+  const isEbikeIncident = incidentData.parties ? hasEbikeParty(incidentData.parties) : false;
+  
   let popupContent = `
     <div class="incident-popup" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.4; color: #333;">
       <style>
@@ -27,8 +33,14 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
         .incident-popup .section { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; }
         .incident-popup .section:last-child { border-bottom: none; margin-bottom: 0; }
         .incident-popup .parties { background: #f8fafc; padding: 8px; border-radius: 4px; margin-top: 8px; }
+        .incident-popup .ebike-header { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 8px 12px; margin: -8px -8px 12px -8px; border-radius: 4px 4px 0 0; font-weight: bold; color: #92400e; display: flex; align-items: center; gap: 6px; }
       </style>
   `;
+  
+  // Add E-bike header if applicable
+  if (isEbikeIncident) {
+    popupContent += `<div class="ebike-header">⚡ E-bike Incident</div>`;
+  }
   
   // Basic incident information section
   popupContent += '<div class="section">';
@@ -49,7 +61,16 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   // Incident details section
   popupContent += '<div class="section">';
   if (incidentData.conflict_type) {
-    popupContent += `<p style="margin: 0 !important;"><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;
+    // Check if this is an e-bike incident and adjust conflict type display
+    const isEbikeIncident = incidentData.parties ? hasEbikeParty(incidentData.parties) : false;
+    let displayConflictType = incidentData.conflict_type;
+    
+    if (isEbikeIncident && displayConflictType.startsWith('Bike vs')) {
+      // Replace "Bike" with "E-bike" in the conflict type for e-bike incidents
+      displayConflictType = displayConflictType.replace('Bike vs', 'E-bike vs');
+    }
+    
+    popupContent += `<p style="margin: 0 !important;"><strong>Conflict Type:</strong> ${displayConflictType}</p>`;
   }
 
   // Severity information
@@ -63,7 +84,15 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   // Involvement flags
   const involvement = getInvolvementText(incidentData);
   if (involvement.length > 0) {
-    popupContent += `<p style="margin: 0 !important;"><strong>Involved:</strong> ${involvement.join(', ')}</p>`;
+    // Check if this is an e-bike incident
+    const isEbikeIncident = incidentData.parties ? hasEbikeParty(incidentData.parties) : false;
+    
+    if (isEbikeIncident) {
+      // Highlight E-bike incidents with a special style
+      popupContent += `<p style="margin: 0 !important;"><strong>Involved:</strong> <span style="background-color: #fef3c7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚡ ${involvement.join(', ')}</span></p>`;
+    } else {
+      popupContent += `<p style="margin: 0 !important;"><strong>Involved:</strong> ${involvement.join(', ')}</p>`;
+    }
   }
   popupContent += '</div>';
 
@@ -87,6 +116,11 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
       
       if (party.party_type) {
         popupContent += `${party.party_type}`;
+        
+        // Add bicycle type information if available
+        if (party.bicycle_type) {
+          popupContent += ` (${party.bicycle_type})`;
+        }
       }
       
       if (party.injury_severity) {
@@ -113,9 +147,49 @@ export function generateRawIncidentPopupContent(
   attributes: any,
   enrichedIncidents?: any[]
 ): string {
-  // Find enriched data from cache
-  const enrichedData = enrichedIncidents?.find(inc => inc.id === attributes.id);
+  // Special debug for incident 3734
+  if (attributes.id === 3734 || attributes.id === '3734') {
+    console.log('🎯🔴 INCIDENT 3734 POPUP:', {
+      attributesId: attributes.id,
+      attributesType: typeof attributes.id,
+      enrichedProvided: !!enrichedIncidents,
+      enrichedCount: enrichedIncidents?.length || 0
+    });
+  }
+
+  // Find enriched data from cache - handle both number and string IDs
+  const enrichedData = enrichedIncidents?.find(inc => 
+    inc.id === attributes.id || inc.id === Number(attributes.id) || String(inc.id) === String(attributes.id)
+  );
   const incidentData = enrichedData || attributes;
+  
+  if (attributes.id === 3734 || attributes.id === '3734') {
+    console.log('🎯🔴 INCIDENT 3734 ENRICHED:', {
+      found: !!enrichedData,
+      enrichedId: enrichedData?.id,
+      enrichedIdType: typeof enrichedData?.id,
+      hasParties: !!enrichedData?.parties,
+      parties: enrichedData?.parties
+    });
+  }
+  
+  // Check if this is an e-bike incident
+  // First check the hasEbike attribute (from improvedSafetyLayers), then check parties
+  let isEbikeIncident = attributes.hasEbike === 1 || attributes.hasEbike === true;
+  
+  if (!isEbikeIncident && enrichedData?.parties) {
+    isEbikeIncident = hasEbikeParty(enrichedData.parties);
+  }
+  
+  // Always log for known e-bike incidents
+  if (attributes.id === 3734 || attributes.id === '3734' || attributes.id === 3322 || attributes.id === 3385) {
+    console.log('🎯 KNOWN E-BIKE INCIDENT CHECK:', {
+      incidentId: attributes.id,
+      hasEbikeAttribute: attributes.hasEbike,
+      isEbikeIncident,
+      bicycleTypes: enrichedData?.parties?.map((p: any) => p.bicycle_type)
+    });
+  }
   
   // Build popup content using cached data
   let popupContent = `
@@ -125,8 +199,14 @@ export function generateRawIncidentPopupContent(
         .incident-popup p { margin: 0 !important; }
         .incident-popup strong { color: #2563eb; }
         .incident-popup .parties { background: #f8fafc; padding: 4px 6px; border-radius: 4px; margin-top: 4px; }
+        .incident-popup .ebike-header { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 6px 10px; margin: -6px -6px 8px -6px; border-radius: 4px 4px 0 0; font-weight: bold; color: #92400e; display: flex; align-items: center; gap: 4px; font-size: 14px; }
       </style>
   `;
+  
+  // Add E-bike header if applicable
+  if (isEbikeIncident) {
+    popupContent += `<div class="ebike-header">⚡ E-bike Incident</div>`;
+  }
   
   if (incidentData.data_source) {
     popupContent += `<p style="margin: 0 !important;"><strong>Source:</strong> ${incidentData.data_source}</p>`;
@@ -136,7 +216,14 @@ export function generateRawIncidentPopupContent(
     popupContent += `<p style="margin: 0 !important;"><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
   }
   if (incidentData.conflict_type) {
-    popupContent += `<p style="margin: 0 !important;"><strong>Conflict Type:</strong> ${incidentData.conflict_type}</p>`;
+    let displayConflictType = incidentData.conflict_type;
+    
+    if (isEbikeIncident && displayConflictType.startsWith('Bike vs')) {
+      // Replace "Bike" with "E-bike" in the conflict type for e-bike incidents
+      displayConflictType = displayConflictType.replace('Bike vs', 'E-bike vs');
+    }
+    
+    popupContent += `<p style="margin: 0 !important;"><strong>Conflict Type:</strong> ${displayConflictType}</p>`;
   }
   
   const severity = incidentData.severity || incidentData.maxSeverity;
@@ -162,6 +249,11 @@ export function generateRawIncidentPopupContent(
       popupContent += `<strong>Party ${party.party_number || index + 1}:</strong> `;
       if (party.party_type) {
         popupContent += `${party.party_type}`;
+        
+        // Add bicycle type information if available
+        if (party.bicycle_type) {
+          popupContent += ` (${party.bicycle_type})`;
+        }
       }
       if (party.injury_severity) {
         const injuryColor = getSeverityColor(party.injury_severity);
@@ -206,10 +298,22 @@ function getSeverityDisplayLabel(severity: string): string {
   return severity; // Return original label for all other cases
 }
 
+
 function getInvolvementText(incidentData: IncidentPopupData): string[] {
   const involvement = [];
   if (incidentData.pedestrian_involved) involvement.push('Pedestrian');
-  if (incidentData.bicyclist_involved) involvement.push('Bicyclist');
+  
+  if (incidentData.bicyclist_involved) {
+    // Check if any party has e-bike bicycle_type using strict detection
+    const hasEbike = incidentData.parties ? hasEbikeParty(incidentData.parties) : false;
+    
+    if (hasEbike) {
+      involvement.push('E-bike');
+    } else {
+      involvement.push('Bicyclist');
+    }
+  }
+  
   if (incidentData.vehicle_involved) involvement.push('Vehicle');
   return involvement;
 }

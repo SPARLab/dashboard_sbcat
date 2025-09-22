@@ -9,6 +9,7 @@ export class RawIncidentsVisualization {
   // Change from static cache to map-specific cache
   private static layerCache = new Map<string, FeatureLayer>();
   private static loadingCache = new Map<string, boolean>();
+  private static enrichedDataCache = new Map<string, any[]>();
 
   /**
    * Gets a client-side FeatureLayer for raw incidents.
@@ -20,18 +21,34 @@ export class RawIncidentsVisualization {
     filters: Partial<SafetyFilters>,
     setDataLoading: (loading: boolean) => void
   ): Promise<FeatureLayer | null> {
-    // Create a stable key for this map view - use a consistent identifier
-    const mapKey = mapView.container?.id || 'default-map';
+    // Create a stable key for this map view INCLUDING e-bike mode
+    const baseMapKey = mapView.container?.id || 'default-map';
+    const mapKey = `${baseMapKey}-ebike:${filters?.ebikeMode || false}`;
     
-    // Check if we have a cached layer for this specific map
+    console.log('🔑 Cache key:', mapKey);
+    
+    // Check if we have a cached layer for this specific map and filter combination
     if (this.layerCache.has(mapKey)) {
       const cachedLayer = this.layerCache.get(mapKey);
       if (cachedLayer && mapView.map && mapView.map.layers.includes(cachedLayer)) {
+        console.log('✅ Using cached layer for:', mapKey);
         return cachedLayer;
       } else {
         // Layer exists in cache but not on map, remove from cache
         this.layerCache.delete(mapKey);
       }
+    }
+    
+    // Clear old cache entries when filter changes
+    const otherKey = `${baseMapKey}-ebike:${!filters?.ebikeMode}`;
+    if (this.layerCache.has(otherKey)) {
+      const oldLayer = this.layerCache.get(otherKey);
+      if (oldLayer && mapView.map) {
+        mapView.map.remove(oldLayer);
+      }
+      this.layerCache.delete(otherKey);
+      this.enrichedDataCache.delete(otherKey);
+      console.log('🗑️ Cleared old cache for:', otherKey);
     }
 
     // Check if we're already loading for this map
@@ -52,13 +69,49 @@ export class RawIncidentsVisualization {
       }
 
       // 2. Process the data: join incidents with parties to compute maxSeverity
-      const enrichedIncidents = SafetyIncidentsDataService.joinIncidentData(
+      // Get ALL enriched incidents first (for popup lookup)
+      const allEnrichedIncidents = SafetyIncidentsDataService.joinIncidentData(
         rawData.incidents,
         rawData.parties
       );
+      
+      // Store enriched data in cache for popup access
+      this.enrichedDataCache.set(mapKey, allEnrichedIncidents);
+      console.log(`📦 Cached ${allEnrichedIncidents.length} enriched incidents for popups`);
 
-      // 3. Create ArcGIS Graphic objects from the processed data
-      const rawIncidentGraphics = enrichedIncidents
+      // 3. Apply e-bike filtering if needed
+      console.log('🔍 RawIncidentsVisualization filters:', {
+        ebikeMode: filters?.ebikeMode,
+        roadUser: filters?.roadUser,
+        shouldFilterEbikes: filters?.ebikeMode && filters?.roadUser?.includes('bicyclist')
+      });
+      
+      let filteredIncidents = allEnrichedIncidents;
+      if (filters?.ebikeMode && filters?.roadUser?.includes('bicyclist')) {
+        // Import the helper function
+        const { hasEbikeParty } = await import('../../../../../lib/safety-app/utils/ebikeDetection');
+        
+        // Debug: Check which incidents have e-bikes
+        const ebikeIncidentIds = new Set<number>();
+        allEnrichedIncidents.forEach(incident => {
+          if (hasEbikeParty(incident.parties)) {
+            ebikeIncidentIds.add(incident.id);
+          }
+        });
+        
+        console.log('🚴 E-bike incidents found:', Array.from(ebikeIncidentIds));
+        
+        filteredIncidents = allEnrichedIncidents.filter(incident => 
+          hasEbikeParty(incident.parties)
+        );
+        
+        console.log(`🚴 E-bike filter APPLIED: ${filteredIncidents.length} of ${allEnrichedIncidents.length} incidents have e-bikes`);
+      } else {
+        console.log('⚠️ E-bike filter NOT applied');
+      }
+
+      // 4. Create ArcGIS Graphic objects from the filtered data
+      const rawIncidentGraphics = filteredIncidents
         .filter(incident => incident.geometry && incident.id)
         .map((incident, index) => new Graphic({
           geometry: incident.geometry,
@@ -103,10 +156,16 @@ export class RawIncidentsVisualization {
         popupTemplate: {
           title: "Safety Incident Details",
           content: ({ graphic }: { graphic: __esri.Graphic }) => {
-            // The `graphic` object is destructured from the function parameter.
-            // We pass the graphic's attributes and the full `enrichedIncidents` array
-            // to the content generation function.
-            return generateRawIncidentPopupContent(graphic.attributes, enrichedIncidents);
+            // Get enriched data from cache - need to reconstruct the key
+            const baseMapKey = mapView.container?.id || 'default-map';
+            const currentMapKey = `${baseMapKey}-ebike:${filters?.ebikeMode || false}`;
+            const cachedEnrichedData = this.enrichedDataCache.get(currentMapKey);
+            console.log('📦 Popup accessing cache:', {
+              mapKey: currentMapKey,
+              cacheHit: !!cachedEnrichedData,
+              cacheSize: cachedEnrichedData?.length || 0
+            });
+            return generateRawIncidentPopupContent(graphic.attributes, cachedEnrichedData);
           },
         },
       });

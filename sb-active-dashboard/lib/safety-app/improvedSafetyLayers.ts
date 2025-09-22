@@ -82,7 +82,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     while (hasMore) {
       const partiesQuery = partiesLayer.createQuery();
       partiesQuery.where = "1=1";
-      partiesQuery.outFields = ["incident_id", "injury_severity"];
+      partiesQuery.outFields = ["incident_id", "injury_severity", "bicycle_type"];
       partiesQuery.returnGeometry = false;
       partiesQuery.start = offset;
       partiesQuery.num = pageSize;
@@ -113,12 +113,16 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     // Create a map of incident_id to max severity
     const severityMap = new Map<number, string>();
     
+    // Create a map of incident_id to hasEbike flag
+    const ebikeMap = new Map<number, boolean>();
+    
     // Log unique severity values to debug
     const uniqueSeverities = new Set<string>();
     
     allParties.forEach(partyFeature => {
       const incidentId = partyFeature.attributes.incident_id;
       const severity = partyFeature.attributes.injury_severity || '';
+      const bicycleType = partyFeature.attributes.bicycle_type;
       
       uniqueSeverities.add(severity);
       
@@ -137,12 +141,41 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       if (!currentSeverity || getSeverityPriority(normalizedSeverity) < getSeverityPriority(currentSeverity)) {
         severityMap.set(incidentId, normalizedSeverity);
       }
+      
+      // Check if this is an e-bike party
+      if (bicycleType && bicycleType.toLowerCase() === 'ebike') {
+        ebikeMap.set(incidentId, true);
+        console.log(`🚲✅ E-bike incident found: ${incidentId}`);
+      }
     });
     
 
 
     // Create enriched graphics with maxSeverity field
+    // Log e-bike incidents found
+    console.log(`🚴 E-bike incidents in ebikeMap:`, Array.from(ebikeMap.keys()).sort());
+    console.log(`📍 Total incidents to process: ${allIncidents.length}`);
+    
     const enrichedGraphics: Graphic[] = [];
+    const ebikeIncidentsProcessed: number[] = [];
+    
+    // First, check if incident 3322 is in allIncidents
+    const incident3322 = allIncidents.find(inc => inc.attributes.id === 3322);
+    if (incident3322) {
+      console.log('🔴 INCIDENT 3322 FOUND in allIncidents:', {
+        id: incident3322.attributes.id,
+        hasGeometry: !!incident3322.geometry,
+        geometry: incident3322.geometry,
+        attributes: incident3322.attributes
+      });
+    } else {
+      console.log('🔴 INCIDENT 3322 NOT FOUND in allIncidents!');
+      // Check if it's there with a different type
+      const incident3322String = allIncidents.find(inc => inc.attributes.id === '3322');
+      if (incident3322String) {
+        console.log('🔴 INCIDENT 3322 found as STRING id');
+      }
+    }
     
     allIncidents.forEach(incidentFeature => {
       const attributes = { ...incidentFeature.attributes };
@@ -150,6 +183,20 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       
       // Add maxSeverity field
       attributes.maxSeverity = severityMap.get(incidentId) || '';
+      
+      // Add hasEbike field (convert boolean to 0/1 for small-integer field type)
+      attributes.hasEbike = ebikeMap.get(incidentId) ? 1 : 0;
+      
+      // Debug e-bike incidents
+      if (ebikeMap.get(incidentId)) {
+        ebikeIncidentsProcessed.push(incidentId);
+        console.log(`🚴 Processing e-bike incident ${incidentId}:`, {
+          hasGeometry: !!incidentFeature.geometry,
+          geometryType: incidentFeature.geometry?.type,
+          coordinates: incidentFeature.geometry ? [incidentFeature.geometry.x, incidentFeature.geometry.y] : null,
+          hasEbike: attributes.hasEbike
+        });
+      }
       
       // If no severity found, default to Unknown regardless of data source
       if (!attributes.maxSeverity) {
@@ -164,7 +211,13 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       enrichedGraphics.push(graphic);
     });
 
-
+    // Log e-bike processing summary
+    console.log(`🚴 E-bike processing summary:`, {
+      expectedEbikeIncidents: Array.from(ebikeMap.keys()).sort(),
+      processedEbikeIncidents: ebikeIncidentsProcessed.sort(),
+      totalGraphicsCreated: enrichedGraphics.length,
+      ebikeGraphicsCreated: enrichedGraphics.filter(g => g.attributes.hasEbike === 1).length
+    });
     
     // Log sample of severity mappings
     const sampleMappings = enrichedGraphics.slice(0, 5).map(g => ({
@@ -194,7 +247,8 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     new Field({ name: "vehicle_involved", alias: "Vehicle Involved", type: "small-integer" }),
     new Field({ name: "data_source", alias: "Data Source", type: "string" }),
     new Field({ name: "strava_id", alias: "Strava ID", type: "integer" }),
-    new Field({ name: "maxSeverity", alias: "Maximum Severity", type: "string" }) // NEW FIELD
+    new Field({ name: "maxSeverity", alias: "Maximum Severity", type: "string" }), // NEW FIELD
+    new Field({ name: "hasEbike", alias: "Has E-bike", type: "small-integer" }) // E-BIKE FIELD
   ];
 
   // Create popup template for safety incidents
@@ -359,6 +413,7 @@ export class SafetyLayerService {
       enabled: boolean;
       type: 'weekdays' | 'weekends';
     };
+    ebikeMode?: boolean;
   }): void {
     if (!this.safetyLayerView) {
       console.warn("SafetyLayerService: Layer view not initialized");
@@ -495,6 +550,25 @@ export class SafetyLayerService {
       
 
       whereClauses.push(`(${weekdayClause})`);
+    }
+    
+    // E-bike filter
+    if (filters.ebikeMode === true) {
+      console.log('🚴 Applying e-bike filter in SafetyLayerService');
+      whereClauses.push("hasEbike = 1");
+      
+      // Debug: Check which incidents will pass the filter
+      if (this.safetyLayerView?.layer) {
+        const layer = this.safetyLayerView.layer as FeatureLayer;
+        if (layer.source && Array.isArray(layer.source)) {
+          const ebikeGraphics = layer.source.filter((g: any) => g.attributes.hasEbike === 1);
+          console.log('🚴 E-bike graphics in layer:', {
+            total: layer.source.length,
+            withEbike: ebikeGraphics.length,
+            ebikeIds: ebikeGraphics.map((g: any) => g.attributes.id).sort()
+          });
+        }
+      }
     }
 
     // Combine all where clauses

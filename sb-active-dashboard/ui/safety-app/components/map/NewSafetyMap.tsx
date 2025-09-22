@@ -158,7 +158,33 @@ export default function NewSafetyMap({
         dateRange: filters.dateRange,
         timeOfDay: filters.timeOfDay,
         weekdayFilter: filters.weekdayFilter,
+        ebikeMode: filters.ebikeMode,
       });
+      
+      // Debug: Check what's in the layer after filtering
+      if (filters.ebikeMode && incidentsLayer) {
+        setTimeout(() => {
+          // Use timeout to ensure filter has been applied
+          const query = incidentsLayer.createQuery();
+          query.where = "hasEbike = 1";
+          query.outFields = ["id", "hasEbike", "loc_desc"];
+          query.returnGeometry = true;
+          
+          incidentsLayer.queryFeatures(query).then(result => {
+            console.log('🔍 E-bike incidents in layer after filter:', {
+              count: result.features.length,
+              incidents: result.features.map(f => ({
+                id: f.attributes.id,
+                hasEbike: f.attributes.hasEbike,
+                location: f.attributes.loc_desc,
+                hasGeometry: !!f.geometry,
+                x: f.geometry?.x,
+                y: f.geometry?.y
+              }))
+            });
+          });
+        }, 100);
+      }
 
       // Raw incidents now use the same incidentsLayer with different renderer,
       // so they get filtered automatically by the SafetyLayerService above
