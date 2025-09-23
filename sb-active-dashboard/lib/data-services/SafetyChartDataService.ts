@@ -146,7 +146,12 @@ export class SafetyChartDataService {
 
     // Count incidents by conflict type
     incidents.forEach(incident => {
-      const conflictType = incident.conflict_type || 'Unknown';
+      let conflictType = incident.conflict_type || 'Unknown';
+      
+      // Handle special conflict types - convert empty/null/undefined to 'None'
+      if (conflictType === '' || conflictType === null || conflictType === undefined) {
+        conflictType = 'None';
+      }
       
       if (!conflictTypeCounts.has(conflictType)) {
         conflictTypeCounts.set(conflictType, { total: 0, bike: 0, ped: 0 });
@@ -158,6 +163,22 @@ export class SafetyChartDataService {
       if (incident.bicyclist_involved === 1) counts.bike += 1;
       if (incident.pedestrian_involved === 1) counts.ped += 1;
     });
+
+    // Filter to only include conflict types that are selected in the filter
+    const selectedConflictTypes = filters?.conflictType || [];
+    if (selectedConflictTypes.length > 0) {
+      // Only keep conflict types that are in the selected list
+      const filteredCounts = new Map<string, { total: number; bike: number; ped: number }>();
+      selectedConflictTypes.forEach(selectedType => {
+        if (conflictTypeCounts.has(selectedType)) {
+          filteredCounts.set(selectedType, conflictTypeCounts.get(selectedType)!);
+        }
+      });
+      conflictTypeCounts.clear();
+      filteredCounts.forEach((value, key) => {
+        conflictTypeCounts.set(key, value);
+      });
+    }
 
     const totalIncidents = incidents.length;
     const categories = Array.from(conflictTypeCounts.keys());

@@ -324,21 +324,30 @@ function ConflictTypeSection({
     // When toggling conflict types, also update roadUser based on what's selected
     const hasAnyPedConflicts = newConflictTypes.some(type => type.startsWith('Pedestrian vs'));
     const hasAnyBikeConflicts = newConflictTypes.some(type => type.startsWith('Bike vs'));
+    const hasNoneConflicts = newConflictTypes.includes('None');
     
     const updatedFilters: Partial<SafetyFilters> = {
       conflictType: newConflictTypes
     };
     
-    // Update roadUser based on selected conflict types
-    if (!isEbikeMode) {
-      const newRoadUser = [];
-      if (hasAnyPedConflicts) newRoadUser.push('pedestrian');
-      if (hasAnyBikeConflicts) newRoadUser.push('bicyclist');
-      
-      if (newRoadUser.length > 0) {
-        updatedFilters.roadUser = newRoadUser;
-        updatedFilters.showPedestrian = hasAnyPedConflicts;
-        updatedFilters.showBicyclist = hasAnyBikeConflicts;
+    // Special handling for None conflicts
+    if (hasNoneConflicts) {
+      // None conflicts don't require specific road user types
+      updatedFilters.roadUser = [];
+      updatedFilters.showPedestrian = false;
+      updatedFilters.showBicyclist = false;
+    } else {
+      // Update roadUser based on selected conflict types
+      if (!isEbikeMode) {
+        const newRoadUser = [];
+        if (hasAnyPedConflicts) newRoadUser.push('pedestrian');
+        if (hasAnyBikeConflicts) newRoadUser.push('bicyclist');
+        
+        if (newRoadUser.length > 0) {
+          updatedFilters.roadUser = newRoadUser;
+          updatedFilters.showPedestrian = hasAnyPedConflicts;
+          updatedFilters.showBicyclist = hasAnyBikeConflicts;
+        }
       }
     }
     
