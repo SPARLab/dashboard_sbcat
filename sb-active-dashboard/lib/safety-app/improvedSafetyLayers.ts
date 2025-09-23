@@ -32,7 +32,6 @@ const colors = [
  * This enables efficient client-side filtering on severity levels
  */
 export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Date; end: Date }): Promise<FeatureLayer> {
-  console.log('🔄 Creating enriched safety incidents layer...', new Date().toISOString());
   
   // Initialize the source layers
   const incidentsLayer = new FeatureLayer({
@@ -52,7 +51,6 @@ export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Da
       const startDate = dateRange.start.toISOString().split('T')[0];
       const endDate = dateRange.end.toISOString().split('T')[0];
       dateFilter = `timestamp >= TIMESTAMP '${startDate} 00:00:00' AND timestamp <= TIMESTAMP '${endDate} 23:59:59'`;
-      console.log('📅 Applying date range filter to initial query:', { startDate, endDate, dateFilter });
     }
 
     // Query incidents with date range filtering and pagination
@@ -162,20 +160,6 @@ export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Da
     // Create enriched graphics with maxSeverity field
     // Log e-bike incidents found
     const ebikeIds = Array.from(ebikeMap.keys()).sort();
-    console.log(`🚴 E-bike incidents in ebikeMap:`, ebikeIds);
-    console.log(`📍 Total incidents to process: ${allIncidents.length}`);
-    console.log(`✅ E-bike map has ${ebikeMap.size} entries`);
-    
-    // Check if our expected 3 incidents are in the list
-    const expectedIds = [3322, 3385, 3734];
-    const foundExpected = expectedIds.filter(id => ebikeIds.includes(id));
-    console.log(`🎯 Expected e-bike incidents (3322, 3385, 3734):`, {
-      found: foundExpected,
-      missing: expectedIds.filter(id => !ebikeIds.includes(id))
-    });
-    
-    // Show first 20 e-bike incident IDs for debugging
-    console.log(`🔍 First 20 e-bike incident IDs:`, ebikeIds.slice(0, 20));
     
     // CRITICAL: Initialize ALL incidents with hasEbike = 0 first
     let ebikeDebugCount = 0;
@@ -183,23 +167,6 @@ export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Da
     const enrichedGraphics: Graphic[] = [];
     const ebikeIncidentsProcessed: number[] = [];
     
-    // First, check if incident 3322 is in allIncidents
-    const incident3322 = allIncidents.find(inc => inc.attributes.id === 3322);
-    if (incident3322) {
-      console.log('🔴 INCIDENT 3322 FOUND in allIncidents:', {
-        id: incident3322.attributes.id,
-        hasGeometry: !!incident3322.geometry,
-        geometry: incident3322.geometry,
-        attributes: incident3322.attributes
-      });
-    } else {
-      console.log('🔴 INCIDENT 3322 NOT FOUND in allIncidents!');
-      // Check if it's there with a different type
-      const incident3322String = allIncidents.find(inc => inc.attributes.id === '3322');
-      if (incident3322String) {
-        console.log('🔴 INCIDENT 3322 found as STRING id');
-      }
-    }
     
     allIncidents.forEach(incidentFeature => {
       const attributes = { ...incidentFeature.attributes };
@@ -221,12 +188,6 @@ export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Da
       if (ebikeMap.get(incidentId)) {
         ebikeIncidentsProcessed.push(incidentId);
         // Commented out to reduce console noise
-        // console.log(`🚴 Processing e-bike incident ${incidentId}:`, {
-        //   hasGeometry: !!incidentFeature.geometry,
-        //   geometryType: incidentFeature.geometry?.type,
-        //   coordinates: incidentFeature.geometry ? [incidentFeature.geometry.x, incidentFeature.geometry.y] : null,
-        //   hasEbike: attributes.hasEbike
-        // });
       }
       
       // If no severity found, default to Unknown regardless of data source
@@ -242,16 +203,8 @@ export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Da
       enrichedGraphics.push(graphic);
     });
 
-    // Log e-bike processing summary
+    // E-bike processing summary for validation
     const ebikeGraphics = enrichedGraphics.filter(g => g.attributes.hasEbike === 1);
-    console.log(`🚴 E-bike processing summary:`, {
-      expectedEbikeIncidents: Array.from(ebikeMap.keys()).sort(),
-      processedEbikeIncidents: ebikeIncidentsProcessed.sort(),
-      totalGraphicsCreated: enrichedGraphics.length,
-      ebikeGraphicsCreated: ebikeGraphics.length,
-      ebikeDebugCount: ebikeDebugCount,
-      ebikeIds: ebikeGraphics.map(g => g.attributes.id).sort()
-    });
     
     // CRITICAL CHECK: If we have more than expected e-bikes, something is wrong
     if (ebikeGraphics.length > ebikeMap.size) {
@@ -260,10 +213,6 @@ export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Da
     
     // Debug: Check a sample of hasEbike values
     const sampleGraphics = enrichedGraphics.slice(0, 10);
-    console.log('🔎 Sample hasEbike values:', sampleGraphics.map(g => ({
-      id: g.attributes.id,
-      hasEbike: g.attributes.hasEbike
-    })));
     
     // Log sample of severity mappings
     const sampleMappings = enrichedGraphics.slice(0, 5).map(g => ({
@@ -300,8 +249,8 @@ export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Da
   // Create popup template for safety incidents
   const popupTemplate = {
     title: "Safety Incident Details",
-    content: ({ graphic }: { graphic: __esri.Graphic }) => {
-      return generateIncidentPopupContent(graphic.attributes);
+    content: async ({ graphic }: { graphic: __esri.Graphic }) => {
+      return await generateIncidentPopupContent(graphic.attributes);
     }
   };
 
@@ -394,10 +343,7 @@ export class SafetyLayerService {
     // Wait for the layer view to be ready
     this.safetyLayerView = await mapView.whenLayerView(incidentsLayer) as __esri.FeatureLayerView;
     
-    console.log("✅ SafetyLayerService initialized with layer view");
-
-    // Log successful initialization
-    console.log("✅ SafetyLayerService ready - severity filtering will use data source as proxy");
+    // SafetyLayerService initialized and ready
   }
 
   /**
@@ -440,7 +386,6 @@ export class SafetyLayerService {
 
     this.safetyLayerView.filter = featureFilter;
 
-    console.log(`🎯 Applied FeatureFilter: ${whereClause}`);
   }
 
   /**
@@ -600,43 +545,12 @@ export class SafetyLayerService {
     
     // E-bike filter
     if (filters.ebikeMode === true) {
-      console.log('🚴 Applying e-bike filter in SafetyLayerService');
       whereClauses.push("hasEbike = 1");
-      
-      // Debug: Check which incidents will pass the filter
-      if (this.safetyLayerView?.layer) {
-        const layer = this.safetyLayerView.layer as FeatureLayer;
-        if (layer.source && Array.isArray(layer.source)) {
-          const ebikeGraphics = layer.source.filter((g: any) => g.attributes.hasEbike === 1);
-          console.log('🚴 E-bike graphics in layer:', {
-            total: layer.source.length,
-            withEbike: ebikeGraphics.length,
-            ebikeIds: ebikeGraphics.map((g: any) => g.attributes.id).sort()
-          });
-          
-          // Check specific incidents
-          const incident3734 = layer.source.find((g: any) => g.attributes.id === 3734 || g.attributes.id === '3734');
-          if (incident3734) {
-            console.log('🎯 Incident 3734 attributes:', incident3734.attributes);
-          }
-        }
-      }
-    } else {
-      console.log('📍 E-bike mode OFF - showing all incidents');
     }
 
     // Combine all where clauses
     const finalWhereClause = whereClauses.length > 0 ? whereClauses.join(' AND ') : "1=1";
 
-    // DEBUG: Log the filter state and resulting WHERE clause
-    console.log('🔍 FILTER DEBUG:', {
-      ebikeMode: filters.ebikeMode,
-      dataSources: filters.dataSources,
-      severityTypes: filters.severityTypes,
-      conflictTypes: filters.conflictTypes,
-      whereClauses: whereClauses,
-      finalWhere: finalWhereClause
-    });
 
     // Apply the comprehensive FeatureFilter
     const featureFilter = new FeatureFilter({
@@ -645,7 +559,6 @@ export class SafetyLayerService {
 
     this.safetyLayerView.filter = featureFilter;
 
-    console.log(`🎯 Applied comprehensive FeatureFilter: ${finalWhereClause}`);
     
     // DEBUG: After applying filter, query to see what's actually visible
     setTimeout(async () => {
@@ -704,7 +617,6 @@ export class SafetyLayerService {
     }
 
     this.safetyLayerView.filter = null;
-    console.log("🔄 Cleared all filters");
   }
 
   /**

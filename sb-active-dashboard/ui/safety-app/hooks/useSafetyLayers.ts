@@ -33,11 +33,6 @@ export function useSafetyLayers(
         setIncidentsLayer(enrichedIncidentsLayer); // Use enriched layer instead!
         setPartiesLayer(layers.partiesLayer);
         
-        // Log layer initialization status
-        console.log('Safety layers initialized:', {
-          incidents: !!enrichedIncidentsLayer,
-          parties: !!layers.partiesLayer
-        });
 
         // Add boundary layers to map
         const boundaryLayers = boundaryService.getBoundaryLayers();

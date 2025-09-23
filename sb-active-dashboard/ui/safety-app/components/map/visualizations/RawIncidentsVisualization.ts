@@ -181,7 +181,7 @@ export class RawIncidentsVisualization {
         // 6. Restore the pop-up template
         popupTemplate: {
           title: "Safety Incident Details",
-          content: ({ graphic }: { graphic: __esri.Graphic }) => {
+          content: async ({ graphic }: { graphic: __esri.Graphic }) => {
             // Get enriched data from cache - need to reconstruct the key
             const baseMapKey = mapView.container?.id || 'default-map';
             const currentMapKey = `${baseMapKey}-ebike:${filters?.ebikeMode || false}`;
@@ -191,7 +191,7 @@ export class RawIncidentsVisualization {
               cacheHit: !!cachedEnrichedData,
               cacheSize: cachedEnrichedData?.length || 0
             });
-            return generateRawIncidentPopupContent(graphic.attributes, cachedEnrichedData);
+            return await generateRawIncidentPopupContent(graphic.attributes, cachedEnrichedData);
           },
         },
       });

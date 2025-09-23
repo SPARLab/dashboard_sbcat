@@ -26,7 +26,6 @@ export function isEbikeBicycleType(bicycleType: string): boolean {
   
   // Only log e-bike detections, not every check
   if (isEbike) {
-    console.log('🔌✅ E-bike Detected:', bicycleType);
   }
   
   return isEbike;
@@ -45,7 +44,6 @@ export function hasEbikeParty(parties: Array<{ bicycle_type?: string }>): boolea
   
   // Only log when e-bike is found
   if (result) {
-    console.log('🔌✅ Incident has E-bike party');
   }
   
   return result;

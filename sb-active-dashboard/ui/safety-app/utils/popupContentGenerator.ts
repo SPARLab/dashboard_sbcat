@@ -1,5 +1,92 @@
 import { hasEbikeParty } from "../../../lib/safety-app/utils/ebikeDetection";
 
+// Global cache for parties data to avoid repeated API calls
+let partiesCache: Map<number, any[]> | null = null;
+let partiesCachePromise: Promise<void> | null = null;
+
+/**
+ * Initialize the parties cache by fetching all parties data once
+ */
+async function initializePartiesCache(): Promise<void> {
+  if (partiesCache) {
+    return; // Already initialized
+  }
+
+  if (partiesCachePromise) {
+    return partiesCachePromise; // Already initializing
+  }
+
+  partiesCachePromise = (async () => {
+    try {
+      // Import FeatureLayer dynamically
+      const { default: FeatureLayer } = await import('@arcgis/core/layers/FeatureLayer');
+      
+      // Create parties layer
+      const partiesLayer = new FeatureLayer({
+        url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents/FeatureServer/1",
+        outFields: ["*"]
+      });
+
+      // Query all parties data with pagination to handle MaxRecordCount limits
+      const allParties: any[] = [];
+      let hasMore = true;
+      let offsetId = 0;
+      const pageSize = 2000; // Match typical ArcGIS limit
+      
+      while (hasMore) {
+        const query = partiesLayer.createQuery();
+        query.where = offsetId > 0 ? `objectid > ${offsetId}` : "1=1";
+        query.outFields = ["*"];
+        query.returnGeometry = false;
+        query.orderByFields = ["objectid"];
+        query.num = pageSize;
+        
+        const pageResult = await partiesLayer.queryFeatures(query);
+        const pageFeatures = pageResult.features;
+        
+        if (pageFeatures.length === 0) {
+          hasMore = false;
+        } else {
+          allParties.push(...pageFeatures);
+          
+          // Update offset for next page
+          if (pageFeatures.length === pageSize) {
+            offsetId = pageFeatures[pageFeatures.length - 1].attributes.objectid;
+          } else {
+            hasMore = false;
+          }
+        }
+      }
+      
+      // Group parties by incident_id
+      partiesCache = new Map();
+      allParties.forEach(feature => {
+        const party = feature.attributes;
+        const incidentId = party.incident_id;
+        
+        if (!partiesCache!.has(incidentId)) {
+          partiesCache!.set(incidentId, []);
+        }
+        partiesCache!.get(incidentId)!.push(party);
+      });
+      
+    } catch (error) {
+      console.error('Error initializing parties cache:', error);
+      partiesCache = new Map(); // Initialize empty cache to avoid repeated failures
+    }
+  })();
+
+  return partiesCachePromise;
+}
+
+/**
+ * Public function to pre-initialize the parties cache
+ * Call this when the safety app loads to avoid delays on first popup
+ */
+export async function preloadPartiesCache(): Promise<void> {
+  return initializePartiesCache();
+}
+
 export interface IncidentPopupData {
   id?: string | number;
   data_source?: string;
@@ -15,14 +102,33 @@ export interface IncidentPopupData {
     party_number?: number;
     party_type?: string;
     injury_severity?: string;
-    age?: number;
+    age?: number | string;
     bicycle_type?: string;
   }>;
 }
 
-export function generateIncidentPopupContent(incidentData: IncidentPopupData): string {
-  // Check if this is an e-bike incident
-  const isEbikeIncident = incidentData.parties ? hasEbikeParty(incidentData.parties) : false;
+export async function generateIncidentPopupContent(incidentData: IncidentPopupData): Promise<string> {
+  // If no parties data is available, get it from the cache
+  let enrichedIncidentData = incidentData;
+  if (!incidentData.parties && incidentData.id) {
+    try {
+      // Initialize cache if needed
+      await initializePartiesCache();
+      
+      // Get parties from cache
+      const incidentId = typeof incidentData.id === 'string' ? parseInt(incidentData.id) : incidentData.id;
+      const cachedParties = partiesCache?.get(incidentId) || [];
+      
+      if (cachedParties.length > 0) {
+        enrichedIncidentData = { ...incidentData, parties: cachedParties };
+      }
+    } catch (error) {
+      console.error('Error getting parties from cache:', error);
+    }
+  }
+  
+  // Check if this is an e-bike incident using the enriched data
+  const isEbikeIncident = enrichedIncidentData.parties ? hasEbikeParty(enrichedIncidentData.parties) : false;
   
   let popupContent = `
     <div class="incident-popup" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.4; color: #333;">
@@ -44,26 +150,24 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   
   // Basic incident information section
   popupContent += '<div class="section">';
-  if (incidentData.id) {
-    popupContent += `<p style="margin: 0 !important;"><strong>Incident ID:</strong> ${incidentData.id}</p>`;
+  if (enrichedIncidentData.id) {
+    popupContent += `<p style="margin: 0 !important;"><strong>Incident ID:</strong> ${enrichedIncidentData.id}</p>`;
   }
   
-  if (incidentData.data_source) {
-    popupContent += `<p style="margin: 0 !important;"><strong>Source:</strong> ${incidentData.data_source}</p>`;
+  if (enrichedIncidentData.data_source) {
+    popupContent += `<p style="margin: 0 !important;"><strong>Source:</strong> ${enrichedIncidentData.data_source}</p>`;
   }
   
-  if (incidentData.timestamp) {
-    const date = new Date(incidentData.timestamp);
+  if (enrichedIncidentData.timestamp) {
+    const date = new Date(enrichedIncidentData.timestamp);
     popupContent += `<p style="margin: 0 !important;"><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
   }
   popupContent += '</div>';
 
   // Incident details section
   popupContent += '<div class="section">';
-  if (incidentData.conflict_type) {
-    // Check if this is an e-bike incident and adjust conflict type display
-    const isEbikeIncident = incidentData.parties ? hasEbikeParty(incidentData.parties) : false;
-    let displayConflictType = incidentData.conflict_type;
+  if (enrichedIncidentData.conflict_type) {
+    let displayConflictType = enrichedIncidentData.conflict_type;
     
     if (isEbikeIncident && displayConflictType.startsWith('Bike vs')) {
       // Replace "Bike" with "E-bike" in the conflict type for e-bike incidents
@@ -74,7 +178,7 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   }
 
   // Severity information
-  const severity = incidentData.severity || incidentData.maxSeverity;
+  const severity = enrichedIncidentData.severity || enrichedIncidentData.maxSeverity;
   if (severity) {
     const severityColor = getSeverityColor(severity);
     const displayLabel = getSeverityDisplayLabel(severity);
@@ -82,11 +186,8 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   }
 
   // Involvement flags
-  const involvement = getInvolvementText(incidentData);
+  const involvement = getInvolvementText(enrichedIncidentData);
   if (involvement.length > 0) {
-    // Check if this is an e-bike incident
-    const isEbikeIncident = incidentData.parties ? hasEbikeParty(incidentData.parties) : false;
-    
     if (isEbikeIncident) {
       // Highlight E-bike incidents with a special style
       popupContent += `<p style="margin: 0 !important;"><strong>Involved:</strong> <span style="background-color: #fef3c7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚡ ${involvement.join(', ')}</span></p>`;
@@ -97,21 +198,29 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   popupContent += '</div>';
 
   // Risk/weight information for incident-to-volume ratio
-  if (incidentData.weightedExposure) {
+  if (enrichedIncidentData.weightedExposure) {
     popupContent += '<div class="section">';
-    popupContent += `<p style="margin: 0 !important;"><strong>Risk Weight:</strong> ${incidentData.weightedExposure.toFixed(3)}</p>`;
+    popupContent += `<p style="margin: 0 !important;"><strong>Risk Weight:</strong> ${enrichedIncidentData.weightedExposure.toFixed(3)}</p>`;
     popupContent += '<p style="margin: 0 !important; font-size: 0.85em; color: #6b7280;">Higher values indicate greater risk relative to selected volumes</p>';
     popupContent += '</div>';
   }
 
+  // E-bike involvement boolean field
+  popupContent += '<div class="section">';
+  const hasEbike = enrichedIncidentData.parties ? hasEbikeParty(enrichedIncidentData.parties) : false;
+  const ebikeStatus = hasEbike ? 'Yes' : 'No';
+  const ebikeColor = hasEbike ? '#059669' : '#6b7280';
+  popupContent += `<p style="margin: 0 !important;"><strong>E-bike Involved:</strong> <span style="color: ${ebikeColor}; font-weight: bold;">${ebikeStatus}</span></p>`;
+  popupContent += '</div>';
+
   // Parties information if available
-  if (incidentData.parties && incidentData.parties.length > 0) {
+  if (enrichedIncidentData.parties && enrichedIncidentData.parties.length > 0) {
     popupContent += '<div class="section">';
-    popupContent += '<p style="margin: 0 !important;"><strong>Parties Involved:</strong></p>';
+    popupContent += `<p style="margin: 0 !important;"><strong>Parties Involved (${enrichedIncidentData.parties.length}):</strong></p>`;
     popupContent += '<div class="parties">';
     
-    incidentData.parties.forEach((party, index) => {
-      popupContent += `<div style="margin-bottom: 6px;">`;
+    enrichedIncidentData.parties.forEach((party, index) => {
+      popupContent += `<div style="margin-bottom: 6px; padding: 4px; background: white; border-radius: 3px;">`;
       popupContent += `<strong>Party ${party.party_number || index + 1}:</strong> `;
       
       if (party.party_type) {
@@ -119,7 +228,8 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
         
         // Add bicycle type information if available
         if (party.bicycle_type) {
-          popupContent += ` (${party.bicycle_type})`;
+          const bikeTypeColor = party.bicycle_type.toLowerCase() === 'ebike' ? '#059669' : '#6b7280';
+          popupContent += ` <span style="color: ${bikeTypeColor}; font-weight: bold;">(${party.bicycle_type})</span>`;
         }
       }
       
@@ -143,148 +253,25 @@ export function generateIncidentPopupContent(incidentData: IncidentPopupData): s
   return popupContent;
 }
 
-export function generateRawIncidentPopupContent(
+// Legacy function - now just calls the enhanced version
+export async function generateRawIncidentPopupContent(
   attributes: any,
   enrichedIncidents?: any[]
-): string {
-  // Special debug for incident 3734
-  if (attributes.id === 3734 || attributes.id === '3734') {
-    console.log('🎯🔴 INCIDENT 3734 POPUP:', {
-      attributesId: attributes.id,
-      attributesType: typeof attributes.id,
-      enrichedProvided: !!enrichedIncidents,
-      enrichedCount: enrichedIncidents?.length || 0
-    });
-  }
-
-  // Find enriched data from cache - handle both number and string IDs
-  const enrichedData = enrichedIncidents?.find(inc => 
-    inc.id === attributes.id || inc.id === Number(attributes.id) || String(inc.id) === String(attributes.id)
-  );
-  const incidentData = enrichedData || attributes;
-  
-  if (attributes.id === 3734 || attributes.id === '3734') {
-    console.log('🎯🔴 INCIDENT 3734 ENRICHED:', {
-      found: !!enrichedData,
-      enrichedId: enrichedData?.id,
-      enrichedIdType: typeof enrichedData?.id,
-      hasParties: !!enrichedData?.parties,
-      parties: enrichedData?.parties
-    });
-  }
-  
-  // Check if this is an e-bike incident
-  // First check the hasEbike attribute (from improvedSafetyLayers), then check parties
-  let isEbikeIncident = attributes.hasEbike === 1 || attributes.hasEbike === true;
-  
-  if (!isEbikeIncident && enrichedData?.parties) {
-    isEbikeIncident = hasEbikeParty(enrichedData.parties);
-  }
-  
-  // DEBUG: Always log for ALL incidents to track hasEbike attribute
-  console.log('🔎 POPUP DEBUG - Incident', attributes.id, ':', {
-    hasEbikeAttribute: attributes.hasEbike,
-    hasEbikeAttributeType: typeof attributes.hasEbike,
-    isEbikeIncident,
-    enrichedDataAvailable: !!enrichedData,
-    parties: enrichedData?.parties?.map((p: any) => ({
-      party_type: p.party_type,
-      bicycle_type: p.bicycle_type
-    })),
-    allAttributes: Object.keys(attributes).sort()
-  });
-  
-  // Special check for known e-bike incidents
-  if (attributes.id === 3734 || attributes.id === '3734' || 
-      attributes.id === 3322 || attributes.id === '3322' ||
-      attributes.id === 3385 || attributes.id === '3385') {
-    console.log('⚡ KNOWN E-BIKE INCIDENT', attributes.id, 'DETAILED CHECK:', {
-      hasEbikeFromAttribute: attributes.hasEbike,
-      hasEbikeFromParties: enrichedData?.parties ? hasEbikeParty(enrichedData.parties) : false,
-      finalDecision: isEbikeIncident
-    });
-  }
-  
-  // Build popup content using cached data
-  let popupContent = `
-    <div class="incident-popup" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.4; color: #333;">
-      <style>
-        .esri-feature-content .incident-popup p { margin: 0 !important; }
-        .incident-popup p { margin: 0 !important; }
-        .incident-popup strong { color: #2563eb; }
-        .incident-popup .parties { background: #f8fafc; padding: 4px 6px; border-radius: 4px; margin-top: 4px; }
-        .incident-popup .ebike-header { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 6px 10px; margin: -6px -6px 8px -6px; border-radius: 4px 4px 0 0; font-weight: bold; color: #92400e; display: flex; align-items: center; gap: 4px; font-size: 14px; }
-      </style>
-  `;
-  
-  // Add E-bike header if applicable
-  if (isEbikeIncident) {
-    popupContent += `<div class="ebike-header">⚡ E-bike Incident</div>`;
-  }
-  
-  if (incidentData.data_source) {
-    popupContent += `<p style="margin: 0 !important;"><strong>Source:</strong> ${incidentData.data_source}</p>`;
-  }
-  if (incidentData.timestamp) {
-    const date = new Date(incidentData.timestamp);
-    popupContent += `<p style="margin: 0 !important;"><strong>Date:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>`;
-  }
-  if (incidentData.conflict_type) {
-    let displayConflictType = incidentData.conflict_type;
+): Promise<string> {
+  // If we have cached enriched data, use it directly
+  if (enrichedIncidents && enrichedIncidents.length > 0) {
+    const enrichedData = enrichedIncidents.find(inc => 
+      inc.id === attributes.id || inc.id === Number(attributes.id) || String(inc.id) === String(attributes.id)
+    );
     
-    if (isEbikeIncident && displayConflictType.startsWith('Bike vs')) {
-      // Replace "Bike" with "E-bike" in the conflict type for e-bike incidents
-      displayConflictType = displayConflictType.replace('Bike vs', 'E-bike vs');
+    if (enrichedData) {
+      // Use the enriched data directly without fetching again
+      return await generateIncidentPopupContent(enrichedData);
     }
-    
-    popupContent += `<p style="margin: 0 !important;"><strong>Conflict Type:</strong> ${displayConflictType}</p>`;
   }
   
-  const severity = incidentData.severity || incidentData.maxSeverity;
-  if (severity) {
-    const severityColor = getSeverityColor(severity);
-    const displayLabel = getSeverityDisplayLabel(severity);
-    popupContent += `<p style="margin: 0 !important;"><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${displayLabel}</span></p>`;
-  }
-  
-  // Involvement
-  const involvement = getInvolvementText(incidentData);
-  if (involvement.length > 0) {
-    popupContent += `<p style="margin: 0 !important;"><strong>Involved:</strong> ${involvement.join(', ')}</p>`;
-  }
-  
-  // Parties if available
-  if (enrichedData && enrichedData.parties && enrichedData.parties.length > 0) {
-    popupContent += '<p style="margin: 0 !important;"><strong>Parties Involved:</strong></p>';
-    popupContent += '<div class="parties">';
-    
-    enrichedData.parties.forEach((party: any, index: number) => {
-      popupContent += `<div style="margin-bottom: 2px;">`;
-      popupContent += `<strong>Party ${party.party_number || index + 1}:</strong> `;
-      if (party.party_type) {
-        popupContent += `${party.party_type}`;
-        
-        // Add bicycle type information if available
-        if (party.bicycle_type) {
-          popupContent += ` (${party.bicycle_type})`;
-        }
-      }
-      if (party.injury_severity) {
-        const injuryColor = getSeverityColor(party.injury_severity);
-        const displayLabel = getSeverityDisplayLabel(party.injury_severity);
-        popupContent += ` - <span style="color: ${injuryColor};">${displayLabel}</span>`;
-      }
-      if (party.age) {
-        popupContent += ` (Age: ${party.age})`;
-      }
-      popupContent += '</div>';
-    });
-    
-    popupContent += '</div>';
-  }
-  
-  popupContent += '</div>';
-  return popupContent;
+  // Fall back to the enhanced function which will fetch data if needed
+  return await generateIncidentPopupContent(attributes);
 }
 
 function getSeverityColor(severity: string): string {

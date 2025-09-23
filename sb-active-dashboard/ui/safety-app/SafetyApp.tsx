@@ -6,6 +6,7 @@ import SafetyLeftSidebar from "./layout/SafetyLeftSidebar";
 import SafetyRightSidebar from "./layout/SafetyRightSidebar";
 import DisclaimerModal from "../components/DisclaimerModal";
 import SafetyDataDisclaimer from "../components/SafetyDataDisclaimer";
+import { preloadPartiesCache } from "./utils/popupContentGenerator";
 
 function useDebouncedValue<T>(value: T, delayMs: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -60,6 +61,13 @@ export default function SafetyApp() {
   const handleMapViewReady = (view: __esri.MapView) => {
     setMapView(view);
   };
+
+  // Preload parties cache when component mounts
+  useEffect(() => {
+    preloadPartiesCache().catch(error => {
+      console.error('Failed to preload parties cache:', error);
+    });
+  }, []);
 
   const debouncedFilters = useDebouncedValue(filters, 300);
 

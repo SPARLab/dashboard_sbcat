@@ -400,13 +400,10 @@ export class SafetyIncidentsDataService {
       partiesByIncident.get(party.incident_id)!.push(party);
     });
 
-    // Count e-bike parties (commented out debug log)
+    // Count e-bike parties for filtering
     const ebikeParties = parties.filter(p => 
       p.bicycle_type && p.bicycle_type.toLowerCase() === 'ebike'
     );
-    // if (ebikeParties.length > 0) {
-    //   console.log(`🚴✅ Found ${ebikeParties.length} E-bike parties`);
-    // }
 
     // Join data and compute derived fields
     let enrichedIncidents = incidents.map(incident => {

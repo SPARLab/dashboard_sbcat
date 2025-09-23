@@ -149,12 +149,6 @@ export default function NewSafetyMap({
     if (!safetyLayerService) return;
 
     const applyFilters = () => {
-      console.log('🛠 Applying filters in NewSafetyMap:', {
-        ebikeMode: filters.ebikeMode,
-        conflictTypes: filters.conflictType?.length,
-        severityTypes: filters.severityTypes?.length,
-        dataSources: filters.dataSource
-      });
       
       // Apply filter to the main incidents layer (for heatmaps)
       safetyLayerService.applyAdditionalFilters({
@@ -167,30 +161,6 @@ export default function NewSafetyMap({
         ebikeMode: filters.ebikeMode,
       });
       
-      // Debug: Check what's in the layer after filtering
-      if (filters.ebikeMode && incidentsLayer) {
-        setTimeout(() => {
-          // Use timeout to ensure filter has been applied
-          const query = incidentsLayer.createQuery();
-          query.where = "hasEbike = 1";
-          // Only request fields that exist in the enriched layer
-          query.outFields = ["id", "loc_desc", "maxSeverity"];
-          query.returnGeometry = true;
-          
-          incidentsLayer.queryFeatures(query).then(result => {
-            console.log('🔍 E-bike filter check - incidents with hasEbike=1:', {
-              count: result.features.length,
-              incidents: result.features.map(f => ({
-                id: f.attributes.id,
-                location: f.attributes.loc_desc,
-                hasGeometry: !!f.geometry
-              }))
-            });
-          }).catch(error => {
-            console.error('Error querying e-bike incidents:', error);
-          });
-        }, 100);
-      }
 
       // Raw incidents now use the same incidentsLayer with different renderer,
       // so they get filtered automatically by the SafetyLayerService above
@@ -201,7 +171,6 @@ export default function NewSafetyMap({
     // CRITICAL: Force layer refresh when switching from e-bike to all
     if (incidentsLayer && !filters.ebikeMode) {
       setTimeout(() => {
-        console.log('🔄 Forcing layer refresh after filter change');
         incidentsLayer.refresh();
         
         // Also try to refresh the map view
@@ -210,16 +179,6 @@ export default function NewSafetyMap({
         }
       }, 200);
     }
-    
-    // Debug: Check layer state after filter application
-    setTimeout(() => {
-      console.log('🔍 Layer state after filter application:', {
-        incidentsLayerVisible: incidentsLayer?.visible,
-        incidentsLayerRenderer: incidentsLayer?.renderer?.type,
-        activeVisualization,
-        ebikeMode: filters.ebikeMode
-      });
-    }, 100);
   }, [filters, safetyLayerService]);
 
   // SIMPLIFIED: Handle visualization changes using single layer approach
@@ -235,11 +194,6 @@ export default function NewSafetyMap({
         setDataLoading(true);
 
         // SIMPLIFIED: Only hide weighted layer, keep main layer visible
-        console.log('👁️ Layer visibility before switch:', {
-          incidentsLayerVisible: incidentsLayer?.visible,
-          cachedWeightedLayerVisible: cachedWeightedLayer?.visible,
-          activeVisualization
-        });
         
         // Only hide weighted layer, main incidents layer stays visible
         if (cachedWeightedLayer) {
@@ -248,7 +202,6 @@ export default function NewSafetyMap({
 
         // SIMPLIFIED: Use only the main incidents layer for all visualizations
         if (incidentsLayer) {
-          console.log('🎨 Setting renderer on main layer:', activeVisualization);
           
           // CRITICAL: Always refresh the renderer to ensure proper display
           let newRenderer;
@@ -290,18 +243,8 @@ export default function NewSafetyMap({
             cachedWeightedLayer.visible = false;
           }
           
-          console.log('✅ Renderer updated and layer refreshed:', {
-            rendererType: newRenderer?.type,
-            layerVisible: incidentsLayer.visible
-          });
         }
         
-        // Debug: Check layer visibility after switch
-        console.log('👁️ Layer visibility after switch:', {
-          incidentsLayerVisible: incidentsLayer?.visible,
-          cachedWeightedLayerVisible: cachedWeightedLayer?.visible,
-          activeVisualization
-        });
         
       } catch (error) {
 
