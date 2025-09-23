@@ -43,7 +43,7 @@ export default function SafetyApp() {
       periods: ['morning', 'afternoon', 'evening']
     },
     weekdayFilter: {
-      enabled: true,
+      enabled: false,  // Default to showing all days
       type: 'weekdays'
     }
   });

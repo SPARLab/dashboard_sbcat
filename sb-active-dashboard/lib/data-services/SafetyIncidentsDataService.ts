@@ -268,7 +268,7 @@ export class SafetyIncidentsDataService {
         enrichedIncidents = enrichedIncidents.filter(incident => 
           hasEbikeParty(incident.parties)
         );
-        console.log(`🚴 E-bike filter in getEnrichedSafetyData: ${enrichedIncidents.length} of ${beforeCount} incidents have e-bikes`);
+        // console.log(`🚴 E-bike filter in getEnrichedSafetyData: ${enrichedIncidents.length} of ${beforeCount} incidents have e-bikes`);
       }
 
       // Calculate summary statistics
@@ -389,7 +389,7 @@ export class SafetyIncidentsDataService {
     filters?: Partial<SafetyFilters>
   ): EnrichedSafetyIncident[] {
     // Log summary only
-    console.log(`🔍 Joining ${incidents.length} incidents with ${parties.length} parties`);
+    // console.log(`🔍 Joining ${incidents.length} incidents with ${parties.length} parties`);
 
     // Create lookup maps for efficient joining
     const partiesByIncident = new Map<number, IncidentParty[]>();
@@ -400,13 +400,13 @@ export class SafetyIncidentsDataService {
       partiesByIncident.get(party.incident_id)!.push(party);
     });
 
-    // Count e-bike parties
+    // Count e-bike parties (commented out debug log)
     const ebikeParties = parties.filter(p => 
       p.bicycle_type && p.bicycle_type.toLowerCase() === 'ebike'
     );
-    if (ebikeParties.length > 0) {
-      console.log(`🚴✅ Found ${ebikeParties.length} E-bike parties`);
-    }
+    // if (ebikeParties.length > 0) {
+    //   console.log(`🚴✅ Found ${ebikeParties.length} E-bike parties`);
+    // }
 
     // Join data and compute derived fields
     let enrichedIncidents = incidents.map(incident => {
@@ -537,13 +537,13 @@ export class SafetyIncidentsDataService {
       gender: feature.attributes.gender
     };
     
-    // Only log e-bike parties
-    if (party.bicycle_type && party.bicycle_type.toLowerCase() === 'ebike') {
-      console.log('🚲✅ E-bike party:', {
-        incident_id: party.incident_id,
-        bicycle_type: party.bicycle_type
-      });
-    }
+    // Only log e-bike parties (commented out to reduce console clutter)
+    // if (party.bicycle_type && party.bicycle_type.toLowerCase() === 'ebike') {
+    //   console.log('🚲✅ E-bike party:', {
+    //     incident_id: party.incident_id,
+    //     bicycle_type: party.bicycle_type
+    //   });
+    // }
     
     return party;
   }

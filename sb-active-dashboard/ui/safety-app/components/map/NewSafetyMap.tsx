@@ -50,7 +50,7 @@ export default function NewSafetyMap({
   const [sketchViewModel, setSketchViewModel] = useState<SketchViewModel | null>(null);
   const [sketchLayer, setSketchLayer] = useState<GraphicsLayer | null>(null);
   
-  // Use layer cache hook for complex visualizations
+  // SIMPLIFIED: Only use cache for weighted visualization
   const {
     cachedWeightedLayer,
     setCachedWeightedLayer,
@@ -65,7 +65,8 @@ export default function NewSafetyMap({
     mapViewRef.current,
     boundaryService.current,
     setDataLoading,
-    setDataError
+    setDataError,
+    filters.dateRange
   );
 
   // Handle ArcGIS view ready
@@ -148,7 +149,12 @@ export default function NewSafetyMap({
     if (!safetyLayerService) return;
 
     const applyFilters = () => {
-
+      console.log('🛠 Applying filters in NewSafetyMap:', {
+        ebikeMode: filters.ebikeMode,
+        conflictTypes: filters.conflictType?.length,
+        severityTypes: filters.severityTypes?.length,
+        dataSources: filters.dataSource
+      });
       
       // Apply filter to the main incidents layer (for heatmaps)
       safetyLayerService.applyAdditionalFilters({
@@ -167,21 +173,21 @@ export default function NewSafetyMap({
           // Use timeout to ensure filter has been applied
           const query = incidentsLayer.createQuery();
           query.where = "hasEbike = 1";
-          query.outFields = ["id", "hasEbike", "loc_desc"];
+          // Only request fields that exist in the enriched layer
+          query.outFields = ["id", "loc_desc", "maxSeverity"];
           query.returnGeometry = true;
           
           incidentsLayer.queryFeatures(query).then(result => {
-            console.log('🔍 E-bike incidents in layer after filter:', {
+            console.log('🔍 E-bike filter check - incidents with hasEbike=1:', {
               count: result.features.length,
               incidents: result.features.map(f => ({
                 id: f.attributes.id,
-                hasEbike: f.attributes.hasEbike,
                 location: f.attributes.loc_desc,
-                hasGeometry: !!f.geometry,
-                x: f.geometry?.x,
-                y: f.geometry?.y
+                hasGeometry: !!f.geometry
               }))
             });
+          }).catch(error => {
+            console.error('Error querying e-bike incidents:', error);
           });
         }, 100);
       }
@@ -191,54 +197,112 @@ export default function NewSafetyMap({
     };
 
     applyFilters();
+    
+    // CRITICAL: Force layer refresh when switching from e-bike to all
+    if (incidentsLayer && !filters.ebikeMode) {
+      setTimeout(() => {
+        console.log('🔄 Forcing layer refresh after filter change');
+        incidentsLayer.refresh();
+        
+        // Also try to refresh the map view
+        if (mapViewRef.current) {
+          mapViewRef.current.refresh();
+        }
+      }, 200);
+    }
+    
+    // Debug: Check layer state after filter application
+    setTimeout(() => {
+      console.log('🔍 Layer state after filter application:', {
+        incidentsLayerVisible: incidentsLayer?.visible,
+        incidentsLayerRenderer: incidentsLayer?.renderer?.type,
+        activeVisualization,
+        ebikeMode: filters.ebikeMode
+      });
+    }, 100);
   }, [filters, safetyLayerService]);
 
-  // Handle visualization type changes using original logic
+  // SIMPLIFIED: Handle visualization changes using single layer approach
   useEffect(() => {
     if (!viewReady || !mapViewRef.current) return;
     
-    // For raw incidents, we don't need incidentsLayer, so only check it for other visualizations
-    if (activeVisualization !== 'raw-incidents' && !incidentsLayer) return;
+    // All visualizations now use the main incidentsLayer
+    if (!incidentsLayer) return;
 
     const updateVisualization = async () => {
 
       try {
         setDataLoading(true);
 
-        // Hide all layers before showing the active one
-        if (incidentsLayer) incidentsLayer.visible = false;
-
-        if (cachedWeightedLayer) cachedWeightedLayer.visible = false;
-
-        switch (activeVisualization) {
-          case 'raw-incidents':
-            // Use the same efficient pattern as incident-heatmap
-            if (incidentsLayer) {
-              incidentsLayer.renderer = RawIncidentRenderer.getRenderer('severity', filters as SafetyFilters);
-              incidentsLayer.visible = true;
-              setDataLoading(false);
-            }
-            break;
-
-          case 'incident-heatmap':
-            if (incidentsLayer) {
-              incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
-              incidentsLayer.visible = true;
-            }
-            break;
-
-          case 'incident-to-volume-ratio':
-            await WeightedVisualization.createVisualization(
-              mapViewRef.current!, filters, incidentsLayer,
-              cachedWeightedLayer, cachedExtentKey, generateCacheKey,
-              setCachedWeightedLayer, setCachedExtentKey
-            );
-            break;
-
-          default:
-            console.warn(`Unknown visualization type: ${activeVisualization}`);
-            break;
+        // SIMPLIFIED: Only hide weighted layer, keep main layer visible
+        console.log('👁️ Layer visibility before switch:', {
+          incidentsLayerVisible: incidentsLayer?.visible,
+          cachedWeightedLayerVisible: cachedWeightedLayer?.visible,
+          activeVisualization
+        });
+        
+        // Only hide weighted layer, main incidents layer stays visible
+        if (cachedWeightedLayer) {
+          cachedWeightedLayer.visible = false;
         }
+
+        // SIMPLIFIED: Use only the main incidents layer for all visualizations
+        if (incidentsLayer) {
+          console.log('🎨 Setting renderer on main layer:', activeVisualization);
+          
+          // CRITICAL: Always refresh the renderer to ensure proper display
+          let newRenderer;
+          
+          switch (activeVisualization) {
+            case 'raw-incidents':
+              newRenderer = RawIncidentRenderer.getRenderer('severity', filters as SafetyFilters);
+              break;
+              
+            case 'incident-heatmap':
+              newRenderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
+              break;
+              
+            case 'incident-to-volume-ratio':
+              // For weighted visualization, we still need the special layer
+              await WeightedVisualization.createVisualization(
+                mapViewRef.current!, filters, incidentsLayer,
+                cachedWeightedLayer, cachedExtentKey, generateCacheKey,
+                setCachedWeightedLayer, setCachedExtentKey
+              );
+              return; // Early return for weighted visualization
+              
+            default:
+              console.warn(`Unknown visualization type: ${activeVisualization}`);
+              return;
+          }
+          
+          // Force renderer update
+          incidentsLayer.renderer = newRenderer;
+          
+          // CRITICAL: Force layer refresh to ensure all features are visible
+          incidentsLayer.refresh();
+          
+          // Make sure the main layer is visible for all non-weighted visualizations
+          incidentsLayer.visible = true;
+          
+          // Hide weighted layer if it exists
+          if (cachedWeightedLayer) {
+            cachedWeightedLayer.visible = false;
+          }
+          
+          console.log('✅ Renderer updated and layer refreshed:', {
+            rendererType: newRenderer?.type,
+            layerVisible: incidentsLayer.visible
+          });
+        }
+        
+        // Debug: Check layer visibility after switch
+        console.log('👁️ Layer visibility after switch:', {
+          incidentsLayerVisible: incidentsLayer?.visible,
+          cachedWeightedLayerVisible: cachedWeightedLayer?.visible,
+          activeVisualization
+        });
+        
       } catch (error) {
 
         setDataError(error instanceof Error ? error.message : `Failed to update to ${activeVisualization}`);

@@ -346,16 +346,32 @@ function ConflictTypeSection({
   };
 
   const handleModeChange = (mode: 'all' | 'none' | 'ebike') => {
+    console.log(`🔘 Conflict Type Mode Changed: ${mode}`);
+    
     if (mode === 'all') {
-      // Reset to all conflict types and turn off e-bike mode
-      // Also ensure both pedestrian and bicyclist are included
-      onFiltersChange({ 
+      // Reset to ALL filters to their default state to ensure everything is visible
+      // This fixes the issue where incidents would remain filtered out
+      const resetFilters = { 
         conflictType: [...availableConflictTypes],
         ebikeMode: false,
         roadUser: ['pedestrian', 'bicyclist'],
         showPedestrian: true,
-        showBicyclist: true
-      });
+        showBicyclist: true,
+        // Also restore severity types and data sources to defaults
+        severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'],
+        dataSource: ['SWITRS', 'BikeMaps.org'],
+        // Reset time filters to show all times and days
+        weekdayFilter: {
+          enabled: false,  // Show all days
+          type: 'weekdays'
+        },
+        timeOfDay: {
+          enabled: false,  // Show all times
+          periods: ['morning', 'afternoon', 'evening']
+        }
+      };
+      console.log('🔄 ALL button - Resetting filters to:', resetFilters);
+      onFiltersChange(resetFilters);
     } else if (mode === 'none') {
       onFiltersChange({ 
         conflictType: [],
@@ -367,13 +383,15 @@ function ConflictTypeSection({
       const bikeConflictTypes = availableConflictTypes.filter(type => 
         type.startsWith('Bike vs')
       );
-      onFiltersChange({ 
+      const ebikeFilters = { 
         conflictType: bikeConflictTypes,
         ebikeMode: true,
         roadUser: ['bicyclist'],  // Start with bicyclist only
         showBicyclist: true
         // Don't change showPedestrian - let user toggle it
-      });
+      };
+      console.log('⚡ E-BIKE button - Setting filters to:', ebikeFilters);
+      onFiltersChange(ebikeFilters);
     }
   };
 

@@ -181,13 +181,27 @@ export function generateRawIncidentPopupContent(
     isEbikeIncident = hasEbikeParty(enrichedData.parties);
   }
   
-  // Always log for known e-bike incidents
-  if (attributes.id === 3734 || attributes.id === '3734' || attributes.id === 3322 || attributes.id === 3385) {
-    console.log('🎯 KNOWN E-BIKE INCIDENT CHECK:', {
-      incidentId: attributes.id,
-      hasEbikeAttribute: attributes.hasEbike,
-      isEbikeIncident,
-      bicycleTypes: enrichedData?.parties?.map((p: any) => p.bicycle_type)
+  // DEBUG: Always log for ALL incidents to track hasEbike attribute
+  console.log('🔎 POPUP DEBUG - Incident', attributes.id, ':', {
+    hasEbikeAttribute: attributes.hasEbike,
+    hasEbikeAttributeType: typeof attributes.hasEbike,
+    isEbikeIncident,
+    enrichedDataAvailable: !!enrichedData,
+    parties: enrichedData?.parties?.map((p: any) => ({
+      party_type: p.party_type,
+      bicycle_type: p.bicycle_type
+    })),
+    allAttributes: Object.keys(attributes).sort()
+  });
+  
+  // Special check for known e-bike incidents
+  if (attributes.id === 3734 || attributes.id === '3734' || 
+      attributes.id === 3322 || attributes.id === '3322' ||
+      attributes.id === 3385 || attributes.id === '3385') {
+    console.log('⚡ KNOWN E-BIKE INCIDENT', attributes.id, 'DETAILED CHECK:', {
+      hasEbikeFromAttribute: attributes.hasEbike,
+      hasEbikeFromParties: enrichedData?.parties ? hasEbikeParty(enrichedData.parties) : false,
+      finalDecision: isEbikeIncident
     });
   }
   

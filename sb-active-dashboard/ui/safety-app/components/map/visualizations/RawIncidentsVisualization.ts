@@ -110,26 +110,51 @@ export class RawIncidentsVisualization {
         console.log('⚠️ E-bike filter NOT applied');
       }
 
+      // Import the helper function to check e-bike status
+      const { hasEbikeParty } = await import('../../../../../lib/safety-app/utils/ebikeDetection');
+      
+      // DEBUG: Track e-bike detection for all incidents
+      const ebikeDebugInfo: any[] = [];
+      
       // 4. Create ArcGIS Graphic objects from the filtered data
       const rawIncidentGraphics = filteredIncidents
         .filter(incident => incident.geometry && incident.id)
-        .map((incident, index) => new Graphic({
-          geometry: incident.geometry,
-          attributes: {
-            // --- Core Fields for Layer ---
-            objectid: index + 1,
-            id: incident.id,
-            maxSeverity: incident.maxSeverity || 'Unknown',
-            data_source: incident.data_source || 'Unknown',
-            timestamp: incident.timestamp ? incident.timestamp.getTime() : null,
-            // --- Additional Fields for Pop-up ---
-            conflict_type: incident.conflict_type || 'N/A',
-            pedestrian_involved: incident.pedestrian_involved || 0,
-            bicyclist_involved: incident.bicyclist_involved || 0,
-            vehicle_involved: incident.vehicle_involved || 0,
-            party_count: incident.parties?.length || 0,
+        .map((incident, index) => {
+          const hasEbike = incident.parties ? hasEbikeParty(incident.parties) : false;
+          
+          // Collect debug info for known e-bike incidents
+          if (incident.id === 3734 || incident.id === 3322 || incident.id === 3385) {
+            ebikeDebugInfo.push({
+              id: incident.id,
+              hasEbike,
+              parties: incident.parties?.map((p: any) => p.bicycle_type)
+            });
           }
-        }));
+          
+          return new Graphic({
+            geometry: incident.geometry,
+            attributes: {
+              // --- Core Fields for Layer ---
+              objectid: index + 1,
+              id: incident.id,
+              maxSeverity: incident.maxSeverity || 'Unknown',
+              data_source: incident.data_source || 'Unknown',
+              timestamp: incident.timestamp ? incident.timestamp.getTime() : null,
+              // --- Additional Fields for Pop-up ---
+              conflict_type: incident.conflict_type || 'N/A',
+              pedestrian_involved: incident.pedestrian_involved || 0,
+              bicyclist_involved: incident.bicyclist_involved || 0,
+              vehicle_involved: incident.vehicle_involved || 0,
+              party_count: incident.parties?.length || 0,
+              hasEbike: hasEbike ? 1 : 0,  // Add hasEbike attribute for popup detection
+            }
+          });
+        });
+        
+      // Log e-bike detection results
+      if (ebikeDebugInfo.length > 0) {
+        console.log('🚴 RawIncidentsVisualization E-bike Detection:', ebikeDebugInfo);
+      }
 
       // 4. Create a new client-side FeatureLayer with the processed graphics
       const clientSideLayer = new FeatureLayer({
@@ -148,6 +173,7 @@ export class RawIncidentsVisualization {
           { name: "bicyclist_involved", type: "integer" },
           { name: "vehicle_involved", type: "integer" },
           { name: "party_count", type: "integer" },
+          { name: "hasEbike", type: "small-integer" },  // Add hasEbike field to schema
         ],
         outFields: ["*"],
         // 5. Apply the severity-based renderer for unique styling

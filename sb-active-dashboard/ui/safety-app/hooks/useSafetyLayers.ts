@@ -9,7 +9,8 @@ export function useSafetyLayers(
   mapView: __esri.MapView | null,
   boundaryService: GeographicBoundariesService,
   setDataLoading: (loading: boolean) => void,
-  setDataError: (error: string | null) => void
+  setDataError: (error: string | null) => void,
+  dateRange?: { start: Date; end: Date }
 ) {
   const [incidentsLayer, setIncidentsLayer] = useState<FeatureLayer | null>(null);
   const [partiesLayer, setPartiesLayer] = useState<FeatureLayer | null>(null);
@@ -23,9 +24,8 @@ export function useSafetyLayers(
         setDataLoading(true);
         setDataError(null);
 
-        // Create the enriched incidents layer with maxSeverity field
-    
-        const enrichedIncidentsLayer = await createEnrichedSafetyIncidentsLayer();
+        // Create the enriched incidents layer with maxSeverity field and date range filtering
+        const enrichedIncidentsLayer = await createEnrichedSafetyIncidentsLayer(dateRange);
         
         // Also initialize the standard layers for data access (parties)
         const layers = SafetyIncidentsDataService.initializeLayers();
@@ -57,7 +57,7 @@ export function useSafetyLayers(
     };
 
     initializeLayers();
-  }, [viewReady, mapView, boundaryService, setDataLoading, setDataError]);
+  }, [viewReady, mapView, boundaryService, setDataLoading, setDataError, dateRange]);
 
   return {
     incidentsLayer,
