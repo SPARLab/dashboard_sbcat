@@ -28,7 +28,7 @@ export default function SafetyApp() {
   const { selectedGeometry, selectedAreaName, onSelectionChange } = useSelection();
   
   const [geographicLevel, setGeographicLevel] = useState('city-service-area');
-  const [schoolDistrictFilter, setSchoolDistrictFilter] = useState<SchoolDistrictFilter>({ gradeFilter: 'all' });
+  const [schoolDistrictFilter, setSchoolDistrictFilter] = useState<SchoolDistrictFilter>({ gradeFilter: 'high-school' });
   const [filters, setFilters] = useState<Partial<SafetyFilters>>({
     showPedestrian: true,
     showBicyclist: true,

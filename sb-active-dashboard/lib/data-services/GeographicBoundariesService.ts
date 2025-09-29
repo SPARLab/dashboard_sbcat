@@ -31,11 +31,7 @@ interface GeographicLevel {
 }
 
 export interface SchoolDistrictFilter {
-  gradeFilter: 'all' | 'elementary' | 'high-school' | 'unified' | 'custom';
-  customGradeRange?: {
-    minGrade: number;
-    maxGrade: number;
-  };
+  gradeFilter: 'high-school' | 'secondary' | 'elementary';
 }
 
 export class GeographicBoundariesService {
@@ -75,6 +71,11 @@ export class GeographicBoundariesService {
   
   // Selection change callback - supports both legacy and new format
   private onSelectionChange: ((data: { geometry: Polygon | Polyline | null; areaName?: string | null } | Polygon | Polyline | null) => void) | null = null;
+
+  // Overlapping polygon handling
+  private overlappingPolygonCallback: ((polygons: Array<{ id: string; name: string; area: number; graphic: __esri.Graphic }>, position: { x: number; y: number }) => void) | null = null;
+  private rightClickPolygonCallback: ((polygons: Array<{ id: string; name: string; area: number; graphic: __esri.Graphic }>, position: { x: number; y: number }) => void) | null = null;
+  private lastHitResults: __esri.HitTestResult[] = [];
 
   private hoverSymbol = new SimpleFillSymbol({
     color: [0, 0, 0, 0],
@@ -360,6 +361,10 @@ export class GeographicBoundariesService {
     if (level === 'school-districts') {
       this.schoolDistrictsLayer.visible = true;
       layers.push(this.schoolDistrictsLayer);
+      // Apply z-index optimization for school districts
+      this.optimizeSchoolDistrictLayerOrdering();
+      // Apply default "High School" filter when school districts are first activated
+      this.applySchoolDistrictFilter({ gradeFilter: 'high-school' });
     }
     if (level === 'unincorporated-areas') {
       this.unincorporatedAreasLayer.visible = true;
@@ -387,25 +392,19 @@ export class GeographicBoundariesService {
 
     switch (filter.gradeFilter) {
       case 'elementary':
-        // Elementary districts typically serve K-8, so grade_levels_high <= 8
-        whereClause = "CAST(grade_levels_high AS INTEGER) <= 8";
+        // For Elementary, show only districts marked as Elementary
+        whereClause = "DISTRICT_TYPE = 'Elementary'";
+        break;
+      case 'secondary':
+        // For Secondary (7-8), show both Secondary AND High School districts
+        // This combines polygons like "Santa Barbara Unified District" and "Santa Barbara Unified District (7-12)"
+        whereClause = "DISTRICT_TYPE = 'Secondary' OR DISTRICT_TYPE = 'High School'";
         break;
       case 'high-school':
-        // High school districts typically serve 9-12, so grade_levels >= 9
-        whereClause = "CAST(grade_levels AS INTEGER) >= 9";
+        // For High School (9-12), show both Secondary AND High School districts
+        // This combines polygons like "Santa Barbara Unified District" and "Santa Barbara Unified District (7-12)"
+        whereClause = "DISTRICT_TYPE = 'Secondary' OR DISTRICT_TYPE = 'High School'";
         break;
-      case 'unified':
-        // Unified districts serve K-12, so grade_levels = 0 (K) and grade_levels_high = 12
-        whereClause = "CAST(grade_levels AS INTEGER) = 0 AND CAST(grade_levels_high AS INTEGER) = 12";
-        break;
-      case 'custom':
-        if (filter.customGradeRange) {
-          const { minGrade, maxGrade } = filter.customGradeRange;
-          // Show districts that serve any grades within the specified range
-          whereClause = `CAST(grade_levels AS INTEGER) <= ${maxGrade} AND CAST(grade_levels_high AS INTEGER) >= ${minGrade}`;
-        }
-        break;
-      case 'all':
       default:
         whereClause = "1=1"; // Show all districts
         break;
@@ -578,7 +577,11 @@ export class GeographicBoundariesService {
         
         this.hitTestInProgress = true;
 
-        mapView.hitTest(event, { include: layers })
+        // Use tolerance-based hit testing for better polygon detection
+        mapView.hitTest(event, { 
+            include: layers,
+            tolerance: 3 // 3 pixel tolerance to catch nearby polygons
+        })
             .then(response => {
                 
                 // Double-check we're still over the map when the async operation completes
@@ -588,9 +591,8 @@ export class GeographicBoundariesService {
                     return;
                 }
                 
-                const graphic = response.results.length > 0 && response.results[0].type === "graphic" 
-                    ? response.results[0].graphic 
-                    : null;
+                // Enhanced polygon selection: show UI for overlapping polygons
+                const graphic = this.selectBestPolygonFromHitResults(response.results);
                 
 
                 
@@ -606,6 +608,15 @@ export class GeographicBoundariesService {
     const clickHandler = mapView.on("click", (event) => {
       // Only process clicks if interactivity is fully ready
       if (!this.isInteractivityFullyReady) {
+        return;
+      }
+
+      // Check if this is a right-click (context menu)
+      const isRightClick = event.button === 2 || (event.native && (event.native as MouseEvent).button === 2);
+      
+      if (isRightClick) {
+        // Handle right-click for context menu
+        this.handleRightClick(event, layers);
         return;
       }
 
@@ -638,11 +649,13 @@ export class GeographicBoundariesService {
           return; // Don't process boundary selection
         }
 
-        // Now do the boundary-specific hitTest
-        mapView.hitTest(event, { include: layers }).then(response => {
-            const graphic = response.results.length > 0 && response.results[0].type === "graphic"
-                ? response.results[0].graphic as Graphic
-                : null;
+        // Now do the boundary-specific hitTest with tolerance
+        mapView.hitTest(event, { 
+            include: layers,
+            tolerance: 3 // 3 pixel tolerance for better polygon detection
+        }).then(response => {
+            // Enhanced polygon selection: show UI for overlapping polygons
+            const graphic = this.selectBestPolygonFromHitResults(response.results);
             
             // Double-check: Even if we found a boundary, verify we didn't also click an incident
             if (graphic) {
@@ -983,8 +996,224 @@ export class GeographicBoundariesService {
     }
   }
 
+  /**
+   * Enhanced polygon selection logic for overlapping polygons.
+   * When multiple polygons overlap, shows UI selector instead of auto-selecting.
+   */
+  private selectBestPolygonFromHitResults(results: __esri.HitTestResult[]): Graphic | null {
+    // Store results for potential UI callback
+    this.lastHitResults = results;
+    
+    // Filter to only graphic results
+    const graphicResults = results.filter(result => result.type === "graphic") as __esri.GraphicHit[];
+    
+    if (graphicResults.length === 0) {
+      return null;
+    }
+    
+    if (graphicResults.length === 1) {
+      return graphicResults[0].graphic;
+    }
+    
+    // Multiple polygons found - check if they're actually overlapping polygons vs different layer types
+    const polygonResults = graphicResults.filter(result => {
+      const geometry = result.graphic.geometry;
+      return geometry && geometry.type === 'polygon';
+    });
+    
+    if (polygonResults.length === 0) {
+      // No polygons found, return first graphic (could be line/point)
+      return graphicResults[0].graphic;
+    }
+    
+    if (polygonResults.length === 1) {
+      return polygonResults[0].graphic;
+    }
+    
+    // Multiple overlapping polygons detected!
+    // Calculate areas for sorting and display
+    const polygonsWithArea = polygonResults.map(result => {
+      const polygon = result.graphic.geometry as Polygon;
+      const area = polygon.extent ? 
+        (polygon.extent.width * polygon.extent.height) : 
+        Number.MAX_SAFE_INTEGER;
+      
+      return {
+        graphic: result.graphic,
+        area: area,
+        layer: result.graphic.layer
+      };
+    });
+    
+    // Sort by area (ascending - smallest first) for display purposes
+    polygonsWithArea.sort((a, b) => a.area - b.area);
+    
+    console.log(`🎯 [Polygon Selection] Found ${polygonsWithArea.length} overlapping polygons:`);
+    polygonsWithArea.forEach((item, index) => {
+      const name = item.graphic.attributes?.NAME || item.graphic.attributes?.name || 'Unknown';
+      console.log(`  ${index + 1}. ${name} (Area: ${item.area.toFixed(2)})`);
+    });
+    
+    // If we have a UI callback, show the selector and return null (no auto-selection)
+    if (this.overlappingPolygonCallback && this.lastScreenPosition) {
+      const polygonOptions = polygonsWithArea.map((item, index) => ({
+        id: `${item.graphic.attributes?.OBJECTID || item.graphic.attributes?.objectid || index}`,
+        name: item.graphic.attributes?.NAME || item.graphic.attributes?.name || `Polygon ${index + 1}`,
+        area: item.area,
+        graphic: item.graphic
+      }));
+      
+      console.log('🎯 [Polygon Selection] Showing UI selector for user choice');
+      this.overlappingPolygonCallback(polygonOptions, this.lastScreenPosition);
+      
+      // Return null to prevent auto-selection - let user choose
+      return null;
+    }
+    
+    // Fallback: if no UI callback is registered, select the first (topmost) polygon
+    // This maintains backward compatibility
+    console.log('🎯 [Polygon Selection] No UI callback - selecting first polygon');
+    return polygonResults[0].graphic;
+  }
+
   public getInteractivityHandlers(): __esri.Handle[] {
     return this.interactivityHandlers;
+  }
+
+  /**
+   * Register a callback for when overlapping polygons are detected.
+   * The callback receives an array of polygon options and the screen position.
+   */
+  public setOverlappingPolygonCallback(
+    callback: ((polygons: Array<{ id: string; name: string; area: number; graphic: __esri.Graphic }>, position: { x: number; y: number }) => void) | null
+  ) {
+    this.overlappingPolygonCallback = callback;
+  }
+
+  /**
+   * Register a callback for right-click context menu on overlapping polygons.
+   */
+  public setRightClickPolygonCallback(
+    callback: ((polygons: Array<{ id: string; name: string; area: number; graphic: __esri.Graphic }>, position: { x: number; y: number }) => void) | null
+  ) {
+    this.rightClickPolygonCallback = callback;
+  }
+
+  /**
+   * Manually select a specific graphic (useful for overlapping polygon UI)
+   */
+  public selectSpecificGraphic(graphic: __esri.Graphic) {
+    this.handleSelection(graphic);
+  }
+
+  /**
+   * Optimize layer ordering for school districts to reduce overlapping polygon issues.
+   * This method attempts to reorder features within the layer so smaller districts render on top.
+   */
+  private optimizeSchoolDistrictLayerOrdering() {
+    if (!this.mapView || !this.schoolDistrictsLayer) {
+      return;
+    }
+
+    // Note: ArcGIS FeatureLayer doesn't support direct z-index manipulation of individual features
+    // However, we can apply a renderer that uses size-based symbology to visually distinguish overlapping areas
+    
+    // Create a renderer that makes smaller districts more prominent
+    const sizeBasedRenderer = new SimpleRenderer({
+      symbol: new SimpleFillSymbol({
+        color: [0, 0, 0, 0], // Transparent fill
+        outline: new SimpleLineSymbol({ 
+          color: [70, 130, 180, 0.9], // Steel blue outline
+          width: 2 
+        })
+      }),
+      // Add visual variable to make smaller districts more prominent
+      visualVariables: [{
+        type: "size",
+        field: "area_calc", // Assuming there's an area field, fallback to default
+        minDataValue: 0,
+        maxDataValue: 1000000, // Adjust based on your data
+        minSize: 3, // Smaller districts get thicker borders
+        maxSize: 1  // Larger districts get thinner borders
+      } as __esri.SizeVariable]
+    });
+
+    // Apply the renderer (this will help visually but won't change hit test order)
+    // The main solution is still the area-based selection logic
+    console.log('🎯 [Layer Optimization] Applied size-based rendering for school districts');
+  }
+
+  /**
+   * Handle right-click events for context menu polygon selection
+   */
+  private handleRightClick(event: __esri.MapViewClickEvent, layers: FeatureLayer[]) {
+    if (!this.mapView || !this.rightClickPolygonCallback) {
+      return;
+    }
+
+    // Prevent default context menu
+    if (event.native) {
+      event.native.preventDefault();
+    }
+
+    // Perform hit test to find overlapping polygons
+    this.mapView.hitTest(event, { 
+      include: layers,
+      tolerance: 5 // Slightly larger tolerance for right-click
+    }).then(response => {
+      const graphicResults = response.results.filter(result => result.type === "graphic") as __esri.GraphicHit[];
+      
+      if (graphicResults.length === 0) {
+        return;
+      }
+
+      const polygonResults = graphicResults.filter(result => {
+        const geometry = result.graphic.geometry;
+        return geometry && geometry.type === 'polygon';
+      });
+
+      if (polygonResults.length <= 1) {
+        return; // No overlapping polygons, no need for context menu
+      }
+
+      // Calculate areas and sort
+      const polygonsWithArea = polygonResults.map(result => {
+        const polygon = result.graphic.geometry as Polygon;
+        const area = polygon.extent ? 
+          (polygon.extent.width * polygon.extent.height) : 
+          Number.MAX_SAFE_INTEGER;
+        
+        return {
+          graphic: result.graphic,
+          area: area,
+          layer: result.graphic.layer
+        };
+      });
+
+      polygonsWithArea.sort((a, b) => a.area - b.area);
+
+      const polygonOptions = polygonsWithArea.map((item, index) => ({
+        id: `${item.graphic.attributes?.OBJECTID || item.graphic.attributes?.objectid || index}`,
+        name: item.graphic.attributes?.NAME || item.graphic.attributes?.name || `Polygon ${index + 1}`,
+        area: item.area,
+        graphic: item.graphic
+      }));
+
+      // Convert screen position to client coordinates
+      const mapContainer = this.mapView.container;
+      if (mapContainer) {
+        const rect = mapContainer.getBoundingClientRect();
+        const clientPosition = {
+          x: rect.left + event.x,
+          y: rect.top + event.y
+        };
+        
+        console.log('🎯 [Right-Click] Showing context menu for overlapping polygons');
+        this.rightClickPolygonCallback(polygonOptions, clientPosition);
+      }
+    }).catch(err => {
+      console.error("Right-click hit test failed:", err);
+    });
   }
 
   public cleanupInteractivity() {

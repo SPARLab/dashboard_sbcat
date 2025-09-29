@@ -35,7 +35,7 @@ export default function VolumeApp() {
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const [aadtLayer, setAadtLayer] = useState<__esri.FeatureLayer | null>(null);
   const [geographicLevel, setGeographicLevel] = useState('city-service-area');
-  const [schoolDistrictFilter, setSchoolDistrictFilter] = useState<SchoolDistrictFilter>({ gradeFilter: 'all' });
+  const [schoolDistrictFilter, setSchoolDistrictFilter] = useState<SchoolDistrictFilter>({ gradeFilter: 'high-school' });
   
   
   // Date range state for timeline and filtering
