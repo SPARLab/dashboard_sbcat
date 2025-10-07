@@ -127,21 +127,19 @@ export class MapClickHandler {
     // TODO: Implement proper request cancellation if enriched data is needed
     let enrichedData = null;
     
-    // Uncomment this section if enriched data is needed and AbortError is resolved:
-    /*
-    const incidentSourceId = attributes.source_id || attributes.incident_id;
-    if (incidentSourceId) {
+    // Fetch enriched data to get party information (needed for e-bike detection)
+    const incidentId = attributes.id || attributes.incident_id;
+    if (incidentId) {
       try {
         const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
           mapView.extent,
           filters
         );
-        enrichedData = safetyData.data.find(inc => inc.source_id === incidentSourceId);
+        enrichedData = safetyData.data.find(inc => inc.source_id === incidentId);
       } catch (error) {
         console.warn('Could not fetch enriched incident data:', error);
       }
     }
-    */
 
     // Use enriched data if available, otherwise fall back to graphic attributes
     const incidentData = enrichedData || attributes;

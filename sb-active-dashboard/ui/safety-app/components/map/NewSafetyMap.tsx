@@ -56,7 +56,7 @@ export default function NewSafetyMap({
   const [sketchViewModel, setSketchViewModel] = useState<SketchViewModel | null>(null);
   const [sketchLayer, setSketchLayer] = useState<GraphicsLayer | null>(null);
   
-  // Use layer cache hook for complex visualizations
+  // SIMPLIFIED: Only use cache for weighted visualization
   const {
     cachedWeightedLayer,
     setCachedWeightedLayer,
@@ -71,7 +71,8 @@ export default function NewSafetyMap({
     mapViewRef.current,
     boundaryService.current,
     setDataLoading,
-    setDataError
+    setDataError,
+    filters.dateRange
   );
 
   // Notify parent when incidents layer is ready
@@ -174,6 +175,7 @@ export default function NewSafetyMap({
     }
 
     const applyFilters = () => {
+      
       // Apply filter to the main incidents layer (for heatmaps)
       safetyLayerService.applyAdditionalFilters({
         dataSources: filters.dataSource || [],
@@ -182,62 +184,94 @@ export default function NewSafetyMap({
         dateRange: filters.dateRange,
         timeOfDay: filters.timeOfDay,
         weekdayFilter: filters.weekdayFilter,
+        ebikeMode: filters.ebikeMode,
       });
+      
 
       // Raw incidents now use the same incidentsLayer with different renderer,
       // so they get filtered automatically by the SafetyLayerService above
     };
 
     applyFilters();
-  }, [filters, safetyLayerService, serviceReady]);
+    
+    // CRITICAL: Force layer refresh when switching from e-bike to all
+    if (incidentsLayer && !filters.ebikeMode) {
+      setTimeout(() => {
+        incidentsLayer.refresh();
+        
+        // Also try to refresh the map view
+        if (mapViewRef.current) {
+          mapViewRef.current.refresh();
+        }
+      }, 200);
+    }
+  }, [filters, safetyLayerService, serviceReady, incidentsLayer]);
 
-  // Handle visualization type changes using original logic
+  // SIMPLIFIED: Handle visualization changes using single layer approach
   useEffect(() => {
     if (!viewReady || !mapViewRef.current) return;
     
-    // For raw incidents, we don't need incidentsLayer, so only check it for other visualizations
-    if (activeVisualization !== 'raw-incidents' && !incidentsLayer) return;
+    // All visualizations now use the main incidentsLayer
+    if (!incidentsLayer) return;
 
     const updateVisualization = async () => {
 
       try {
         setDataLoading(true);
 
-        // Hide all layers before showing the active one
-        if (incidentsLayer) incidentsLayer.visible = false;
-
-        if (cachedWeightedLayer) cachedWeightedLayer.visible = false;
-
-        switch (activeVisualization) {
-          case 'raw-incidents':
-            // Use the same efficient pattern as incident-heatmap
-            if (incidentsLayer) {
-              incidentsLayer.renderer = RawIncidentRenderer.getRenderer('severity', filters as SafetyFilters);
-              incidentsLayer.visible = true;
-              setDataLoading(false);
-            }
-            break;
-
-          case 'incident-heatmap':
-            if (incidentsLayer) {
-              // Use renderer with referenceScale for consistent visualization across zoom levels
-              incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
-              incidentsLayer.visible = true;
-            }
-            break;
-
-          case 'incident-to-volume-ratio':
-            await WeightedVisualization.createVisualization(
-              mapViewRef.current!, filters, incidentsLayer,
-              cachedWeightedLayer, cachedExtentKey, generateCacheKey,
-              setCachedWeightedLayer, setCachedExtentKey
-            );
-            break;
-
-          default:
-            console.warn(`Unknown visualization type: ${activeVisualization}`);
-            break;
+        // SIMPLIFIED: Only hide weighted layer, keep main layer visible
+        
+        // Only hide weighted layer, main incidents layer stays visible
+        if (cachedWeightedLayer) {
+          cachedWeightedLayer.visible = false;
         }
+
+        // SIMPLIFIED: Use only the main incidents layer for all visualizations
+        if (incidentsLayer) {
+          
+          // CRITICAL: Always refresh the renderer to ensure proper display
+          let newRenderer;
+          
+          switch (activeVisualization) {
+            case 'raw-incidents':
+              newRenderer = RawIncidentRenderer.getRenderer('severity', filters as SafetyFilters);
+              break;
+              
+            case 'incident-heatmap':
+              newRenderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
+              break;
+              
+            case 'incident-to-volume-ratio':
+              // For weighted visualization, we still need the special layer
+              await WeightedVisualization.createVisualization(
+                mapViewRef.current!, filters, incidentsLayer,
+                cachedWeightedLayer, cachedExtentKey, generateCacheKey,
+                setCachedWeightedLayer, setCachedExtentKey
+              );
+              return; // Early return for weighted visualization
+              
+            default:
+              console.warn(`Unknown visualization type: ${activeVisualization}`);
+              return;
+          }
+          
+          // Force renderer update
+          incidentsLayer.renderer = newRenderer;
+          
+          // CRITICAL: Force layer refresh to ensure all features are visible
+          incidentsLayer.refresh();
+          
+          // Make sure the main layer is visible for all non-weighted visualizations
+          incidentsLayer.visible = true;
+          
+          // Hide weighted layer if it exists
+          if (cachedWeightedLayer) {
+            cachedWeightedLayer.visible = false;
+          }
+          
+        }
+        
+        
       } catch (error) {
 
         setDataError(error instanceof Error ? error.message : `Failed to update to ${activeVisualization}`);

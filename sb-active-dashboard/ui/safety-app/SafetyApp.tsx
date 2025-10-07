@@ -7,6 +7,7 @@ import SafetyRightSidebar from "./layout/SafetyRightSidebar";
 import DisclaimerModal from "../components/DisclaimerModal";
 import SafetyDataDisclaimer from "../components/SafetyDataDisclaimer";
 import { SchoolDistrictFilter } from "../components/filters/GeographicLevelSection";
+import { preloadPartiesCache } from "./utils/popupContentGenerator";
 
 function useDebouncedValue<T>(value: T, delayMs: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -36,6 +37,7 @@ export default function SafetyApp() {
     dataSource: ['SWITRS', 'BikeMaps.org'],
     severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'],
     conflictType: ['Bike vs vehicle', 'Bike vs other', 'Bike vs bike', 'Bike vs pedestrian', 'Bike vs infrastructure', 'Pedestrian vs vehicle', 'Pedestrian vs other'],
+    ebikeMode: false, // Default to regular bike mode
     dateRange: {
       start: new Date(2020, 0, 1), // January 1, 2020
       end: new Date(2024, 11, 31) // December 31, 2024 (local time)
@@ -45,7 +47,7 @@ export default function SafetyApp() {
       periods: ['morning', 'afternoon', 'evening']
     },
     weekdayFilter: {
-      enabled: true,
+      enabled: false,  // Default to showing all days
       type: 'weekdays'
     }
   });
@@ -66,6 +68,13 @@ export default function SafetyApp() {
   const handleIncidentsLayerReady = (layer: __esri.FeatureLayer) => {
     setIncidentsLayer(layer);
   };
+
+  // Preload parties cache when component mounts
+  useEffect(() => {
+    preloadPartiesCache().catch(error => {
+      console.error('Failed to preload parties cache:', error);
+    });
+  }, []);
 
   const debouncedFilters = useDebouncedValue(filters, 300);
 

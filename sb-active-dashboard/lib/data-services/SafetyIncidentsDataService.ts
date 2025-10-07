@@ -18,6 +18,7 @@ import {
   SafetyIncident,
   SafetySummaryData
 } from "../safety-app/types";
+import { hasEbikeParty } from "../safety-app/utils/ebikeDetection";
 
 export class SafetyIncidentsDataService {
   private static readonly BASE_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents/FeatureServer";
@@ -561,10 +562,20 @@ export class SafetyIncidentsDataService {
       }
 
       // Join the data
-      const enrichedIncidents = this.joinIncidentData(
+      let enrichedIncidents = this.joinIncidentData(
         rawData.incidents,
-        rawData.parties
+        rawData.parties,
+        filters
       );
+
+      // Apply e-bike filtering if enabled
+      if (filters?.ebikeMode && filters?.roadUser?.includes('bicyclist')) {
+        const beforeCount = enrichedIncidents.length;
+        enrichedIncidents = enrichedIncidents.filter(incident => 
+          hasEbikeParty(incident.parties)
+        );
+        // console.log(`🚴 E-bike filter in getEnrichedSafetyData: ${enrichedIncidents.length} of ${beforeCount} incidents have e-bikes`);
+      }
 
       // Calculate summary statistics
       const summary = this.calculateSummaryStatistics(enrichedIncidents);
@@ -637,6 +648,13 @@ export class SafetyIncidentsDataService {
       }
     }
 
+    // Handle e-bike mode filtering - this requires joining with parties table
+    // For now, we'll handle this in the post-processing step since e-bike info is in parties table
+    if (filters?.ebikeMode) {
+      // Add a comment for future enhancement - e-bike filtering requires parties join
+      // This will be handled in the joinIncidentData method
+    }
+
     return conditions.join(' AND ');
   }
 
@@ -679,8 +697,12 @@ export class SafetyIncidentsDataService {
    */
   static joinIncidentData(
     incidents: SafetyIncident[],
-    parties: IncidentParty[]
+    parties: IncidentParty[],
+    filters?: Partial<SafetyFilters>
   ): EnrichedSafetyIncident[] {
+    // Log summary only
+    // console.log(`🔍 Joining ${incidents.length} incidents with ${parties.length} parties`);
+
     // Create lookup maps for efficient joining
     const partiesByIncident = new Map<number, IncidentParty[]>();
     parties.forEach(party => {
@@ -690,8 +712,13 @@ export class SafetyIncidentsDataService {
       partiesByIncident.get(party.incident_id)!.push(party);
     });
 
+    // Count e-bike parties for filtering
+    const ebikeParties = parties.filter(p => 
+      p.bicycle_type && p.bicycle_type.toLowerCase() === 'ebike'
+    );
+
     // Join data and compute derived fields
-    return incidents.map(incident => {
+    let enrichedIncidents = incidents.map(incident => {
       const incidentParties = partiesByIncident.get(incident.id) || [];
 
       // Calculate max severity from all parties or use incident severity
@@ -718,6 +745,11 @@ export class SafetyIncidentsDataService {
         pedTrafficLevel: incident.ped_traffic
       };
     });
+
+    // Note: E-bike filtering is now handled in the visualization layer
+    // This allows popups to access all enriched data while still filtering the display
+
+    return enrichedIncidents;
   }
 
   /**
@@ -817,7 +849,7 @@ export class SafetyIncidentsDataService {
    * Map ArcGIS feature to IncidentParty interface
    */
   private static mapPartyFeature(feature: any): IncidentParty {
-    return {
+    const party = {
       OBJECTID: feature.attributes.objectid || feature.attributes.OBJECTID,
       incident_id: feature.attributes.incident_id,
       party_number: feature.attributes.party_number,
@@ -828,6 +860,16 @@ export class SafetyIncidentsDataService {
       age: feature.attributes.age,
       gender: feature.attributes.gender
     };
+    
+    // Only log e-bike parties (commented out to reduce console clutter)
+    // if (party.bicycle_type && party.bicycle_type.toLowerCase() === 'ebike') {
+    //   console.log('🚲✅ E-bike party:', {
+    //     incident_id: party.incident_id,
+    //     bicycle_type: party.bicycle_type
+    //   });
+    // }
+    
+    return party;
   }
 
   /**

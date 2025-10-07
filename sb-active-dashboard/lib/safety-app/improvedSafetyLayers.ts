@@ -31,8 +31,7 @@ const colors = [
  * Creates an enriched safety incidents layer with maxSeverity field computed from parties data
  * This enables efficient client-side filtering on severity levels
  */
-export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer> {
-
+export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Date; end: Date }): Promise<FeatureLayer> {
   
   // Initialize the source layers
   const incidentsLayer = new FeatureLayer({
@@ -46,8 +45,15 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
   });
 
   try {
-    // Query all incidents with pagination
+    // Build date range filter if provided
+    let dateFilter = "1=1";
+    if (dateRange) {
+      const startDate = dateRange.start.toISOString().split('T')[0];
+      const endDate = dateRange.end.toISOString().split('T')[0];
+      dateFilter = `timestamp >= TIMESTAMP '${startDate} 00:00:00' AND timestamp <= TIMESTAMP '${endDate} 23:59:59'`;
+    }
 
+    // Query incidents with date range filtering and pagination
     const allIncidents: any[] = [];
     let hasMore = true;
     let offset = 0;
@@ -55,7 +61,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     
     while (hasMore) {
       const incidentsQuery = incidentsLayer.createQuery();
-      incidentsQuery.where = "1=1";
+      incidentsQuery.where = dateFilter;
       incidentsQuery.outFields = ["*"];
       incidentsQuery.returnGeometry = true;
       incidentsQuery.start = offset;
@@ -82,7 +88,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     while (hasMore) {
       const partiesQuery = partiesLayer.createQuery();
       partiesQuery.where = "1=1";
-      partiesQuery.outFields = ["incident_id", "injury_severity"];
+      partiesQuery.outFields = ["incident_id", "injury_severity", "bicycle_type"];
       partiesQuery.returnGeometry = false;
       partiesQuery.start = offset;
       partiesQuery.num = pageSize;
@@ -113,12 +119,16 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     // Create a map of incident_id to max severity
     const severityMap = new Map<number, string>();
     
+    // Create a map of incident_id to hasEbike flag
+    const ebikeMap = new Map<number, boolean>();
+    
     // Log unique severity values to debug
     const uniqueSeverities = new Set<string>();
     
     allParties.forEach(partyFeature => {
       const incidentId = partyFeature.attributes.incident_id;
       const severity = partyFeature.attributes.injury_severity || '';
+      const bicycleType = partyFeature.attributes.bicycle_type;
       
       uniqueSeverities.add(severity);
       
@@ -137,12 +147,26 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       if (!currentSeverity || getSeverityPriority(normalizedSeverity) < getSeverityPriority(currentSeverity)) {
         severityMap.set(incidentId, normalizedSeverity);
       }
+      
+      // Check if this is an e-bike party
+      if (bicycleType && bicycleType.toLowerCase() === 'ebike') {
+        ebikeMap.set(incidentId, true);
+        // Removed cluttering debug log
+      }
     });
     
 
 
     // Create enriched graphics with maxSeverity field
+    // Log e-bike incidents found
+    const ebikeIds = Array.from(ebikeMap.keys()).sort();
+    
+    // CRITICAL: Initialize ALL incidents with hasEbike = 0 first
+    let ebikeDebugCount = 0;
+    
     const enrichedGraphics: Graphic[] = [];
+    const ebikeIncidentsProcessed: number[] = [];
+    
     
     allIncidents.forEach(incidentFeature => {
       const attributes = { ...incidentFeature.attributes };
@@ -150,6 +174,21 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       
       // Add maxSeverity field
       attributes.maxSeverity = severityMap.get(incidentId) || '';
+      
+      // Add hasEbike field (convert boolean to 0/1 for small-integer field type)
+      // CRITICAL FIX: Explicitly check if the incident is in the ebikeMap
+      const isEbike = ebikeMap.has(incidentId) && ebikeMap.get(incidentId) === true;
+      attributes.hasEbike = isEbike ? 1 : 0;
+      
+      if (isEbike) {
+        ebikeDebugCount++;
+      }
+      
+      // Debug e-bike incidents
+      if (ebikeMap.get(incidentId)) {
+        ebikeIncidentsProcessed.push(incidentId);
+        // Commented out to reduce console noise
+      }
       
       // If no severity found, default to Unknown regardless of data source
       if (!attributes.maxSeverity) {
@@ -164,7 +203,16 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
       enrichedGraphics.push(graphic);
     });
 
-
+    // E-bike processing summary for validation
+    const ebikeGraphics = enrichedGraphics.filter(g => g.attributes.hasEbike === 1);
+    
+    // CRITICAL CHECK: If we have more than expected e-bikes, something is wrong
+    if (ebikeGraphics.length > ebikeMap.size) {
+      console.error(`⚠️ ERROR: ${ebikeGraphics.length} graphics have hasEbike=1 but only ${ebikeMap.size} should!`);
+    }
+    
+    // Debug: Check a sample of hasEbike values
+    const sampleGraphics = enrichedGraphics.slice(0, 10);
     
     // Log sample of severity mappings
     const sampleMappings = enrichedGraphics.slice(0, 5).map(g => ({
@@ -200,14 +248,15 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
     new Field({ name: "incident_date", alias: "Incident Date", type: "date" }),
     new Field({ name: "bike_traffic", alias: "Bike Traffic", type: "string" }),
     new Field({ name: "ped_traffic", alias: "Pedestrian Traffic", type: "string" }),
-    new Field({ name: "severity", alias: "Severity", type: "string" })
+    new Field({ name: "severity", alias: "Severity", type: "string" }),
+    new Field({ name: "hasEbike", alias: "Has E-bike", type: "small-integer" }) // E-BIKE FIELD
   ];
 
   // Create popup template for safety incidents
   const popupTemplate = {
     title: "Safety Incident Details",
-    content: ({ graphic }: { graphic: __esri.Graphic }) => {
-      return generateIncidentPopupContent(graphic.attributes);
+    content: async ({ graphic }: { graphic: __esri.Graphic }) => {
+      return await generateIncidentPopupContent(graphic.attributes);
     }
   };
 
@@ -270,7 +319,7 @@ export async function createEnrichedSafetyIncidentsLayer(): Promise<FeatureLayer
  * instead of reloading data when toggling between Police Reports and BikeMaps.org
  */
 export async function createImprovedSafetyLayers(): Promise<GroupLayer> {
-  // Create the enriched layer with maxSeverity field
+  // Create the enriched layer with maxSeverity field (no date filtering for this legacy function)
   const safetyIncidentsLayer = await createEnrichedSafetyIncidentsLayer();
 
   // Create a group layer to contain all safety layers
@@ -299,6 +348,8 @@ export class SafetyLayerService {
 
     // Wait for the layer view to be ready
     this.safetyLayerView = await mapView.whenLayerView(incidentsLayer) as __esri.FeatureLayerView;
+    
+    // SafetyLayerService initialized and ready
   }
 
   /**
@@ -346,6 +397,7 @@ export class SafetyLayerService {
     });
 
     this.safetyLayerView.filter = featureFilter;
+
   }
 
   /**
@@ -364,6 +416,7 @@ export class SafetyLayerService {
       enabled: boolean;
       type: 'weekdays' | 'weekends';
     };
+    ebikeMode?: boolean;
   }): void {
     if (!this.safetyLayerView) {
       return;
@@ -500,9 +553,15 @@ export class SafetyLayerService {
 
       whereClauses.push(`(${weekdayClause})`);
     }
+    
+    // E-bike filter
+    if (filters.ebikeMode === true) {
+      whereClauses.push("hasEbike = 1");
+    }
 
     // Combine all where clauses
     const finalWhereClause = whereClauses.length > 0 ? whereClauses.join(' AND ') : "1=1";
+
 
     // Apply the comprehensive FeatureFilter
     const featureFilter = new FeatureFilter({
@@ -510,6 +569,53 @@ export class SafetyLayerService {
     });
 
     this.safetyLayerView.filter = featureFilter;
+
+    
+    // DEBUG: After applying filter, query to see what's actually visible
+    setTimeout(async () => {
+      if (this.safetyLayerView?.layer) {
+        const layer = this.safetyLayerView.layer as FeatureLayer;
+        const query = layer.createQuery();
+        query.where = finalWhereClause;
+        query.returnGeometry = false;
+        query.outFields = ["id"];
+        
+        try {
+          const result = await layer.queryFeatures(query);
+          console.log(`🔎 POST-FILTER CHECK:`, {
+            mode: filters.ebikeMode ? 'E-BIKE' : 'ALL',
+            incidentsPassingFilter: result.features.length,
+            sampleIds: result.features.slice(0, 10).map(f => f.attributes.id).sort(),
+            whereClause: finalWhereClause.substring(0, 100) + '...'
+          });
+          
+          // In e-bike mode, check which incidents actually have hasEbike = 1
+          if (filters.ebikeMode) {
+            const ebikeQuery = layer.createQuery();
+            ebikeQuery.where = "hasEbike = 1";
+            ebikeQuery.returnGeometry = false;
+            ebikeQuery.outFields = ["id", "hasEbike"];
+            
+            layer.queryFeatures(ebikeQuery).then(ebikeResult => {
+              console.log('🔍 E-BIKE FIELD CHECK:', {
+                incidentsWithHasEbike1: ebikeResult.features.length,
+                ids: ebikeResult.features.map(f => f.attributes.id).sort()
+              });
+            }).catch(err => {
+              console.error('Error checking hasEbike field:', err);
+            });
+          }
+          
+          // Check if specific incident 3227 is included
+          const has3227 = result.features.some(f => f.attributes.id === 3227 || f.attributes.id === '3227');
+          if (!has3227 && !filters.ebikeMode) {
+            console.warn('⚠ Incident 3227 is MISSING after switching back to ALL mode!');
+          }
+        } catch (error) {
+          console.error('Error querying filtered results:', error);
+        }
+      }
+    }, 200);
   }
 
   /**

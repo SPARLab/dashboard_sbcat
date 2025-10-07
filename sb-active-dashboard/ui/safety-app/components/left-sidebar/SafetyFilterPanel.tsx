@@ -335,6 +335,7 @@ function ConflictTypeSection({
   ];
 
   const currentConflictTypes = filters.conflictType || [];
+  const isEbikeMode = filters.ebikeMode || false;
   
   const toggleConflictType = (conflictType: string) => {
     let newConflictTypes: string[];
@@ -350,26 +351,107 @@ function ConflictTypeSection({
     // Sort the array to ensure the cache key is consistent
     newConflictTypes.sort();
     
-    // Only pass the conflictType change, not the entire filters object
-    onFiltersChange({ conflictType: newConflictTypes });
+    // When toggling conflict types, also update roadUser based on what's selected
+    const hasAnyPedConflicts = newConflictTypes.some(type => type.startsWith('Pedestrian vs'));
+    const hasAnyBikeConflicts = newConflictTypes.some(type => type.startsWith('Bike vs'));
+    const hasNoneConflicts = newConflictTypes.includes('None');
+    
+    const updatedFilters: Partial<SafetyFilters> = {
+      conflictType: newConflictTypes
+    };
+    
+    // Special handling for None conflicts
+    if (hasNoneConflicts) {
+      // None conflicts don't require specific road user types
+      updatedFilters.roadUser = [];
+      updatedFilters.showPedestrian = false;
+      updatedFilters.showBicyclist = false;
+    } else {
+      // Update roadUser based on selected conflict types
+      if (!isEbikeMode) {
+        const newRoadUser = [];
+        if (hasAnyPedConflicts) newRoadUser.push('pedestrian');
+        if (hasAnyBikeConflicts) newRoadUser.push('bicyclist');
+        
+        if (newRoadUser.length > 0) {
+          updatedFilters.roadUser = newRoadUser;
+          updatedFilters.showPedestrian = hasAnyPedConflicts;
+          updatedFilters.showBicyclist = hasAnyBikeConflicts;
+        }
+      }
+    }
+    
+    onFiltersChange(updatedFilters);
   };
 
-  const handleModeChange = (mode: 'all') => {
+  const handleModeChange = (mode: 'all' | 'none' | 'ebike') => {
+    console.log(`🔘 Conflict Type Mode Changed: ${mode}`);
+    
     if (mode === 'all') {
-      onFiltersChange({ conflictType: [...availableConflictTypes] });
+      // Reset to ALL filters to their default state to ensure everything is visible
+      // This fixes the issue where incidents would remain filtered out
+      const resetFilters = { 
+        conflictType: [...availableConflictTypes],
+        ebikeMode: false,
+        roadUser: ['pedestrian', 'bicyclist'],
+        showPedestrian: true,
+        showBicyclist: true,
+        // Also restore severity types and data sources to defaults
+        severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'],
+        dataSource: ['SWITRS', 'BikeMaps.org'],
+        // Reset time filters to show all times and days
+        weekdayFilter: {
+          enabled: false,  // Show all days
+          type: 'weekdays'
+        },
+        timeOfDay: {
+          enabled: false,  // Show all times
+          periods: ['morning', 'afternoon', 'evening']
+        }
+      };
+      console.log('🔄 ALL button - Resetting filters to:', resetFilters);
+      onFiltersChange(resetFilters);
+    } else if (mode === 'none') {
+      onFiltersChange({ 
+        conflictType: [],
+        ebikeMode: false
+      });
+    } else if (mode === 'ebike') {
+      // Enable e-bike mode and keep only bike-related conflicts initially
+      // But allow pedestrian toggles to be added later
+      const bikeConflictTypes = availableConflictTypes.filter(type => 
+        type.startsWith('Bike vs')
+      );
+      const ebikeFilters = { 
+        conflictType: bikeConflictTypes,
+        ebikeMode: true,
+        roadUser: ['bicyclist'],  // Start with bicyclist only
+        showBicyclist: true
+        // Don't change showPedestrian - let user toggle it
+      };
+      console.log('⚡ E-BIKE button - Setting filters to:', ebikeFilters);
+      onFiltersChange(ebikeFilters);
     }
   };
 
-  // Determine current mode based on selected conflict types
-  const allSelected = availableConflictTypes.every(type => currentConflictTypes.includes(type));
+  // Determine current mode based on selected conflict types and e-bike mode
+  const allSelected = availableConflictTypes.every(type => currentConflictTypes.includes(type)) && !isEbikeMode;
   const noneSelected = currentConflictTypes.length === 0;
-  const currentMode = allSelected ? 'all' : noneSelected ? 'none' : 'individual';
+  const currentMode = isEbikeMode ? 'ebike' : allSelected ? 'all' : noneSelected ? 'none' : 'individual';
+
+  // Get display labels based on e-bike mode
+  const getDisplayLabel = (conflictType: string): string => {
+    if (isEbikeMode && conflictType.startsWith('Bike vs')) {
+      return conflictType.replace('Bike vs', 'E-bike vs');
+    }
+    return conflictType;
+  };
 
   return (
     <div id="safety-conflict-type-section" className="px-4 py-4">
       <h3 id="safety-conflict-type-title" className="text-base font-medium text-gray-700 mb-2">Conflict Type</h3>
       
-      {/* All button */}
+      {/* All/None/E-bike buttons */}
       <div id="safety-conflict-type-mode-buttons" className="flex gap-1 mb-2">
         <button 
           id="safety-conflict-type-all-button"
@@ -382,16 +464,47 @@ function ConflictTypeSection({
         >
           All
         </button>
+        <button 
+          id="safety-conflict-type-none-button"
+          onClick={() => handleModeChange('none')}
+          className={`px-2 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none active:outline-none ${
+            currentMode === 'none' 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-white border border-blue-500 text-blue-500 hover:bg-blue-50'
+          }`}
+        >
+          None
+        </button>
+        <button 
+          id="safety-conflict-type-ebike-button"
+          onClick={() => handleModeChange('ebike')}
+          className={`px-2 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none active:outline-none ${
+            currentMode === 'ebike' 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-white border border-blue-500 text-blue-500 hover:bg-blue-50'
+          }`}
+        >
+          E-bike
+        </button>
       </div>
+
+      {/* E-bike mode disclaimer */}
+      {isEbikeMode && (
+        <div id="safety-ebike-disclaimer" className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+          <p>⚠️ E-bike data available from 2022+. Earlier incidents may include unclassified e-bikes in general bike category.</p>
+        </div>
+      )}
 
       {/* Individual conflict toggles */}
       <div id="safety-conflict-type-toggles" className="space-y-0.5">
         {availableConflictTypes.map((conflictType) => {
           const labelId = conflictType.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          const displayLabel = getDisplayLabel(conflictType);
+          
           return (
             <div key={conflictType} id={`safety-conflict-type-${labelId}-container`}>
               <ConflictToggle 
-                label={conflictType} 
+                label={displayLabel} 
                 checked={currentConflictTypes.includes(conflictType)}
                 onChange={() => toggleConflictType(conflictType)}
               />

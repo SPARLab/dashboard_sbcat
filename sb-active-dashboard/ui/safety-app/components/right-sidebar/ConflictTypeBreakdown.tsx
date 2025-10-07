@@ -37,6 +37,7 @@ const getAbbreviatedLabel = (fullName: string): string => {
     'Vehicle vs bike': 'Veh vs\nbike',
     'Vehicle vs pedestrian': 'Veh vs\nped',
     'Vehicle vs vehicle': 'Veh vs\nveh',
+    'None': 'None',
     'Unknown': 'Unknown'
   };
   
@@ -61,6 +62,7 @@ const getFullName = (fullName: string): string => {
     'Vehicle vs bike': 'Vehicle vs bike',
     'Vehicle vs pedestrian': 'Vehicle vs pedestrian',
     'Vehicle vs vehicle': 'Vehicle vs vehicle',
+    'None': 'None',
     'Unknown': 'Unknown'
   };
   

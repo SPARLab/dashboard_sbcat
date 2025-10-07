@@ -66,6 +66,7 @@ export interface SafetyFilters {
   roadUser: ('pedestrian' | 'bicyclist')[];
   showPedestrian: boolean;
   showBicyclist: boolean;
+  ebikeMode?: boolean; // When true, filters for e-bike specific incidents
   timeOfDay?: {
     enabled: boolean;
     periods: ('morning' | 'afternoon' | 'evening')[];
