@@ -20,8 +20,8 @@ const BOUNDARY_LAYER_URLS = {
   SERVICE_AREAS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/26", // Census Designated Places
   COUNTIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1", // Counties
   CENSUS_TRACTS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0", // Census Tracts
-  SCHOOL_DISTRICTS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_school_districts/FeatureServer", // Santa Barbara School Districts
-  UNINCORPORATED_AREAS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/SB_UnincorporatedAreas/FeatureServer", // Santa Barbara Unincorporated Areas
+  SCHOOL_DISTRICTS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_school_districts_multi_layer/FeatureServer", // Santa Barbara School Districts (multi-layer)
+  UNINCORPORATED_AREAS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_unincorporated_areas_multi_layer/FeatureServer", // Santa Barbara Unincorporated Areas (multi-layer)
   CALTRANS_HIGHWAYS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/SB_CaltransHighways_Real/FeatureServer" // Santa Barbara Caltrans Highways
 };
 
@@ -195,9 +195,10 @@ export class GeographicBoundariesService {
     );
 
     // School Districts layer - using the Santa Barbara specific service
-    // The service has lowercase field names, so we need to handle that in the interactivity
+    // Using layer 1 (Regular_School_Districts) which includes Caltrans highways in polygons
+    // Layer 0 (Non_Highway_School_Districts) has highways removed - available for future toggle feature
     this.schoolDistrictsLayer = new FeatureLayer({
-      url: BOUNDARY_LAYER_URLS.SCHOOL_DISTRICTS + "/0", // Specify layer 0
+      url: BOUNDARY_LAYER_URLS.SCHOOL_DISTRICTS + "/1", // Layer 1 = Regular (includes highways)
       title: "School Districts",
       visible: false,
       popupEnabled: false,
@@ -213,8 +214,10 @@ export class GeographicBoundariesService {
     });
 
     // Unincorporated Areas layer - using the Santa Barbara specific service
+    // Using layer 1 (Regular_Unincorporated_Areas) which includes Caltrans highways in polygons
+    // Layer 0 (Non_Highway_Unincorporated_Areas) has highways removed - available for future toggle feature
     this.unincorporatedAreasLayer = new FeatureLayer({
-      url: BOUNDARY_LAYER_URLS.UNINCORPORATED_AREAS + "/0", // Specify layer 0
+      url: BOUNDARY_LAYER_URLS.UNINCORPORATED_AREAS + "/1", // Layer 1 = Regular (includes highways)
       title: "Unincorporated Areas",
       visible: false,
       popupEnabled: false,
@@ -393,17 +396,17 @@ export class GeographicBoundariesService {
     switch (filter.gradeFilter) {
       case 'elementary':
         // For Elementary, show only districts marked as Elementary
-        whereClause = "DISTRICT_TYPE = 'Elementary'";
+        whereClause = "DISTRICT_T = 'Elementary'";
         break;
       case 'secondary':
         // For Secondary (7-8), show both Secondary AND High School districts
         // This combines polygons like "Santa Barbara Unified District" and "Santa Barbara Unified District (7-12)"
-        whereClause = "DISTRICT_TYPE = 'Secondary' OR DISTRICT_TYPE = 'High School'";
+        whereClause = "DISTRICT_T = 'Secondary' OR DISTRICT_T = 'High School'";
         break;
       case 'high-school':
         // For High School (9-12), show both Secondary AND High School districts
         // This combines polygons like "Santa Barbara Unified District" and "Santa Barbara Unified District (7-12)"
-        whereClause = "DISTRICT_TYPE = 'Secondary' OR DISTRICT_TYPE = 'High School'";
+        whereClause = "DISTRICT_T = 'Secondary' OR DISTRICT_T = 'High School'";
         break;
       default:
         whereClause = "1=1"; // Show all districts
@@ -862,8 +865,11 @@ export class GeographicBoundariesService {
       this.hoveredGraphic = null;
     }
     
-    // Handle both uppercase (census layers) and lowercase (school districts) field names
-    const hoveredObjectId = newlyHovered?.attributes.OBJECTID || newlyHovered?.attributes.objectid1 || newlyHovered?.attributes.objectid;
+    // Handle multiple field name variations across different services:
+    // - OBJECTID (uppercase) - used by TIGER census layers
+    // - objectid/objectid1 (lowercase) - some ArcGIS services
+    // - fid - used by custom UCSB spatial services (school districts, unincorporated areas)
+    const hoveredObjectId = newlyHovered?.attributes.OBJECTID || newlyHovered?.attributes.objectid1 || newlyHovered?.attributes.objectid || newlyHovered?.attributes.fid;
     const isSelected = hoveredObjectId === this.selectedFeature?.objectId;
     if (newlyHovered && !isSelected) {
         this.hoveredGraphic = new Graphic({
@@ -899,8 +905,11 @@ export class GeographicBoundariesService {
         return;
     }
     
-    // Handle both uppercase (census layers) and lowercase (school districts) field names
-    const clickedObjectId = clickedGraphic.attributes.OBJECTID || clickedGraphic.attributes.objectid1 || clickedGraphic.attributes.objectid;
+    // Handle multiple field name variations across different services:
+    // - OBJECTID (uppercase) - used by TIGER census layers
+    // - objectid/objectid1 (lowercase) - some ArcGIS services
+    // - fid - used by custom UCSB spatial services (school districts, unincorporated areas)
+    const clickedObjectId = clickedGraphic.attributes.OBJECTID || clickedGraphic.attributes.objectid1 || clickedGraphic.attributes.objectid || clickedGraphic.attributes.fid;
     
     // If clicking the same boundary, keep it selected (don't toggle)
     if (clickedObjectId === this.selectedFeature?.objectId) {
@@ -1057,7 +1066,7 @@ export class GeographicBoundariesService {
     // If we have a UI callback, show the selector and return null (no auto-selection)
     if (this.overlappingPolygonCallback && this.lastScreenPosition) {
       const polygonOptions = polygonsWithArea.map((item, index) => ({
-        id: `${item.graphic.attributes?.OBJECTID || item.graphic.attributes?.objectid || index}`,
+        id: `${item.graphic.attributes?.OBJECTID || item.graphic.attributes?.objectid || item.graphic.attributes?.fid || index}`,
         name: item.graphic.attributes?.NAME || item.graphic.attributes?.name || `Polygon ${index + 1}`,
         area: item.area,
         graphic: item.graphic
@@ -1193,7 +1202,7 @@ export class GeographicBoundariesService {
       polygonsWithArea.sort((a, b) => a.area - b.area);
 
       const polygonOptions = polygonsWithArea.map((item, index) => ({
-        id: `${item.graphic.attributes?.OBJECTID || item.graphic.attributes?.objectid || index}`,
+        id: `${item.graphic.attributes?.OBJECTID || item.graphic.attributes?.objectid || item.graphic.attributes?.fid || index}`,
         name: item.graphic.attributes?.NAME || item.graphic.attributes?.name || `Polygon ${index + 1}`,
         area: item.area,
         graphic: item.graphic
