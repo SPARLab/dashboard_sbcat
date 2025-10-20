@@ -76,6 +76,27 @@ export default function SafetyApp() {
     });
   }, []);
 
+  // Highway visualization: Show/hide when filter changes
+  useEffect(() => {
+    const updateHighwayVisualization = async () => {
+      if (!mapView || !selectedGeometry) {
+        return;
+      }
+
+      const { HighwayFilterService } = await import('../../lib/data-services/HighwayFilterService');
+
+      if (filters.excludeHighwayIncidents) {
+        // Show highway buffer visualization
+        await HighwayFilterService.showHighwayBuffer(mapView, selectedGeometry, 75);
+      } else {
+        // Hide highway buffer visualization
+        HighwayFilterService.hideHighwayBuffer(mapView);
+      }
+    };
+
+    updateHighwayVisualization();
+  }, [mapView, selectedGeometry, filters.excludeHighwayIncidents]);
+
   const debouncedFilters = useDebouncedValue(filters, 300);
 
 

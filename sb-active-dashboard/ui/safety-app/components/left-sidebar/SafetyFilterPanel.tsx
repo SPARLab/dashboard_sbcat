@@ -53,6 +53,18 @@ export default function SafetyFilterPanel({
       />
       <hr className="border-gray-200" />
 
+      {/* Highway Filter - Only show when a geographic area is selected */}
+      {geographicLevel && geographicLevel !== 'hexagons' && (
+        <>
+          <HighwayFilterSection 
+            filters={filters}
+            onFiltersChange={onFiltersChange}
+            geographicLevel={geographicLevel}
+          />
+          <hr className="border-gray-200" />
+        </>
+      )}
+
       {/* Custom Draw Tool Instructions - Only show when custom is selected */}
       {geographicLevel === 'custom' && (
         <>
@@ -692,6 +704,64 @@ function WeekdaysWeekendsSection({
               {option.label}
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HighwayFilterSection({
+  filters,
+  onFiltersChange,
+  geographicLevel
+}: {
+  filters: Partial<SafetyFilters>;
+  onFiltersChange: (filters: Partial<SafetyFilters>) => void;
+  geographicLevel: string;
+}) {
+  const excludeHighways = filters.excludeHighwayIncidents || false;
+
+  const handleToggle = () => {
+    console.log(`🛣️ [Highway Filter] Toggle: ${!excludeHighways}`);
+    onFiltersChange({ 
+      ...filters,
+      excludeHighwayIncidents: !excludeHighways 
+    });
+  };
+
+  // Don't show for caltrans-highways geographic level (that IS the highway)
+  if (geographicLevel === 'caltrans-highways') {
+    return null;
+  }
+
+  return (
+    <div id="safety-highway-filter-section" className="px-4 py-3">
+      <div id="safety-highway-filter-container" className="flex items-center justify-between">
+        <div id="safety-highway-filter-label-container" className="flex items-center gap-2">
+          <span id="safety-highway-filter-label" className="text-sm font-medium text-gray-700">
+            Exclude Highway Incidents
+          </span>
+          <MoreInformationIcon 
+            text="When enabled, filters out safety incidents that occurred within 75 feet of Caltrans highways. This focuses analysis on local streets and non-highway areas, which fall under different jurisdictions."
+            align="center"
+            width="w-80"
+            yOffset="-0.15rem"
+          />
+        </div>
+        <div 
+          id="safety-highway-filter-toggle"
+          onClick={handleToggle}
+          className={`w-8 h-5 rounded-full flex items-center p-0.5 cursor-pointer transition-all duration-200 focus:outline-none active:outline-none ${
+            excludeHighways ? 'bg-blue-500 justify-end' : 'bg-gray-300 justify-start'
+          }`}
+        >
+          <div id="safety-highway-filter-toggle-dot" className="w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200"></div>
+        </div>
+      </div>
+
+      {excludeHighways && (
+        <div id="safety-highway-filter-info" className="mt-2 text-xs text-gray-600 bg-blue-50 p-2 rounded">
+          ✓ Filtering out incidents within 75ft of Caltrans highways
         </div>
       )}
     </div>

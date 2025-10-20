@@ -210,10 +210,35 @@ export const useSafetySpatialQuery = (
         
         console.debug('[useSafetySpatialQuery] Executing query id', myRequestId);
         try {
-          const queryResult = await SafetyIncidentsDataService.getEnrichedSafetyData(
+          let queryResult = await SafetyIncidentsDataService.getEnrichedSafetyData(
             selectedGeometry,
             filters
           );
+
+          // 🛣️ Apply highway filtering if enabled
+          if (filters?.excludeHighwayIncidents && selectedGeometry && queryResult?.data) {
+            console.log('🛣️ [Highway Filter] Applying highway exclusion filter...');
+            const { HighwayFilterService } = await import('../data-services/HighwayFilterService');
+            
+            const filteredIncidents = await HighwayFilterService.filterIncidentsExcludingHighways(
+              queryResult.data,
+              selectedGeometry,
+              75 // 75 feet buffer distance
+            );
+
+            queryResult = {
+              ...queryResult,
+              data: filteredIncidents,
+              summary: {
+                ...queryResult.summary,
+                totalIncidents: filteredIncidents.length,
+                bikeIncidents: filteredIncidents.filter(i => i.bicyclist_involved).length,
+                pedIncidents: filteredIncidents.filter(i => i.pedestrian_involved).length
+              }
+            };
+
+            console.log(`🛣️ [Highway Filter] Filtered: ${queryResult.data.length} incidents (removed ${(queryResult.data.length - filteredIncidents.length)} highway incidents)`);
+          }
 
           // 🔍 DEBUG: Log query results
           console.group('🔍 [SAFETY DEBUG] useSafetySpatialQuery - Query Results');
@@ -292,12 +317,44 @@ export const useSafetyLayerViewSpatialQuery = (
       setError(null);
 
       try {
-        const queryResult = await SafetySpatialQueryService.queryIncidentsWithinPolygon(
+        let queryResult = await SafetySpatialQueryService.queryIncidentsWithinPolygon(
           mapView,
           incidentsLayer,
           selectedGeometry,
           filters
         );
+
+        // 🛣️ Apply highway filtering if enabled
+        if (filters?.excludeHighwayIncidents && selectedGeometry && queryResult.incidents && queryResult.incidents.length > 0) {
+          console.log('🛣️ [Highway Filter - LayerView] Applying highway exclusion filter...');
+          console.log(`   Before filter: ${queryResult.incidents.length} incidents`);
+          
+          const { HighwayFilterService } = await import('../data-services/HighwayFilterService');
+          
+          const filteredIncidents = await HighwayFilterService.filterIncidentsExcludingHighways(
+            queryResult.incidents,
+            selectedGeometry,
+            75 // 75 feet buffer distance
+          );
+
+          // Recalculate summary statistics
+          const bikeIncidents = filteredIncidents.filter(i => i.bicyclist_involved).length;
+          const pedIncidents = filteredIncidents.filter(i => i.pedestrian_involved).length;
+
+          queryResult = {
+            ...queryResult,
+            incidents: filteredIncidents,
+            summary: {
+              ...queryResult.summary,
+              totalIncidents: filteredIncidents.length,
+              bikeIncidents,
+              pedIncidents
+            }
+          };
+
+          console.log(`🛣️ [Highway Filter - LayerView] After filter: ${filteredIncidents.length} incidents`);
+          console.log(`   Removed: ${queryResult.incidents.length - filteredIncidents.length} highway incidents`);
+        }
 
         if (!cancelled) {
           if (queryResult.error) {

@@ -75,6 +75,7 @@ export interface SafetyFilters {
     enabled: boolean;
     type: 'weekdays' | 'weekends';
   };
+  excludeHighwayIncidents?: boolean; // When true, filters out incidents on Caltrans highways
 }
 
 // Chart data interfaces

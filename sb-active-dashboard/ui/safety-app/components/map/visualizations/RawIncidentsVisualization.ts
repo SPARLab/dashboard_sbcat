@@ -1,6 +1,7 @@
 import Graphic from "@arcgis/core/Graphic";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import { SafetyIncidentsDataService } from "../../../../../lib/data-services/SafetyIncidentsDataService";
+import { HighwayFilterService } from "../../../../../lib/data-services/HighwayFilterService";
 import { RawIncidentRenderer } from "../../../../../lib/safety-app/renderers/RawIncidentRenderer";
 import { SafetyFilters } from "../../../../../lib/safety-app/types";
 import { generateRawIncidentPopupContent } from "../../../utils/popupContentGenerator";
@@ -116,7 +117,16 @@ export class RawIncidentsVisualization {
       // DEBUG: Track e-bike detection for all incidents
       const ebikeDebugInfo: any[] = [];
       
-      // 4. Create ArcGIS Graphic objects from the filtered data
+      // 4. Apply highway filtering if needed and a polygon is selected
+      // Note: This only works when a geographic area is selected
+      // Highway filtering requires a polygon to determine which highways to check
+      if (filters?.excludeHighwayIncidents) {
+        console.log('🛣️ Highway filter is enabled, but requires selected geometry from map interaction');
+        console.log('   Highway filtering will be applied client-side when geometry is available');
+        // Highway filtering will be handled by the chart components that have access to selectedGeometry
+      }
+      
+      // 5. Create ArcGIS Graphic objects from the filtered data
       const rawIncidentGraphics = filteredIncidents
         .filter(incident => incident.geometry && incident.id)
         .map((incident, index) => {
