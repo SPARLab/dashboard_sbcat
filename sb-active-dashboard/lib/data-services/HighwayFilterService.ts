@@ -333,12 +333,24 @@ export class HighwayFilterService {
       }
 
       if (!highwayBuffer) {
+        console.log('🛣️ [Highway Visualization] No highway buffer created');
         return;
+      }
+
+      // Ensure the buffer has the same spatial reference as the map
+      const mapSR = mapView.spatialReference;
+      let displayBuffer = highwayBuffer;
+      
+      if (highwayBuffer.spatialReference.wkid !== mapSR.wkid) {
+        console.log(`🛣️ [Highway Visualization] Projecting buffer from ${highwayBuffer.spatialReference.wkid} to ${mapSR.wkid}`);
+        const projection = await import('@arcgis/core/geometry/projection');
+        await projection.load();
+        displayBuffer = projection.project(highwayBuffer, mapSR) as Polygon;
       }
 
       // Create visualization graphic with semi-transparent blue fill
       const bufferGraphic = new Graphic({
-        geometry: highwayBuffer,
+        geometry: displayBuffer,
         symbol: new SimpleFillSymbol({
           color: [100, 150, 255, 0.25], // Semi-transparent blue
           outline: new SimpleLineSymbol({
@@ -350,6 +362,7 @@ export class HighwayFilterService {
       });
 
       this.visualizationLayer.add(bufferGraphic);
+      console.log('🛣️ [Highway Visualization] Buffer displayed on map');
     } catch (error) {
       console.error('Failed to visualize highway buffer:', error);
     }

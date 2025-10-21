@@ -238,8 +238,10 @@ export const useSafetySpatialQuery = (
 
           // 🛣️ Apply highway filtering if enabled
           if (filters?.excludeHighwayIncidents && selectedGeometry && queryResult?.data) {
+            const originalCount = queryResult.data.length;
             console.log('🛣️ [Highway Filter] Applying highway exclusion filter...');
             const { HighwayFilterService } = await import('../data-services/HighwayFilterService');
+            const { SafetySpatialQueryService } = await import('../data-services/SafetySpatialQueryService');
             
             const filteredIncidents = await HighwayFilterService.filterIncidentsExcludingHighways(
               queryResult.data,
@@ -247,18 +249,16 @@ export const useSafetySpatialQuery = (
               75 // 75 feet buffer distance
             );
 
+            // Fully recalculate ALL summary statistics from filtered incidents
+            const recalculatedSummary = SafetySpatialQueryService.calculateSummaryStatistics(filteredIncidents);
+
             queryResult = {
               ...queryResult,
               data: filteredIncidents,
-              summary: {
-                ...queryResult.summary,
-                totalIncidents: filteredIncidents.length,
-                bikeIncidents: filteredIncidents.filter(i => i.bicyclist_involved).length,
-                pedIncidents: filteredIncidents.filter(i => i.pedestrian_involved).length
-              }
+              summary: recalculatedSummary
             };
 
-            console.log(`🛣️ [Highway Filter] Filtered: ${queryResult.data.length} incidents (removed ${(queryResult.data.length - filteredIncidents.length)} highway incidents)`);
+            console.log(`🛣️ [Highway Filter] Filtered: ${filteredIncidents.length} incidents (removed ${originalCount - filteredIncidents.length} highway incidents)`);
           }
 
           // 🔍 DEBUG: Log query results
@@ -368,10 +368,12 @@ export const useSafetyLayerViewSpatialQuery = (
 
         // 🛣️ Apply highway filtering if enabled
         if (filters?.excludeHighwayIncidents && selectedGeometry && queryResult.incidents && queryResult.incidents.length > 0) {
+          const originalCount = queryResult.incidents.length;
           console.log('🛣️ [Highway Filter - LayerView] Applying highway exclusion filter...');
-          console.log(`   Before filter: ${queryResult.incidents.length} incidents`);
+          console.log(`   Before filter: ${originalCount} incidents`);
           
           const { HighwayFilterService } = await import('../data-services/HighwayFilterService');
+          const { SafetySpatialQueryService } = await import('../data-services/SafetySpatialQueryService');
           
           const filteredIncidents = await HighwayFilterService.filterIncidentsExcludingHighways(
             queryResult.incidents,
@@ -379,23 +381,16 @@ export const useSafetyLayerViewSpatialQuery = (
             75 // 75 feet buffer distance
           );
 
-          // Recalculate summary statistics
-          const bikeIncidents = filteredIncidents.filter(i => i.bicyclist_involved).length;
-          const pedIncidents = filteredIncidents.filter(i => i.pedestrian_involved).length;
+          // Fully recalculate ALL summary statistics from filtered incidents
+          const recalculatedSummary = SafetySpatialQueryService.calculateSummaryStatistics(filteredIncidents);
 
           queryResult = {
-            ...queryResult,
             incidents: filteredIncidents,
-            summary: {
-              ...queryResult.summary,
-              totalIncidents: filteredIncidents.length,
-              bikeIncidents,
-              pedIncidents
-            }
+            summary: recalculatedSummary
           };
 
           console.log(`🛣️ [Highway Filter - LayerView] After filter: ${filteredIncidents.length} incidents`);
-          console.log(`   Removed: ${queryResult.incidents.length - filteredIncidents.length} highway incidents`);
+          console.log(`   Removed: ${originalCount - filteredIncidents.length} highway incidents`);
         }
 
         if (!cancelled) {

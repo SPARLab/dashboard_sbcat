@@ -1,15 +1,11 @@
 /**
- * SafetySpatialQueryService - Query rendered safety features directly from the map layer
+ * SafetySpatialQueryService - Query safety features from the layer
  * 
- * This approach is much more efficient than server queries because:
- * 1. It queries only the features already rendered on the map
- * 2. No network requests needed
- * 3. Respects current layer filters and visibility
- * 4. Works exactly like the Volume app's successful implementation
+ * This approach queries all features in the layer that match the spatial
+ * and attribute filters, regardless of map extent or zoom level.
  */
 
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
-import FeatureLayerView from "@arcgis/core/views/layers/FeatureLayerView";
 import MapView from "@arcgis/core/views/MapView";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import { SafetyFilters, SafetySummaryData, EnrichedSafetyIncident } from "../safety-app/types";
@@ -17,8 +13,8 @@ import { SafetyFilters, SafetySummaryData, EnrichedSafetyIncident } from "../saf
 export class SafetySpatialQueryService {
   
   /**
-   * Query safety incidents within a polygon using the rendered layer view
-   * This is much faster and more reliable than server queries
+   * Query safety incidents within a polygon
+   * Queries the entire layer, not just rendered features in the viewport
    */
   static async queryIncidentsWithinPolygon(
     mapView: MapView,
@@ -31,23 +27,12 @@ export class SafetySpatialQueryService {
     error?: string;
   }> {
     try {
-      // Get the layer view (this contains only rendered features)
-      const layerView = await mapView.whenLayerView(incidentsLayer) as FeatureLayerView;
-      
-      // Wait for layer view to finish updating if needed
-      if (layerView.updating) {
-        await layerView.when();
-      }
-
       // Build where clause for filters
       let whereClause = "1=1"; // Default to all records
       
       // Apply date range filter if provided
       // NOTE: Temporarily removing date filtering from database query since ArcGIS has issues
       // comparing Unix timestamps with date strings. We'll filter in the component instead.
-      if (filters?.dateRange) {
-        console.log('[SafetySpatialQueryService] Date range requested but filtering in component instead:', filters.dateRange);
-      }
       
       // Apply data source filter if provided
       if (filters?.dataSource && filters.dataSource.length > 0 && filters.dataSource.length < 2) {
@@ -71,14 +56,15 @@ export class SafetySpatialQueryService {
         whereClause += ` AND (${conflictConditions.join(' OR ')})`;
       }
 
-      // Query features within the polygon using the layer view with filters
-      const queryResult = await layerView.queryFeatures({
-        geometry: polygon,
-        spatialRelationship: "intersects",
-        returnGeometry: true,
-        outFields: ["*"],
-        where: whereClause
-      });
+      // Query the LAYER directly (not the layerView) to get ALL features, not just rendered ones
+      const query = incidentsLayer.createQuery();
+      query.geometry = polygon;
+      query.spatialRelationship = "intersects";
+      query.returnGeometry = true;
+      query.outFields = ["*"];
+      query.where = whereClause;
+      
+      const queryResult = await incidentsLayer.queryFeatures(query);
       
       console.log(`[SafetySpatialQueryService] Query returned ${queryResult.features.length} incidents`);
 
@@ -138,8 +124,9 @@ export class SafetySpatialQueryService {
 
   /**
    * Calculate summary statistics from incidents array
+   * Public method to allow recalculation after filtering
    */
-  private static calculateSummaryStatistics(incidents: EnrichedSafetyIncident[]): SafetySummaryData {
+  static calculateSummaryStatistics(incidents: EnrichedSafetyIncident[]): SafetySummaryData {
     const total = incidents.length;
     const bikeIncidents = incidents.filter(inc => inc.bicyclist_involved === 1).length;
     const pedIncidents = incidents.filter(inc => inc.pedestrian_involved === 1).length;

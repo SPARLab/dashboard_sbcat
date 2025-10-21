@@ -1064,11 +1064,7 @@ export class GeographicBoundariesService {
     // Sort by area (ascending - smallest first) for display purposes
     polygonsWithArea.sort((a, b) => a.area - b.area);
     
-    console.log(`🎯 [Polygon Selection] Found ${polygonsWithArea.length} overlapping polygons:`);
-    polygonsWithArea.forEach((item, index) => {
-      const name = item.graphic.attributes?.NAME || item.graphic.attributes?.name || 'Unknown';
-      console.log(`  ${index + 1}. ${name} (Area: ${item.area.toFixed(2)})`);
-    });
+    // Found overlapping polygons - will handle via UI or auto-select
     
     // If we have a UI callback, show the selector and return null (no auto-selection)
     if (this.overlappingPolygonCallback && this.lastScreenPosition) {
@@ -1079,7 +1075,6 @@ export class GeographicBoundariesService {
         graphic: item.graphic
       }));
       
-      console.log('🎯 [Polygon Selection] Showing UI selector for user choice');
       this.overlappingPolygonCallback(polygonOptions, this.lastScreenPosition);
       
       // Return null to prevent auto-selection - let user choose
@@ -1087,8 +1082,6 @@ export class GeographicBoundariesService {
     }
     
     // Fallback: if no UI callback is registered, select the first (topmost) polygon
-    // This maintains backward compatibility
-    console.log('🎯 [Polygon Selection] No UI callback - selecting first polygon');
     return polygonResults[0].graphic;
   }
 

@@ -76,6 +76,11 @@ export default function SafetyApp() {
     });
   }, []);
 
+  // Clear selection when geographic level changes
+  useEffect(() => {
+    onSelectionChange(null);
+  }, [geographicLevel, onSelectionChange]);
+
   // Highway visualization: Show/hide when filter changes OR when highway is selected
   useEffect(() => {
     const updateHighwayVisualization = async () => {
