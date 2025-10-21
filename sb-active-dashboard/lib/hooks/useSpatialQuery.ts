@@ -210,8 +210,29 @@ export const useSafetySpatialQuery = (
         
         console.debug('[useSafetySpatialQuery] Executing query id', myRequestId);
         try {
+          // If selected geometry is a line (highway), query all segments of that route and buffer them
+          let queryGeometry = selectedGeometry;
+          if (selectedGeometry.type === 'polyline') {
+            const { HighwayFilterService } = await import('../data-services/HighwayFilterService');
+            // Get attributes from the geometry (added by GeographicBoundariesService)
+            const attrs = (selectedGeometry as any).attributes;
+            if (attrs && attrs.segment_group_id) {
+              queryGeometry = await HighwayFilterService.bufferHighwayByGroupId(
+                attrs.segment_group_id,
+                attrs.route_name,
+                attrs.direction,
+                75
+              );
+            } else {
+              console.warn('⚠️ [Highway Selection] No segment_group_id found, buffering single line');
+              // Fallback: buffer just the clicked line
+              const geometryEngine = await import('@arcgis/core/geometry/geometryEngine');
+              queryGeometry = geometryEngine.buffer(selectedGeometry, 75, 'feet') as __esri.Polygon;
+            }
+          }
+
           let queryResult = await SafetyIncidentsDataService.getEnrichedSafetyData(
-            selectedGeometry,
+            queryGeometry,
             filters
           );
 
@@ -317,10 +338,31 @@ export const useSafetyLayerViewSpatialQuery = (
       setError(null);
 
       try {
+        // If selected geometry is a line (highway), query all segments of that route and buffer them
+        let queryGeometry = selectedGeometry;
+        if (selectedGeometry.type === 'polyline') {
+          const { HighwayFilterService } = await import('../data-services/HighwayFilterService');
+          // Get attributes from the geometry (added by GeographicBoundariesService)
+          const attrs = (selectedGeometry as any).attributes;
+          if (attrs && attrs.segment_group_id) {
+            queryGeometry = await HighwayFilterService.bufferHighwayByGroupId(
+              attrs.segment_group_id,
+              attrs.route_name,
+              attrs.direction,
+              75
+            );
+          } else {
+            console.warn('⚠️ [Highway Selection] No segment_group_id found, buffering single line');
+            // Fallback: buffer just the clicked line
+            const geometryEngine = await import('@arcgis/core/geometry/geometryEngine');
+            queryGeometry = geometryEngine.buffer(selectedGeometry, 75, 'feet') as __esri.Polygon;
+          }
+        }
+
         let queryResult = await SafetySpatialQueryService.queryIncidentsWithinPolygon(
           mapView,
           incidentsLayer,
-          selectedGeometry,
+          queryGeometry,
           filters
         );
 

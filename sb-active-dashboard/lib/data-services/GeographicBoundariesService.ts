@@ -22,7 +22,7 @@ const BOUNDARY_LAYER_URLS = {
   CENSUS_TRACTS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0", // Census Tracts
   SCHOOL_DISTRICTS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_school_districts_multi_layer/FeatureServer", // Santa Barbara School Districts (multi-layer)
   UNINCORPORATED_AREAS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_unincorporated_areas_multi_layer/FeatureServer", // Santa Barbara Unincorporated Areas (multi-layer)
-  CALTRANS_HIGHWAYS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/SB_CaltransHighways_Real/FeatureServer" // Santa Barbara Caltrans Highways
+  CALTRANS_HIGHWAYS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/SB_CaltransHighways_Enriched/FeatureServer" // Santa Barbara Caltrans Highways (enriched with segment_group_id)
 };
 
 interface GeographicLevel {
@@ -70,7 +70,7 @@ export class GeographicBoundariesService {
   private selectedFeature: { objectId: number, layer: FeatureLayer } | null = null;
   
   // Selection change callback - supports both legacy and new format
-  private onSelectionChange: ((data: { geometry: Polygon | Polyline | null; areaName?: string | null } | Polygon | Polyline | null) => void) | null = null;
+  private onSelectionChange: ((data: { geometry: Polygon | Polyline | null; areaName?: string | null; attributes?: any } | Polygon | Polyline | null) => void) | null = null;
 
   // Overlapping polygon handling
   private overlappingPolygonCallback: ((polygons: Array<{ id: string; name: string; area: number; graphic: __esri.Graphic }>, position: { x: number; y: number }) => void) | null = null;
@@ -260,7 +260,7 @@ export class GeographicBoundariesService {
     return [this.cityLayer, this.serviceAreaLayer, this.countyLayer, this.censusTractLayer, this.schoolDistrictsLayer, this.unincorporatedAreasLayer, this.caltransHighwaysLayer, this.highlightLayer];
   }
   
-  setSelectionChangeCallback(callback: (data: { geometry: Polygon | Polyline | null; areaName?: string | null } | Polygon | Polyline | null) => void) {
+  setSelectionChangeCallback(callback: (data: { geometry: Polygon | Polyline | null; areaName?: string | null; attributes?: any } | Polygon | Polyline | null) => void) {
     this.onSelectionChange = callback;
   }
 
@@ -942,13 +942,14 @@ export class GeographicBoundariesService {
       this.refreshHighlight();
     }
     
-    // Notify about the new selection with area name
+    // Notify about the new selection with area name and attributes
     if (this.onSelectionChange && clickedGraphic.geometry) {
       // Handle both uppercase (census layers) and lowercase (school districts) field names
       const areaName = clickedGraphic.attributes.NAME || clickedGraphic.attributes.name || null;
       this.onSelectionChange({
         geometry: clickedGraphic.geometry as Polygon | Polyline,
-        areaName: areaName
+        areaName: areaName,
+        attributes: clickedGraphic.attributes  // 🔥 Pass the attributes so we can access segment_group_id!
       });
     }
   }

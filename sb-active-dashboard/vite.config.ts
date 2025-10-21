@@ -7,6 +7,12 @@ import tailwindcss from "tailwindcss";
 import autoprefixer from "autoprefixer";
 
 export default defineConfig({
+  server: {
+    port: 3000, // Change this to your desired port
+    // strictPort: true, // Uncomment to exit if port is already in use
+    // open: true, // Uncomment to auto-open browser
+  },
+
   build: {
     rollupOptions: {
       // Note: Removed external @arcgis/lumina for production deployment
