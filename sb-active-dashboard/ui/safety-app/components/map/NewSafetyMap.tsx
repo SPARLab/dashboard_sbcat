@@ -198,11 +198,6 @@ export default function NewSafetyMap({
     if (incidentsLayer && !filters.ebikeMode) {
       setTimeout(() => {
         incidentsLayer.refresh();
-        
-        // Also try to refresh the map view
-        if (mapViewRef.current) {
-          mapViewRef.current.refresh();
-        }
       }, 200);
     }
   }, [filters, safetyLayerService, serviceReady, incidentsLayer]);

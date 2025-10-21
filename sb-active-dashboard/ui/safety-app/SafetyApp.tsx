@@ -76,18 +76,30 @@ export default function SafetyApp() {
     });
   }, []);
 
-  // Highway visualization: Show/hide when filter changes
+  // Highway visualization: Show/hide when filter changes OR when highway is selected
   useEffect(() => {
     const updateHighwayVisualization = async () => {
-      if (!mapView || !selectedGeometry) {
+      if (!mapView) {
         return;
       }
 
       const { HighwayFilterService } = await import('../../lib/data-services/HighwayFilterService');
 
-      if (filters.excludeHighwayIncidents) {
+      // Show buffer if:
+      // 1. "Exclude Highway Incidents" filter is enabled (show what's being excluded)
+      // 2. A highway line is selected AND we're on the Caltrans Highways geographic level
+      const isHighwaySelected = selectedGeometry?.type === 'polyline' && geographicLevel === 'caltrans-highways';
+      
+      if (selectedGeometry && (filters.excludeHighwayIncidents || isHighwaySelected)) {
         // Show highway buffer visualization
-        await HighwayFilterService.showHighwayBuffer(mapView, selectedGeometry, 75);
+        await HighwayFilterService.showHighwayBuffer(
+          mapView, 
+          selectedGeometry, 
+          undefined, // segmentGroupId (will be read from geometry.attributes)
+          undefined, // routeName (will be read from geometry.attributes)
+          undefined, // direction (will be read from geometry.attributes)
+          75 // bufferDistance
+        );
       } else {
         // Hide highway buffer visualization
         HighwayFilterService.hideHighwayBuffer(mapView);
@@ -95,7 +107,7 @@ export default function SafetyApp() {
     };
 
     updateHighwayVisualization();
-  }, [mapView, selectedGeometry, filters.excludeHighwayIncidents]);
+  }, [mapView, selectedGeometry, filters.excludeHighwayIncidents, geographicLevel]);
 
   const debouncedFilters = useDebouncedValue(filters, 300);
 
