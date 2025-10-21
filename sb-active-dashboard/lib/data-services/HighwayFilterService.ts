@@ -279,7 +279,8 @@ export class HighwayFilterService {
     segmentGroupId?: number,
     routeName?: string,
     direction?: string,
-    bufferDistance = 75
+    bufferDistance = 75,
+    colorMode: 'blue' | 'red' = 'blue' // Blue for selection, Red for exclusion
   ): Promise<void> {
     try {
       // Create visualization layer if it doesn't exist
@@ -348,13 +349,22 @@ export class HighwayFilterService {
         displayBuffer = projection.project(highwayBuffer, mapSR) as Polygon;
       }
 
-      // Create visualization graphic with semi-transparent blue fill
+      // Create visualization graphic with color based on context
+      // Blue = selection/viewing, Red = exclusion/removal
+      const fillColor = colorMode === 'red' 
+        ? [255, 100, 100, 0.25]  // Semi-transparent red for exclusion
+        : [100, 150, 255, 0.25]; // Semi-transparent blue for selection
+      
+      const outlineColor = colorMode === 'red'
+        ? [255, 0, 0, 0.9]   // Solid red outline for exclusion
+        : [0, 100, 255, 0.9]; // Solid blue outline for selection
+      
       const bufferGraphic = new Graphic({
         geometry: displayBuffer,
         symbol: new SimpleFillSymbol({
-          color: [100, 150, 255, 0.25], // Semi-transparent blue
+          color: fillColor,
           outline: new SimpleLineSymbol({
-            color: [0, 100, 255, 0.9], // Solid blue outline
+            color: outlineColor,
             width: 2.5,
             style: "dash"
           })

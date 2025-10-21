@@ -91,13 +91,16 @@ export default function SafetyApp() {
       const { HighwayFilterService } = await import('../../lib/data-services/HighwayFilterService');
 
       // Show buffer if:
-      // 1. "Exclude Highway Incidents" filter is enabled (show what's being excluded)
-      // 2. A highway line is selected AND we're on the Caltrans Highways geographic level
+      // 1. "Exclude Highway Incidents" filter is enabled (show what's being excluded) → RED
+      // 2. A highway line is selected AND we're on the Caltrans Highways geographic level → BLUE
       const isHighwaySelected = selectedGeometry?.type === 'polyline' && geographicLevel === 'caltrans-highways';
       
       if (selectedGeometry && (filters.excludeHighwayIncidents || isHighwaySelected)) {
         // For highway lines, pass attributes explicitly if available
         const attrs = (selectedGeometry as any).attributes || selectedAttributes;
+        
+        // Determine color: Red for exclusion mode, Blue for selection mode
+        const colorMode = filters.excludeHighwayIncidents ? 'red' : 'blue';
         
         await HighwayFilterService.showHighwayBuffer(
           mapView, 
@@ -105,7 +108,8 @@ export default function SafetyApp() {
           attrs?.segment_group_id, // segmentGroupId from attributes
           attrs?.route_name, // routeName from attributes
           attrs?.direction, // direction from attributes
-          75 // bufferDistance
+          75, // bufferDistance
+          colorMode // Color based on context (red = exclusion, blue = selection)
         );
       } else {
         // Hide highway buffer visualization
