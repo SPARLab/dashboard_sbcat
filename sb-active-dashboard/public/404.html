@@ -19,8 +19,11 @@
       // then set pathSegmentsToKeep to 1 (enterprise users may need to set it to > 1).
       // This way the code will only replace the route part and not the real directory.
       // This script should be the same for 404.html and index.html
+      
+      // For Vercel/Netlify deployment: set to 0 (root domain)
+      // For GitHub Pages project site: set to 1
 
-      var pathSegmentsToKeep = 1;
+      var pathSegmentsToKeep = 0;
 
       var l = window.location;
       l.replace(
