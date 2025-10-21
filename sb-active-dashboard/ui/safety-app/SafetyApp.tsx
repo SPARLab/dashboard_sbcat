@@ -26,7 +26,7 @@ export default function SafetyApp() {
   const [showDisclaimer, setShowDisclaimer] = useState(true);
   
   // Selection hook for polygon selection (same as volume page)
-  const { selectedGeometry, selectedAreaName, onSelectionChange } = useSelection();
+  const { selectedGeometry, selectedAreaName, selectedAttributes, onSelectionChange } = useSelection();
   
   const [geographicLevel, setGeographicLevel] = useState('city-service-area');
   const [schoolDistrictFilter, setSchoolDistrictFilter] = useState<SchoolDistrictFilter>({ gradeFilter: 'high-school' });
@@ -91,13 +91,15 @@ export default function SafetyApp() {
       const isHighwaySelected = selectedGeometry?.type === 'polyline' && geographicLevel === 'caltrans-highways';
       
       if (selectedGeometry && (filters.excludeHighwayIncidents || isHighwaySelected)) {
-        // Show highway buffer visualization
+        // For highway lines, pass attributes explicitly if available
+        const attrs = (selectedGeometry as any).attributes || selectedAttributes;
+        
         await HighwayFilterService.showHighwayBuffer(
           mapView, 
           selectedGeometry, 
-          undefined, // segmentGroupId (will be read from geometry.attributes)
-          undefined, // routeName (will be read from geometry.attributes)
-          undefined, // direction (will be read from geometry.attributes)
+          attrs?.segment_group_id, // segmentGroupId from attributes
+          attrs?.route_name, // routeName from attributes
+          attrs?.direction, // direction from attributes
           75 // bufferDistance
         );
       } else {
@@ -107,7 +109,7 @@ export default function SafetyApp() {
     };
 
     updateHighwayVisualization();
-  }, [mapView, selectedGeometry, filters.excludeHighwayIncidents, geographicLevel]);
+  }, [mapView, selectedGeometry, selectedAttributes, filters.excludeHighwayIncidents, geographicLevel]);
 
   const debouncedFilters = useDebouncedValue(filters, 300);
 
