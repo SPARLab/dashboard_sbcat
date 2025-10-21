@@ -16,10 +16,17 @@ import MapView from "@arcgis/core/views/MapView";
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 
 const BOUNDARY_LAYER_URLS = {
-  CITIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/25", // Incorporated Places
-  SERVICE_AREAS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/26", // Census Designated Places
-  COUNTIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1", // Counties
-  CENSUS_TRACTS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0", // Census Tracts
+  // Using hosted UCSB layers for better performance (TIGER can be slow)
+  // Fallback to TIGER if needed (uncomment below):
+  // CITIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/25", // Incorporated Places
+  // SERVICE_AREAS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/26", // Census Designated Places
+  // COUNTIES: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1", // Counties
+  // CENSUS_TRACTS: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0", // Census Tracts
+  
+  CITIES: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_cities_service_areas_multi_layer/FeatureServer/1", // Santa Barbara Cities (Layer 1 = Regular with highways)
+  SERVICE_AREAS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_cities_service_areas_multi_layer/FeatureServer/1", // Santa Barbara Service Areas (same as cities, Layer 1 = Regular)
+  COUNTIES: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_county_multi_layer/FeatureServer/1", // Santa Barbara County (Layer 1 = Regular with highways)
+  CENSUS_TRACTS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_census_tracts_multi_layer/FeatureServer/1", // Santa Barbara Census Tracts (Layer 1 = Regular with highways)
   SCHOOL_DISTRICTS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_school_districts_multi_layer/FeatureServer", // Santa Barbara School Districts (multi-layer)
   UNINCORPORATED_AREAS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/sb_unincorporated_areas_multi_layer/FeatureServer", // Santa Barbara Unincorporated Areas (multi-layer)
   CALTRANS_HIGHWAYS: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/SB_CaltransHighways_Enriched/FeatureServer" // Santa Barbara Caltrans Highways (enriched with segment_group_id)
