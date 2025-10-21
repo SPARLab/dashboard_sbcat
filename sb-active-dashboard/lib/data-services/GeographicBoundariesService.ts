@@ -944,8 +944,14 @@ export class GeographicBoundariesService {
     
     // Notify about the new selection with area name and attributes
     if (this.onSelectionChange && clickedGraphic.geometry) {
-      // Handle both uppercase (census layers) and lowercase (school districts) field names
-      const areaName = clickedGraphic.attributes.NAME || clickedGraphic.attributes.name || null;
+      // Handle different field names:
+      // - NAME (uppercase) for census layers
+      // - name (lowercase) for school districts
+      // - route_name for highways
+      const areaName = clickedGraphic.attributes.route_name || 
+                       clickedGraphic.attributes.NAME || 
+                       clickedGraphic.attributes.name || 
+                       null;
       this.onSelectionChange({
         geometry: clickedGraphic.geometry as Polygon | Polyline,
         areaName: areaName,
