@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "@/ui/dashboard/DashboardLayout";
 import LayerProvider from "@/lib/context/MapContext";
 import HomePage from "./pages/home";
-import ExplorePage from "./pages/dashboard/explore";
 import SafetyPage from "./pages/dashboard/safety";
 import VolumePage from "./pages/dashboard/volume";
 import Test from "./pages/dashboard/test";
@@ -31,7 +30,6 @@ function App() {
                 <LayerProvider>
                   <DashboardLayout>
                     <Routes>
-                      <Route path="explore" element={<ExplorePage />} />
                       <Route path="safety" element={<SafetyPage />} />
                       <Route path="volume" element={<VolumePage />} />
                       <Route path="test" element={<Test />} />

@@ -8,7 +8,6 @@ type DashboardLayoutProps = {
 };
 
 const apps = [
-  { name: "Explore", link: "/dashboard/explore" },
   { name: "Safety", link: "/dashboard/safety" },
   { name: "Volume", link: "/dashboard/volume" },
   
