@@ -64,7 +64,7 @@ export async function queryAADTWithinPolygon(
     const query = aadtLayer.createQuery();
     query.geometry = selectedPolygon;
     query.spatialRelationship = "intersects";
-    query.outFields = ["objectid"];
+    query.outFields = ["*"];
     query.returnGeometry = false;
 
     const results = await aadtLayer.queryFeatures(query);

@@ -66,8 +66,6 @@ export class SafetySpatialQueryService {
       
       const queryResult = await incidentsLayer.queryFeatures(query);
       
-      console.log(`[SafetySpatialQueryService] Query returned ${queryResult.features.length} incidents`);
-
       // Convert ArcGIS features to our incident format
       const incidents: EnrichedSafetyIncident[] = queryResult.features.map(feature => {
         const attrs = feature.attributes;

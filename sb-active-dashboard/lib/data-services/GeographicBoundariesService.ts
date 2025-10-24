@@ -71,6 +71,7 @@ export class GeographicBoundariesService {
   private layerRecreationPending = false;
   private initializationPromise: Promise<void> | null = null;
   private isInteractivityFullyReady = false; // New flag to track when interactivity is truly ready
+  private isAutoSelecting = false; // Prevent multiple simultaneous auto-selections
   
   private abortController: AbortController | null = null;
   
@@ -112,7 +113,7 @@ export class GeographicBoundariesService {
         title,
         visible: false,
         popupEnabled: false,
-        outFields: ["OBJECTID", "NAME", "STATE", "GEOID"], // Added STATE and GEOID for debugging
+        outFields: ["*"], // Request all fields to avoid field name conflicts
         minScale: 0, // No minimum scale limit - visible at all zoom levels
         maxScale: 0, // No maximum scale limit - visible at all zoom levels
         definitionExpression: whereClause,
@@ -352,6 +353,8 @@ export class GeographicBoundariesService {
     await this.waitForMapReady(mapView);
 
     const layers: FeatureLayer[] = [];
+    let shouldAutoSelectCounty = false;
+    
     if (level === 'city' || level === 'city-service-area') {
       this.cityLayer.visible = true;
       layers.push(this.cityLayer);
@@ -363,6 +366,7 @@ export class GeographicBoundariesService {
     if (level === 'county') {
       this.countyLayer.visible = true;
       layers.push(this.countyLayer);
+      shouldAutoSelectCounty = true;
     }
     if (level === 'census-tract') {
       this.censusTractLayer.visible = true;
@@ -387,6 +391,14 @@ export class GeographicBoundariesService {
 
     if (layers.length > 0) {
       this.setupInteractivity(mapView, layers);
+      
+      // Auto-select Santa Barbara County AFTER interactivity is set up
+      if (shouldAutoSelectCounty) {
+        // Wait for interactivity to be fully ready before auto-selecting
+        setTimeout(() => {
+          this.autoSelectSantaBarbaraCounty();
+        }, 500); // Give interactivity time to fully initialize
+      }
     }
   }
 
@@ -421,6 +433,88 @@ export class GeographicBoundariesService {
     }
 
     this.schoolDistrictsLayer.definitionExpression = whereClause;
+  }
+
+  /**
+   * Auto-select Santa Barbara County when switching to county level
+   */
+  private async autoSelectSantaBarbaraCounty() {
+    // Prevent multiple simultaneous auto-selections
+    if (this.isAutoSelecting) {
+      return;
+    }
+    
+    this.isAutoSelecting = true;
+    
+    try {
+      // Wait for interactivity to be fully ready
+      const waitForInteractivity = () => {
+        return new Promise<void>((resolve) => {
+          const checkReady = () => {
+            if (this.isInteractivityFullyReady) {
+              resolve();
+            } else {
+              setTimeout(checkReady, 50);
+            }
+          };
+          checkReady();
+        });
+      };
+      
+      await waitForInteractivity();
+      
+      // Query for Santa Barbara County feature
+      const query = this.countyLayer.createQuery();
+      query.where = "NAME = 'Santa Barbara'";
+      query.returnGeometry = true;
+      query.outFields = ["*"];
+      
+      const featureSet = await this.countyLayer.queryFeatures(query);
+      
+      if (featureSet.features.length > 0) {
+        const countyFeature = featureSet.features[0];
+        
+        // Extract OBJECTID (handle different field name variations)
+        const objectId = countyFeature.attributes.OBJECTID || 
+                        countyFeature.attributes.objectid1 || 
+                        countyFeature.attributes.objectid || 
+                        countyFeature.attributes.fid;
+        
+        // Set the selected feature state
+        this.selectedFeature = {
+          objectId: objectId,
+          layer: this.countyLayer
+        };
+        
+        // Clear any existing selection
+        this.clearSelection();
+        
+        // Create selection graphic with the blue outline
+        this.selectedGraphic = new Graphic({
+          geometry: countyFeature.geometry as any,
+          symbol: this.selectionSymbol,
+          attributes: countyFeature.attributes
+        });
+        
+        // Add to highlight layer
+        this.highlightLayer.add(this.selectedGraphic);
+        
+        // Trigger the selection callback to notify components
+        if (this.onSelectionChange) {
+          const areaName = countyFeature.attributes.NAME || countyFeature.attributes.name || null;
+          
+          this.onSelectionChange({
+            geometry: countyFeature.geometry as Polygon | Polyline,
+            areaName: areaName,
+            attributes: countyFeature.attributes
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to auto-select Santa Barbara County:', error);
+    } finally {
+      this.isAutoSelecting = false;
+    }
   }
 
   /**
@@ -719,7 +813,7 @@ export class GeographicBoundariesService {
       if (layers.length > 0) {
         const testQuery = layers[0].createQuery();
         testQuery.where = "1=1";
-        testQuery.outFields = ["OBJECTID"];
+        testQuery.outFields = ["*"];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         layers[0].queryFeatures(testQuery as any).then(() => {
           // Test query completed

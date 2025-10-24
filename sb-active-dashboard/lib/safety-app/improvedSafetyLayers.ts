@@ -582,12 +582,6 @@ export class SafetyLayerService {
         
         try {
           const result = await layer.queryFeatures(query);
-          console.log(`🔎 POST-FILTER CHECK:`, {
-            mode: filters.ebikeMode ? 'E-BIKE' : 'ALL',
-            incidentsPassingFilter: result.features.length,
-            sampleIds: result.features.slice(0, 10).map(f => f.attributes.id).sort(),
-            whereClause: finalWhereClause.substring(0, 100) + '...'
-          });
           
           // In e-bike mode, check which incidents actually have hasEbike = 1
           if (filters.ebikeMode) {
