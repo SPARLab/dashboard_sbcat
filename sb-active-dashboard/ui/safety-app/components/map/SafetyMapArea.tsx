@@ -4,6 +4,9 @@ import { IncidentHeatmapRenderer } from "../../../../lib/safety-app/renderers/In
 import NewSafetyMap from "./NewSafetyMap";
 import HeatmapLegend from "./HeatmapLegend";
 import { SchoolDistrictFilter } from "../../../components/filters/GeographicLevelSection";
+import { DEFAULT_VOLUME_WEIGHTS, VolumeWeightConfig } from "../../../../lib/safety-app/utils/incidentRiskMatrix";
+import VolumeWeightControls from "../controls/VolumeWeightControls";
+import VolumeWeightModal from "../controls/VolumeWeightModal";
 
 interface SafetyMapAreaProps {
   filters?: Partial<SafetyFilters>;
@@ -25,6 +28,8 @@ export default function SafetyMapArea({
   selectedAreaName
 }: SafetyMapAreaProps) {
   const [activeMapTab, setActiveMapTab] = useState<SafetyVisualizationType>('raw-incidents');
+  const [volumeWeights, setVolumeWeights] = useState<VolumeWeightConfig>(DEFAULT_VOLUME_WEIGHTS);
+  const [showWeightModal, setShowWeightModal] = useState(false);
 
   const mapTabs: Array<{ id: SafetyVisualizationType; label: string }> = [
     { id: 'raw-incidents', label: 'Raw Incidents' },
@@ -73,8 +78,20 @@ export default function SafetyMapArea({
             onMapViewReady={onMapViewReady}
             onIncidentsLayerReady={onIncidentsLayerReady}
             onSelectionChange={onSelectionChange}
+            volumeWeights={volumeWeights}
           />
         </div>
+
+        {/* Volume Weight Controls - Show only for ratio visualization */}
+        {activeMapTab === 'incident-to-volume-ratio' && (
+          <div id="safety-weight-controls" className="absolute top-20 right-2 z-20 w-72">
+            <VolumeWeightControls
+              weights={volumeWeights}
+              onWeightsChange={setVolumeWeights}
+              onInfoClick={() => setShowWeightModal(true)}
+            />
+          </div>
+        )}
 
         {/* Dynamic Legend - positioned in bottom right with proper z-index */}
         <div id="safety-map-legend" className="absolute bottom-6 right-2 z-10">
@@ -114,6 +131,12 @@ export default function SafetyMapArea({
           )}
         </div>
       </div>
+
+      {/* Explanatory Modal */}
+      <VolumeWeightModal
+        open={showWeightModal}
+        onClose={() => setShowWeightModal(false)}
+      />
     </div>
   );
 } 

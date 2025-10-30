@@ -14,7 +14,7 @@ export class IncidentHeatmapRenderer {
     return new HeatmapRenderer({
       field: undefined, // Use point density, not a specific field
       radius: 10,
-      maxDensity: 0.08, // Higher threshold to show more nuanced gradient
+      maxDensity: 0.04, // Lower value = darker/more intense heatmap (adjusted from 0.08)
       minDensity: 0,
       referenceScale: 72224, // Lock visualization to this scale for consistency across zoom levels
       colorStops: this.getColorScheme(colorScheme)

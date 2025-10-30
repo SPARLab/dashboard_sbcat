@@ -16,6 +16,7 @@ import { WeightedVisualization } from "./visualizations/WeightedVisualization";
 import { useLayerCache } from "../../hooks/useLayerCache";
 import { useSafetyLayers } from "../../hooks/useSafetyLayers";
 import { SchoolDistrictFilter } from "../../../components/filters/GeographicLevelSection";
+import { VolumeWeightConfig } from "../../../../lib/safety-app/utils/incidentRiskMatrix";
 
 interface NewSafetyMapProps {
   activeVisualization: SafetyVisualizationType;
@@ -26,6 +27,7 @@ interface NewSafetyMapProps {
   schoolDistrictFilter?: SchoolDistrictFilter;
   onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | null) => void;
   showLoadingOverlay?: boolean;
+  volumeWeights?: VolumeWeightConfig;
 }
 
 export default function NewSafetyMap({ 
@@ -36,7 +38,8 @@ export default function NewSafetyMap({
   geographicLevel,
   schoolDistrictFilter,
   onSelectionChange,
-  showLoadingOverlay = true
+  showLoadingOverlay = true,
+  volumeWeights
 }: NewSafetyMapProps) {
   // Map and state management
   const mapViewRef = useRef<__esri.MapView | null>(null);
@@ -241,7 +244,8 @@ export default function NewSafetyMap({
               await WeightedVisualization.createVisualization(
                 mapViewRef.current!, filters, incidentsLayer,
                 cachedWeightedLayer, cachedExtentKey, generateCacheKey,
-                setCachedWeightedLayer, setCachedExtentKey
+                setCachedWeightedLayer, setCachedExtentKey,
+                volumeWeights
               );
               return; // Early return for weighted visualization
               
@@ -276,8 +280,8 @@ export default function NewSafetyMap({
     };
 
     updateVisualization();
-    // Re-run this effect when the visualization type changes. Filter changes are handled separately.
-  }, [activeVisualization, incidentsLayer, viewReady]);
+    // Re-run this effect when the visualization type or volume weights change. Filter changes are handled separately.
+  }, [activeVisualization, incidentsLayer, viewReady, volumeWeights]);
 
   // Raw incidents now use the same layer as heatmaps, so no special cleanup needed
 

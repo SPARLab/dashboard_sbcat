@@ -3,6 +3,7 @@ import { SafetyIncidentsDataService } from "../../../../../lib/data-services/Saf
 import { IncidentHeatmapRenderer } from "../../../../../lib/safety-app/renderers/IncidentHeatmapRenderer";
 import { IncidentVolumeRatioRenderer } from "../../../../../lib/safety-app/renderers/IncidentVolumeRatioRenderer";
 import { SafetyFilters } from "../../../../../lib/safety-app/types";
+import { getNormalizationWeight, VolumeWeightConfig } from "../../../../../lib/safety-app/utils/incidentRiskMatrix";
 
 export class WeightedVisualization {
   static async createVisualization(
@@ -13,15 +14,18 @@ export class WeightedVisualization {
     cachedExtentKey: string | null,
     generateCacheKey: (extent: __esri.Extent, filters: Partial<SafetyFilters>) => string,
     setCachedWeightedLayer: (layer: FeatureLayer | null) => void,
-    setCachedExtentKey: (key: string | null) => void
+    setCachedExtentKey: (key: string | null) => void,
+    customWeights?: VolumeWeightConfig
   ): Promise<void> {
     if (!incidentsLayer || !mapView) return;
 
     try {
       // Check if we can use cached layer
+      // NOTE: Don't use cache if custom weights are provided - always regenerate to reflect weight changes
       const currentCacheKey = generateCacheKey(mapView.extent, filters);
+      const hasCustomWeights = customWeights !== undefined;
       
-      if (cachedWeightedLayer && cachedExtentKey === currentCacheKey) {
+      if (cachedWeightedLayer && cachedExtentKey === currentCacheKey && !hasCustomWeights) {
   
         
         // Hide the regular incidents layer and show the cached traffic layer
@@ -172,31 +176,34 @@ export class WeightedVisualization {
 
       // Create features array for client-side feature layer with traffic data
       const trafficFeatures = incidentsWithTrafficData.map((incident, index) => {
-        // Calculate traffic level score (Low=1, Medium=2, High=3) - case insensitive
-        const getTrafficScore = (level: string | undefined) => {
-          if (!level) return 1;
-          const normalizedLevel = level.toLowerCase();
-          if (normalizedLevel === 'high') return 3;
-          if (normalizedLevel === 'medium') return 2;
-          return 1; // low or unknown
+        // Normalize traffic level string to standard format
+        const normalizeLevel = (level: string | undefined): 'Low' | 'Medium' | 'High' => {
+          if (!level) return 'Medium';
+          const normalized = level.toLowerCase();
+          if (normalized === 'high') return 'High';
+          if (normalized === 'medium') return 'Medium';
+          return 'Low';
         };
         
-        const bikeTrafficScore = getTrafficScore(incident.bikeTrafficLevel);
-        const pedTrafficScore = getTrafficScore(incident.pedTrafficLevel);
+        const bikeLevel = normalizeLevel(incident.bikeTrafficLevel);
+        const pedLevel = normalizeLevel(incident.pedTrafficLevel);
         
-        // Use the higher traffic level for visualization
-        const trafficLevel = Math.max(bikeTrafficScore, pedTrafficScore);
-        const normalizedTrafficLevel = trafficLevel / 3; // Normalize to 0-1 scale
+        // Prioritize bike traffic level, fall back to pedestrian level
+        const volumeLevel = incident.bikeTrafficLevel ? bikeLevel : pedLevel;
+        
+        // Get normalization weight based on volume level
+        // Uses custom weights if provided, otherwise defaults to 3.0/1.0/0.5
+        const riskWeight = getNormalizationWeight(volumeLevel, customWeights);
         
         const feature = {
           geometry: incident.geometry,
           attributes: {
             objectid: incident.OBJECTID || index + 1, // Ensure we have a valid objectid
             id: incident.id,
-            bikeTrafficLevel: incident.bikeTrafficLevel || 'low',
-            pedTrafficLevel: incident.pedTrafficLevel || 'low',
-            trafficLevel: trafficLevel,
-            normalizedTrafficLevel: normalizedTrafficLevel, // Use this for visualization
+            bikeTrafficLevel: incident.bikeTrafficLevel || 'Low',
+            pedTrafficLevel: incident.pedTrafficLevel || 'Low',
+            volumeLevel: volumeLevel,
+            normalizedRisk: riskWeight, // Use this for heatmap visualization
             severity: incident.maxSeverity || 'unknown',
             data_source: incident.data_source || 'unknown'
           }
@@ -223,8 +230,8 @@ export class WeightedVisualization {
           { name: "id", type: "integer" },
           { name: "bikeTrafficLevel", type: "string" },
           { name: "pedTrafficLevel", type: "string" },
-          { name: "trafficLevel", type: "integer" },
-          { name: "normalizedTrafficLevel", type: "double" },
+          { name: "volumeLevel", type: "string" },
+          { name: "normalizedRisk", type: "double" },
           { name: "severity", type: "string" },
           { name: "data_source", type: "string" }
         ],
@@ -237,11 +244,13 @@ export class WeightedVisualization {
       
 
       
-      // Create a custom renderer using consistent purple scheme
+      // Create a custom renderer using risk weights
+      // Higher weights (low-volume areas) create stronger heatmap intensity per incident
+      // maxDensity is higher than incident heatmap to ensure ratio never exceeds incident intensity
       const trafficRenderer = new (await import("@arcgis/core/renderers/HeatmapRenderer")).default({
-        field: "normalizedTrafficLevel", // Use our traffic level field
+        field: "normalizedRisk", // Use risk weight: Low volume=3.0, Medium=1.0, High=0.5
         radius: 15, // Match incident heatmap radius
-        maxDensity: 0.02, // Match incident heatmap maxDensity
+        maxDensity: 0.08, // Higher than incident heatmap (0.04) to keep overall intensity lighter
         minDensity: 0,
         referenceScale: 72224, // Match incident heatmap referenceScale
         colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Use same purple scheme
