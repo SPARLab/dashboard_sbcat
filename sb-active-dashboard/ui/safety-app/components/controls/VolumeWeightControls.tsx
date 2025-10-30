@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Slider, Button, Collapse, IconButton, Tooltip, Chip } from '@mui/material';
-import { ExpandMore as ExpandMoreIcon, Info as InfoIcon, RestartAlt as ResetIcon, Check as CheckIcon } from '@mui/icons-material';
 import { DEFAULT_VOLUME_WEIGHTS, VolumeWeightConfig } from '../../../../lib/safety-app/utils/incidentRiskMatrix';
 
 interface VolumeWeightControlsProps {
@@ -8,6 +6,8 @@ interface VolumeWeightControlsProps {
   onWeightsChange: (weights: VolumeWeightConfig) => void;
   onInfoClick?: () => void;
 }
+
+const MAX_DENSITY = 0.06; // Match the heatmap renderer setting (ArcGIS pixel density units)
 
 export default function VolumeWeightControls({ 
   weights, 
@@ -48,240 +48,215 @@ export default function VolumeWeightControls({
     draftWeights.medium === DEFAULT_VOLUME_WEIGHTS.medium &&
     draftWeights.high === DEFAULT_VOLUME_WEIGHTS.high;
 
+  const getWeightDescription = (weight: number, category: string, baseline: number = 1.0) => {
+    if (weight === 0) return "Hidden (filtered out)";
+    
+    // Calculate relative intensity compared to baseline
+    const ratio = weight / baseline;
+    
+    // Show what this means in practical terms
+    if (ratio >= 4) {
+      return `Much more visible - hotspots form ~${ratio.toFixed(0)}x faster than medium-volume areas`;
+    } else if (ratio >= 2) {
+      return `More visible - hotspots form ~${ratio.toFixed(1)}x faster than medium-volume areas`;
+    } else if (ratio > 1.2) {
+      return `Slightly more visible than medium-volume areas`;
+    } else if (ratio >= 0.8 && ratio <= 1.2) {
+      return `Similar visibility to medium-volume areas (baseline)`;
+    } else if (ratio >= 0.5) {
+      return `Less visible - needs ~${(1/ratio).toFixed(1)}x more incidents than medium-volume for same intensity`;
+    } else {
+      return `Much less visible - needs ~${(1/ratio).toFixed(0)}x more incidents than medium-volume for same intensity`;
+    }
+  };
+
   return (
-    <Box 
+    <div 
       id="volume-weight-controls"
-      sx={{ 
-        bgcolor: 'background.paper', 
-        borderRadius: 1, 
-        p: 2,
-        border: '1px solid',
-        borderColor: 'divider'
-      }}
+      className="bg-white rounded border border-gray-300 p-4"
     >
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: expanded ? 2 : 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="subtitle2" fontWeight="bold">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-gray-900">
             Volume Weighting
-          </Typography>
+          </h3>
           {hasUnappliedChanges && !expanded && (
-            <Chip 
-              label="Pending" 
-              size="small" 
-              color="warning" 
-              sx={{ height: 20, fontSize: '0.7rem' }}
-            />
+            <span className="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-800 rounded">
+              Pending
+            </span>
           )}
-          <Tooltip title="Learn how volume weighting works">
-            <IconButton 
-              id="volume-weight-info-button"
-              size="small" 
-              onClick={onInfoClick}
-              sx={{ p: 0.5 }}
-            >
-              <InfoIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-        <IconButton 
+          <button
+            id="volume-weight-info-button"
+            onClick={onInfoClick}
+            className="p-1 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
+            title="Learn how volume weighting works"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+        <button
           id="volume-weight-expand-button"
-          size="small"
           onClick={() => setExpanded(!expanded)}
-          sx={{ 
-            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.3s'
-          }}
+          className="p-1 text-gray-500 hover:text-gray-700 transition-transform"
+          style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
         >
-          <ExpandMoreIcon />
-        </IconButton>
-      </Box>
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
 
       {/* Collapsed State - Show Current Values */}
       {!expanded && (
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="caption" color="text.secondary">
+        <div className="mt-2">
+          <p className="text-xs text-gray-600">
             Low: {weights.low.toFixed(1)}x • Medium: {weights.medium.toFixed(1)}x • High: {weights.high.toFixed(1)}x
-          </Typography>
-        </Box>
+          </p>
+        </div>
       )}
 
       {/* Expanded State - Show Sliders */}
-      <Collapse in={expanded}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      {expanded && (
+        <div className="mt-4 space-y-6">
           
           {/* Low Volume Weight */}
-          <Box id="low-volume-weight-control">
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-              <Typography variant="body2" fontWeight="medium">
-                Low Volume Areas
-              </Typography>
-              <Typography 
-                variant="body2" 
-                fontWeight="bold" 
-                sx={{ 
-                  bgcolor: 'primary.main', 
-                  color: 'white', 
-                  px: 1, 
-                  py: 0.25, 
-                  borderRadius: 1,
-                  minWidth: '48px',
-                  textAlign: 'center'
-                }}
-              >
+          <div id="low-volume-weight-control">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-700">Low Volume Areas</span>
+              <span className="px-3 py-1 text-sm font-bold bg-blue-600 text-white rounded">
                 {draftWeights.low.toFixed(1)}x
-              </Typography>
-            </Box>
-            <Slider
+              </span>
+            </div>
+            <input
+              type="range"
               value={draftWeights.low}
-              onChange={(_, value) => handleWeightChange('low', value as number)}
-              min={0}
-              max={5}
-              step={0.1}
-              marks={[
-                { value: 0, label: '0' },
-                { value: 2.5, label: '2.5' },
-                { value: 5, label: '5' }
-              ]}
-              sx={{ mt: 1 }}
+              onChange={(e) => handleWeightChange('low', parseFloat(e.target.value))}
+              min="0"
+              max="5"
+              step="0.1"
+              className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
-            <Typography variant="caption" color="text.secondary">
-              {draftWeights.low === 0 
-                ? 'Hidden (filtered out)' 
-                : `Each incident counts ${draftWeights.low.toFixed(1)}x`}
-            </Typography>
-          </Box>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0</span>
+              <span>2.5</span>
+              <span>5</span>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              {getWeightDescription(draftWeights.low, 'low-volume', draftWeights.medium)}
+            </p>
+          </div>
 
           {/* Medium Volume Weight */}
-          <Box id="medium-volume-weight-control">
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-              <Typography variant="body2" fontWeight="medium">
-                Medium Volume Areas
-              </Typography>
-              <Typography 
-                variant="body2" 
-                fontWeight="bold" 
-                sx={{ 
-                  bgcolor: 'primary.main', 
-                  color: 'white', 
-                  px: 1, 
-                  py: 0.25, 
-                  borderRadius: 1,
-                  minWidth: '48px',
-                  textAlign: 'center'
-                }}
-              >
+          <div id="medium-volume-weight-control">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-700">Medium Volume Areas</span>
+              <span className="px-3 py-1 text-sm font-bold bg-blue-600 text-white rounded">
                 {draftWeights.medium.toFixed(1)}x
-              </Typography>
-            </Box>
-            <Slider
+              </span>
+            </div>
+            <input
+              type="range"
               value={draftWeights.medium}
-              onChange={(_, value) => handleWeightChange('medium', value as number)}
-              min={0}
-              max={5}
-              step={0.1}
-              marks={[
-                { value: 0, label: '0' },
-                { value: 2.5, label: '2.5' },
-                { value: 5, label: '5' }
-              ]}
-              sx={{ mt: 1 }}
+              onChange={(e) => handleWeightChange('medium', parseFloat(e.target.value))}
+              min="0"
+              max="5"
+              step="0.1"
+              className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
-            <Typography variant="caption" color="text.secondary">
-              {draftWeights.medium === 0 
-                ? 'Hidden (filtered out)' 
-                : draftWeights.medium === 1 
-                  ? 'Baseline (1x)' 
-                  : `Each incident counts ${draftWeights.medium.toFixed(1)}x`}
-            </Typography>
-          </Box>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0</span>
+              <span>2.5</span>
+              <span>5</span>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              {getWeightDescription(draftWeights.medium, 'medium-volume', draftWeights.medium)}
+            </p>
+          </div>
 
           {/* High Volume Weight */}
-          <Box id="high-volume-weight-control">
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-              <Typography variant="body2" fontWeight="medium">
-                High Volume Areas
-              </Typography>
-              <Typography 
-                variant="body2" 
-                fontWeight="bold" 
-                sx={{ 
-                  bgcolor: 'primary.main', 
-                  color: 'white', 
-                  px: 1, 
-                  py: 0.25, 
-                  borderRadius: 1,
-                  minWidth: '48px',
-                  textAlign: 'center'
-                }}
-              >
+          <div id="high-volume-weight-control">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-700">High Volume Areas</span>
+              <span className="px-3 py-1 text-sm font-bold bg-blue-600 text-white rounded">
                 {draftWeights.high.toFixed(1)}x
-              </Typography>
-            </Box>
-            <Slider
+              </span>
+            </div>
+            <input
+              type="range"
               value={draftWeights.high}
-              onChange={(_, value) => handleWeightChange('high', value as number)}
-              min={0}
-              max={5}
-              step={0.1}
-              marks={[
-                { value: 0, label: '0' },
-                { value: 2.5, label: '2.5' },
-                { value: 5, label: '5' }
-              ]}
-              sx={{ mt: 1 }}
+              onChange={(e) => handleWeightChange('high', parseFloat(e.target.value))}
+              min="0"
+              max="5"
+              step="0.1"
+              className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
-            <Typography variant="caption" color="text.secondary">
-              {draftWeights.high === 0 
-                ? 'Hidden (filtered out)' 
-                : `Each incident counts ${draftWeights.high.toFixed(1)}x`}
-            </Typography>
-          </Box>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0</span>
+              <span>2.5</span>
+              <span>5</span>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              {getWeightDescription(draftWeights.high, 'high-volume', draftWeights.medium)}
+            </p>
+          </div>
 
           {/* Action Buttons */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <div className="space-y-2">
             {hasUnappliedChanges && (
-              <Box sx={{ bgcolor: 'warning.lighter', px: 1.5, py: 1, borderRadius: 1 }}>
-                <Typography variant="caption" color="warning.dark" fontWeight="medium">
+              <div className="bg-orange-50 border border-orange-200 rounded px-3 py-2">
+                <p className="text-xs font-medium text-orange-800">
                   ⚠️ Changes pending - click Apply to update map
-                </Typography>
-              </Box>
+                </p>
+              </div>
             )}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
+            <div className="flex gap-2">
+              <button
                 id="apply-weights-button"
-                variant="contained"
-                size="small"
-                startIcon={<CheckIcon />}
                 onClick={handleApply}
                 disabled={!hasUnappliedChanges}
-                sx={{ flex: 1 }}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded transition-colors ${
+                  hasUnappliedChanges
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
               >
-                Apply
-              </Button>
-              <Button
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                APPLY
+              </button>
+              <button
                 id="reset-weights-button"
-                variant="outlined"
-                size="small"
-                startIcon={<ResetIcon />}
                 onClick={handleReset}
                 disabled={isDefault}
-                sx={{ flex: 1 }}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded border transition-colors ${
+                  isDefault
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
               >
-                Reset
-              </Button>
-            </Box>
-          </Box>
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                </svg>
+                RESET
+              </button>
+            </div>
+          </div>
 
           {/* Info Text */}
-          <Box sx={{ bgcolor: 'info.lighter', p: 1.5, borderRadius: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              💡 <strong>Tip:</strong> Adjust sliders to preview values, then click <strong>Apply</strong> to update the map. Higher weights increase visual prominence. Set to 0 to filter out a category entirely.
-            </Typography>
-          </Box>
-        </Box>
-      </Collapse>
-    </Box>
+          <div className="bg-blue-50 border border-blue-200 rounded px-3 py-2">
+            <p className="text-xs text-gray-700">
+              💡 <strong>Tip:</strong> Adjust sliders to preview values, then click <strong>Apply</strong> to update the map. Higher weights make hotspots more visible. Set to 0 to filter out a category entirely.
+            </p>
+            <p className="text-xs text-gray-600 mt-1">
+              <strong>Note:</strong> Descriptions show relative visibility compared to medium-volume areas (baseline). Actual heatmap appearance also depends on incident proximity and zoom level.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
-

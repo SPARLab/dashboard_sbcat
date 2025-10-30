@@ -1,6 +1,7 @@
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import { useState } from "react";
 import { SafetyFilters } from "../../../lib/safety-app/types";
+import { VolumeWeightConfig } from "../../../lib/safety-app/utils/incidentRiskMatrix";
 
 export function useLayerCache() {
   // Cache for the weighted layer to avoid expensive recreation
@@ -13,12 +14,13 @@ export function useLayerCache() {
   const [rawDataFiltersKey, setRawDataFiltersKey] = useState<string | null>(null);
 
   // Generate a cache key based on filters only (not extent)
-  const generateCacheKey = (extent: __esri.Extent, filters: Partial<SafetyFilters>): string => {
+  const generateCacheKey = (extent: __esri.Extent, filters: Partial<SafetyFilters>, weights?: VolumeWeightConfig): string => {
     const filtersKey = JSON.stringify({
       dateRange: filters.dateRange ? `${filters.dateRange.start.getTime()}-${filters.dateRange.end.getTime()}` : null,
       dataSource: filters.dataSource?.sort(),
       roadUser: filters.roadUser?.sort(),
-      conflictType: filters.conflictType?.sort()
+      conflictType: filters.conflictType?.sort(),
+      weights: weights ? `${weights.low}-${weights.medium}-${weights.high}` : null
     });
     return filtersKey;
   };

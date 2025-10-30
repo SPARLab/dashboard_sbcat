@@ -98,9 +98,11 @@ export default function SafetyMapArea({
           {(activeMapTab === 'incident-heatmap' || activeMapTab === 'incident-to-volume-ratio') ? (
             <HeatmapLegend 
               colorStops={IncidentHeatmapRenderer.createDensityHeatmap().colorStops as Array<{ ratio: number; color: string | __esri.Color }>}
-              title={activeMapTab === 'incident-heatmap' ? "Incident Density" : "Incident to Volume Ratio"}
+              title={activeMapTab === 'incident-heatmap' ? "Incident Density" : "Volume-Weighted Incidents"}
               minLabel="Low"
               maxLabel="High"
+              volumeWeights={activeMapTab === 'incident-to-volume-ratio' ? volumeWeights : undefined}
+              showIncidentCounts={activeMapTab === 'incident-to-volume-ratio'}
             />
           ) : (
             <div id="safety-incident-legend" className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-36">

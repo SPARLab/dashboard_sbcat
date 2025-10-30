@@ -12,7 +12,7 @@ export class WeightedVisualization {
     incidentsLayer: FeatureLayer | null,
     cachedWeightedLayer: FeatureLayer | null,
     cachedExtentKey: string | null,
-    generateCacheKey: (extent: __esri.Extent, filters: Partial<SafetyFilters>) => string,
+    generateCacheKey: (extent: __esri.Extent, filters: Partial<SafetyFilters>, weights?: VolumeWeightConfig) => string,
     setCachedWeightedLayer: (layer: FeatureLayer | null) => void,
     setCachedExtentKey: (key: string | null) => void,
     customWeights?: VolumeWeightConfig
@@ -21,11 +21,10 @@ export class WeightedVisualization {
 
     try {
       // Check if we can use cached layer
-      // NOTE: Don't use cache if custom weights are provided - always regenerate to reflect weight changes
-      const currentCacheKey = generateCacheKey(mapView.extent, filters);
-      const hasCustomWeights = customWeights !== undefined;
+      // Cache key now includes weights, so different weights = different cache
+      const currentCacheKey = generateCacheKey(mapView.extent, filters, customWeights);
       
-      if (cachedWeightedLayer && cachedExtentKey === currentCacheKey && !hasCustomWeights) {
+      if (cachedWeightedLayer && cachedExtentKey === currentCacheKey) {
   
         
         // Hide the regular incidents layer and show the cached traffic layer
@@ -246,11 +245,11 @@ export class WeightedVisualization {
       
       // Create a custom renderer using risk weights
       // Higher weights (low-volume areas) create stronger heatmap intensity per incident
-      // maxDensity is higher than incident heatmap to ensure ratio never exceeds incident intensity
+      // maxDensity must be small (0.01-0.1 range) - this is ArcGIS pixel density, not weight units
       const trafficRenderer = new (await import("@arcgis/core/renderers/HeatmapRenderer")).default({
         field: "normalizedRisk", // Use risk weight: Low volume=3.0, Medium=1.0, High=0.5
         radius: 15, // Match incident heatmap radius
-        maxDensity: 0.08, // Higher than incident heatmap (0.04) to keep overall intensity lighter
+        maxDensity: 0.06, // ArcGIS pixel density threshold (slightly higher than incident heatmap's 0.04)
         minDensity: 0,
         referenceScale: 72224, // Match incident heatmap referenceScale
         colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Use same purple scheme
