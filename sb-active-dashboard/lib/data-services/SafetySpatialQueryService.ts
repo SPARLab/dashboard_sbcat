@@ -55,6 +55,11 @@ export class SafetySpatialQueryService {
         const conflictConditions = filters.conflictType.map(type => `conflict_type = '${type}'`);
         whereClause += ` AND (${conflictConditions.join(' OR ')})`;
       }
+      
+      // Apply e-bike filter if provided
+      if (filters?.ebikeMode === true) {
+        whereClause += " AND hasEbike = 1";
+      }
 
       // Query the LAYER directly (not the layerView) to get ALL features, not just rendered ones
       const query = incidentsLayer.createQuery();
