@@ -151,7 +151,6 @@ export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Da
       // Check if this is an e-bike party
       if (bicycleType && bicycleType.toLowerCase() === 'ebike') {
         ebikeMap.set(incidentId, true);
-        // Removed cluttering debug log
       }
     });
     
@@ -589,16 +588,8 @@ export class SafetyLayerService {
             ebikeQuery.where = "hasEbike = 1";
             ebikeQuery.returnGeometry = false;
             ebikeQuery.outFields = ["id", "hasEbike"];
-            
-            layer.queryFeatures(ebikeQuery).then(ebikeResult => {
-              console.log('🔍 E-BIKE FIELD CHECK:', {
-                incidentsWithHasEbike1: ebikeResult.features.length,
-                ids: ebikeResult.features.map(f => f.attributes.id).sort()
-              });
-            }).catch(err => {
-              console.error('Error checking hasEbike field:', err);
-            });
           }
+
           
           // Check if specific incident 3227 is included
           const has3227 = result.features.some(f => f.attributes.id === 3227 || f.attributes.id === '3227');

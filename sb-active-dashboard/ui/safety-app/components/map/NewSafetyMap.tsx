@@ -74,8 +74,7 @@ export default function NewSafetyMap({
     mapViewRef.current,
     boundaryService.current,
     setDataLoading,
-    setDataError,
-    filters.dateRange
+    setDataError
   );
 
   // Notify parent when incidents layer is ready
