@@ -41,17 +41,17 @@ export const INCIDENT_RISK_THRESHOLDS: RiskThresholds = {
  * Users can customize these to explore different risk perspectives
  */
 export interface VolumeWeightConfig {
-  low: number;    // Weight for low-volume areas (default 3.0)
+  low: number;    // Weight for low-volume areas (default 2.0)
   medium: number; // Weight for medium-volume areas (default 1.0)
   high: number;   // Weight for high-volume areas (default 0.5)
 }
 
 /**
  * Default weights represent a hypothesis that incidents in low-volume areas
- * are more concerning than in high-volume areas (6x difference: 3.0 vs 0.5)
+ * are more concerning than in high-volume areas (4x difference: 2.0 vs 0.5)
  */
 export const DEFAULT_VOLUME_WEIGHTS: VolumeWeightConfig = {
-  low: 3.0,    // 3x baseline - incidents in quieter areas are more notable
+  low: 2.0,    // 2x baseline - incidents in quieter areas are more notable
   medium: 1.0, // Baseline reference
   high: 0.5    // 0.5x baseline - incidents in busy areas are expected
 };

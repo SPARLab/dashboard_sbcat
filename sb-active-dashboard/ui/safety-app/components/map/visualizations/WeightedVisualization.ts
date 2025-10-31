@@ -246,10 +246,11 @@ export class WeightedVisualization {
       // Create a custom renderer using risk weights
       // Higher weights (low-volume areas) create stronger heatmap intensity per incident
       // maxDensity must be small (0.01-0.1 range) - this is ArcGIS pixel density, not weight units
+      // IMPORTANT: Must match ALL incident heatmap parameters so that weights=1.0x produces identical results
       const trafficRenderer = new (await import("@arcgis/core/renderers/HeatmapRenderer")).default({
-        field: "normalizedRisk", // Use risk weight: Low volume=3.0, Medium=1.0, High=0.5
-        radius: 15, // Match incident heatmap radius
-        maxDensity: 0.06, // ArcGIS pixel density threshold (slightly higher than incident heatmap's 0.04)
+        field: "normalizedRisk", // Use risk weight: Low volume=2.0, Medium=1.0, High=0.5 (defaults)
+        radius: 10, // Match incident heatmap radius (10, not 15 - controls blur amount)
+        maxDensity: 0.04, // Match incident heatmap exactly (0.04)
         minDensity: 0,
         referenceScale: 72224, // Match incident heatmap referenceScale
         colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Use same purple scheme

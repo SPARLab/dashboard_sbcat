@@ -6,7 +6,6 @@ import HeatmapLegend from "./HeatmapLegend";
 import { SchoolDistrictFilter } from "../../../components/filters/GeographicLevelSection";
 import { DEFAULT_VOLUME_WEIGHTS, VolumeWeightConfig } from "../../../../lib/safety-app/utils/incidentRiskMatrix";
 import VolumeWeightControls from "../controls/VolumeWeightControls";
-import VolumeWeightModal from "../controls/VolumeWeightModal";
 
 interface SafetyMapAreaProps {
   filters?: Partial<SafetyFilters>;
@@ -29,7 +28,6 @@ export default function SafetyMapArea({
 }: SafetyMapAreaProps) {
   const [activeMapTab, setActiveMapTab] = useState<SafetyVisualizationType>('raw-incidents');
   const [volumeWeights, setVolumeWeights] = useState<VolumeWeightConfig>(DEFAULT_VOLUME_WEIGHTS);
-  const [showWeightModal, setShowWeightModal] = useState(false);
 
   const mapTabs: Array<{ id: SafetyVisualizationType; label: string }> = [
     { id: 'raw-incidents', label: 'Raw Incidents' },
@@ -88,7 +86,6 @@ export default function SafetyMapArea({
             <VolumeWeightControls
               weights={volumeWeights}
               onWeightsChange={setVolumeWeights}
-              onInfoClick={() => setShowWeightModal(true)}
             />
           </div>
         )}
@@ -101,8 +98,6 @@ export default function SafetyMapArea({
               title={activeMapTab === 'incident-heatmap' ? "Incident Density" : "Volume-Weighted Incidents"}
               minLabel="Low"
               maxLabel="High"
-              volumeWeights={activeMapTab === 'incident-to-volume-ratio' ? volumeWeights : undefined}
-              showIncidentCounts={activeMapTab === 'incident-to-volume-ratio'}
             />
           ) : (
             <div id="safety-incident-legend" className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-36">
@@ -133,12 +128,6 @@ export default function SafetyMapArea({
           )}
         </div>
       </div>
-
-      {/* Explanatory Modal */}
-      <VolumeWeightModal
-        open={showWeightModal}
-        onClose={() => setShowWeightModal(false)}
-      />
     </div>
   );
 } 

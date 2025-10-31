@@ -1,20 +1,18 @@
 import { useState, useEffect } from 'react';
 import { DEFAULT_VOLUME_WEIGHTS, VolumeWeightConfig } from '../../../../lib/safety-app/utils/incidentRiskMatrix';
+import CollapseExpandIcon from '../../../components/CollapseExpandIcon';
+import MoreInformationIcon from '../right-sidebar/MoreInformationIcon';
 
 interface VolumeWeightControlsProps {
   weights: VolumeWeightConfig;
   onWeightsChange: (weights: VolumeWeightConfig) => void;
-  onInfoClick?: () => void;
 }
-
-const MAX_DENSITY = 0.06; // Match the heatmap renderer setting (ArcGIS pixel density units)
 
 export default function VolumeWeightControls({ 
   weights, 
-  onWeightsChange,
-  onInfoClick 
+  onWeightsChange
 }: VolumeWeightControlsProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true); // Expanded by default
   const [draftWeights, setDraftWeights] = useState<VolumeWeightConfig>(weights);
 
   // Sync draft weights when committed weights change externally (e.g., from reset)
@@ -73,12 +71,12 @@ export default function VolumeWeightControls({
   return (
     <div 
       id="volume-weight-controls"
-      className="bg-white rounded border border-gray-300 p-4"
+      className="bg-white border border-gray-200 rounded-md p-4"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-gray-900">
+      <div id="volume-weight-controls-header" className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <h3 id="volume-weight-controls-title" className="text-base font-medium text-gray-700">
             Volume Weighting
           </h3>
           {hasUnappliedChanges && !expanded && (
@@ -86,27 +84,17 @@ export default function VolumeWeightControls({
               Pending
             </span>
           )}
-          <button
-            id="volume-weight-info-button"
-            onClick={onInfoClick}
-            className="p-1 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
-            title="Learn how volume weighting works"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-          </button>
+          <MoreInformationIcon 
+            text="Adjust weights to change how traffic volume affects incident visibility. 1.0x = neutral. Higher values emphasize incidents. Volume estimates based on 2023 bike traffic data."
+            align="center"
+            width="w-80"
+          />
         </div>
-        <button
+        <CollapseExpandIcon 
           id="volume-weight-expand-button"
+          isCollapsed={!expanded}
           onClick={() => setExpanded(!expanded)}
-          className="p-1 text-gray-500 hover:text-gray-700 transition-transform"
-          style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-        >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
+        />
       </div>
 
       {/* Collapsed State - Show Current Values */}
@@ -140,9 +128,9 @@ export default function VolumeWeightControls({
               className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>0</span>
-              <span>2.5</span>
-              <span>5</span>
+              <span>0x</span>
+              <span>2.5x</span>
+              <span>5x</span>
             </div>
             <p className="text-xs text-gray-600 mt-2">
               {getWeightDescription(draftWeights.low, 'low-volume', draftWeights.medium)}
@@ -167,9 +155,9 @@ export default function VolumeWeightControls({
               className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>0</span>
-              <span>2.5</span>
-              <span>5</span>
+              <span>0x</span>
+              <span>2.5x</span>
+              <span>5x</span>
             </div>
             <p className="text-xs text-gray-600 mt-2">
               {getWeightDescription(draftWeights.medium, 'medium-volume', draftWeights.medium)}
@@ -194,9 +182,9 @@ export default function VolumeWeightControls({
               className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>0</span>
-              <span>2.5</span>
-              <span>5</span>
+              <span>0x</span>
+              <span>2.5x</span>
+              <span>5x</span>
             </div>
             <p className="text-xs text-gray-600 mt-2">
               {getWeightDescription(draftWeights.high, 'high-volume', draftWeights.medium)}
@@ -247,12 +235,15 @@ export default function VolumeWeightControls({
           </div>
 
           {/* Info Text */}
-          <div className="bg-blue-50 border border-blue-200 rounded px-3 py-2">
+          <div className="bg-blue-50 border border-blue-200 rounded px-3 py-2 space-y-2">
             <p className="text-xs text-gray-700">
-              💡 <strong>Tip:</strong> Adjust sliders to preview values, then click <strong>Apply</strong> to update the map. Higher weights make hotspots more visible. Set to 0 to filter out a category entirely.
+              💡 <strong>How weights work:</strong> 1.0x = neutral (no adjustment). Values &gt; 1.0x emphasize incidents, values &lt; 1.0x de-emphasize them. Set all to 1.0x to match the raw incident heatmap.
             </p>
-            <p className="text-xs text-gray-600 mt-1">
-              <strong>Note:</strong> Descriptions show relative visibility compared to medium-volume areas (baseline). Actual heatmap appearance also depends on incident proximity and zoom level.
+            <p className="text-xs text-gray-700">
+              <strong>Tip:</strong> Adjust sliders to preview values, then click <strong>Apply</strong> to update the map. Set to 0x to hide a category entirely.
+            </p>
+            <p className="text-xs text-gray-600">
+              <strong>Data Source:</strong> Volume categories based on 2023 bike traffic estimates. Descriptions show relative visibility compared to medium-volume areas.
             </p>
           </div>
         </div>
