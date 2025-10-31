@@ -315,11 +315,19 @@ export default function AnnualIncidentsComparison({
     // If cache key changed OR incident count changed, clear cache and reprocess
     // This handles both filter changes and when fresh query results arrive
     const cacheKeyChanged = newCacheKey !== cacheKey;
+    
+    // CRITICAL FIX: If cache key changed but we're loading or incident count hasn't changed yet,
+    // skip processing stale data. Wait for fresh query results (incidentCountChanged).
+    if (cacheKeyChanged && (spatialLoading || !incidentCountChanged)) {
+      setDataCache(new Map());
+      setCacheKey(newCacheKey);
+      return;
+    }
+    
     const shouldReprocess = cacheKeyChanged || incidentCountChanged;
     
     if (shouldReprocess) {
       setDataCache(new Map());
-      setCacheKey(newCacheKey);
       setLastIncidentCount(currentIncidentCount);
       // Don't check cache - we need to process new data
     } else {

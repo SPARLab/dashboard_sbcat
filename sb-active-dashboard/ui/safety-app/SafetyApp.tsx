@@ -53,7 +53,6 @@ export default function SafetyApp() {
   });
 
   const handleFiltersChange = useCallback((newFilters: Partial<SafetyFilters>) => {
-
     setFilters(prevFilters => {
       const updated = { ...prevFilters, ...newFilters };
   
