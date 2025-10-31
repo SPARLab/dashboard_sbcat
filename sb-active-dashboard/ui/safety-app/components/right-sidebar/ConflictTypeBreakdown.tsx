@@ -329,8 +329,8 @@ export default function ConflictTypeBreakdown({
           {/* Data display with loading overlay */}
           {selectedGeometry && (
             <div id="safety-conflict-type-data-container" className="relative">
-              {/* Loading overlay */}
-              {(isLoading || spatialLoading) && (
+              {/* Loading overlay - only show when no data exists yet (initial load) */}
+              {(isLoading || spatialLoading) && !chartData && (
                 <div 
                   id="safety-conflict-type-loading-overlay" 
                   className="absolute inset-0 bg-white bg-opacity-75 backdrop-blur-sm flex justify-center items-center z-20 rounded-md"
@@ -343,8 +343,8 @@ export default function ConflictTypeBreakdown({
                 </div>
               )}
 
-              {/* Data content */}
-              <div className={`transition-opacity duration-200 ${(isLoading || spatialLoading) ? 'opacity-40' : 'opacity-100'}`}>
+              {/* Data content - show subtle loading state when refreshing existing data */}
+              <div className={`transition-opacity duration-200 ${(isLoading || spatialLoading) && chartData ? 'opacity-60' : 'opacity-100'}`}>
                 {chartData && !error ? (
                 <>
                   <div id="safety-conflict-type-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>

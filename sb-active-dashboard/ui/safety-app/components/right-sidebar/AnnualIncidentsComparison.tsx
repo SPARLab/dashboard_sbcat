@@ -240,9 +240,6 @@ export default function AnnualIncidentsComparison({
   // Track the incident count to detect when spatial result actually changes
   const [lastIncidentCount, setLastIncidentCount] = useState<number>(0);
 
-  // Serialize filters for proper dependency tracking
-  const filtersKey = JSON.stringify(filters);
-
   // Create data service instance
   const dataService = useMemo(() => new SafetyChartDataService(), []);
 
@@ -367,7 +364,7 @@ export default function AnnualIncidentsComparison({
     } finally {
       setIsLoading(false);
     }
-  }, [spatialResult, spatialError, selectedGeometry, filtersKey, timeScale, dataService]);
+  }, [spatialResult, spatialError, selectedGeometry, filters, timeScale, dataService]);
 
   const onEvents = useMemo(
     () => ({
@@ -607,8 +604,8 @@ export default function AnnualIncidentsComparison({
           {/* Data display with loading overlay */}
           {selectedGeometry && (
             <div id="safety-annual-incidents-data-container" className="relative">
-              {/* Loading overlay */}
-              {(isLoading || spatialLoading) && (
+              {/* Loading overlay - only show when no data exists yet (initial load) */}
+              {(isLoading || spatialLoading) && !chartData && (
                 <div 
                   id="safety-annual-incidents-loading-overlay" 
                   className="absolute inset-0 bg-white bg-opacity-75 backdrop-blur-sm flex justify-center items-center z-20 rounded-md"
@@ -621,8 +618,8 @@ export default function AnnualIncidentsComparison({
                 </div>
               )}
 
-              {/* Data content */}
-              <div className={`transition-opacity duration-200 ${(isLoading || spatialLoading) ? 'opacity-40' : 'opacity-100'}`}>
+              {/* Data content - show subtle loading state when refreshing existing data */}
+              <div className={`transition-opacity duration-200 ${(isLoading || spatialLoading) && chartData ? 'opacity-60' : 'opacity-100'}`}>
                 {chartData && !error && chartData.categories && chartData.categories.length > 0 ? (
             <>
               <div id="safety-annual-incidents-buttons-container" className="flex space-x-1 mt-2">

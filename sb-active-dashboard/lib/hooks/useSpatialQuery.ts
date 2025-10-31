@@ -330,15 +330,18 @@ export const useSafetyLayerViewSpatialQuery = (
     if (!mapView || !incidentsLayer || !selectedGeometry) {
       setResult(null);
       setError(null);
+      setIsLoading(false);
       return;
     }
+
+    // Show loading state (but keep existing data to avoid blink)
+    // Only clear if we're not already loading to prevent double-blink
+    setIsLoading(true);
+    setError(null);
 
     let cancelled = false;
     const timer = setTimeout(async () => {
       if (cancelled) return;
-      
-      setIsLoading(true);
-      setError(null);
 
       try {
         // If selected geometry is a line (highway), query all segments of that route and buffer them
