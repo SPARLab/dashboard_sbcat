@@ -55,11 +55,13 @@ export default function IncidentsVsTrafficRatios({
   const chartRef = useRef<any>(null);
 
   // Use spatial query to get filtered data
+  // Note: Filters are already debounced in SafetyApp, so we use a minimal debounce here (50ms)
   const { result, isLoading: spatialLoading, error: spatialError } = useSafetyLayerViewSpatialQuery(
     mapView,
     incidentsLayer,
     selectedGeometry,
-    filters
+    filters,
+    50 // Minimal debounce since filters are already debounced upstream
   );
 
   // Initialize Strava service and highlight layer

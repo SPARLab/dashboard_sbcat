@@ -86,11 +86,13 @@ export default function ConflictTypeBreakdown({
   const dataService = useMemo(() => new SafetyChartDataService(), []);
 
   // Use spatial query to get filtered data
+  // Note: Filters are already debounced in SafetyApp, so we use a minimal debounce here (50ms)
   const { result: spatialResult, isLoading: spatialLoading, error: spatialError } = useSafetyLayerViewSpatialQuery(
     mapView,
     incidentsLayer,
     selectedGeometry,
-    filters
+    filters,
+    50 // Minimal debounce since filters are already debounced upstream
   );
 
   const toggleCollapse = () => {

@@ -237,16 +237,24 @@ export default function AnnualIncidentsComparison({
   // Cache for preloaded data by time scale
   const [dataCache, setDataCache] = useState<Map<TimeScale, AnnualIncidentsComparisonData>>(new Map());
   const [cacheKey, setCacheKey] = useState<string>('');
+  // Track the incident count to detect when spatial result actually changes
+  const [lastIncidentCount, setLastIncidentCount] = useState<number>(0);
+
+  // Serialize filters for proper dependency tracking
+  const filtersKey = JSON.stringify(filters);
 
   // Create data service instance
   const dataService = useMemo(() => new SafetyChartDataService(), []);
 
   // Use spatial query to get filtered data
+  // Note: Filters are already debounced in SafetyApp, so we use a minimal debounce here (50ms) 
+  // just to batch rapid state changes, avoiding the double-debounce issue
   const { result: spatialResult, isLoading: spatialLoading, error: spatialError } = useSafetyLayerViewSpatialQuery(
     mapView,
     incidentsLayer,
     selectedGeometry,
-    filters
+    filters,
+    50 // Minimal debounce since filters are already debounced upstream
   );
 
   const toggleCollapse = () => {
@@ -295,22 +303,30 @@ export default function AnnualIncidentsComparison({
   // Process spatial query result to generate chart data
   useEffect(() => {
     const newCacheKey = generateCacheKey(selectedGeometry, filters);
+    const currentIncidentCount = spatialResult?.incidents?.length || 0;
+    const incidentCountChanged = currentIncidentCount !== lastIncidentCount;
 
     if (!selectedGeometry || !spatialResult?.incidents) {
       setChartData(null);
       setError(spatialError);
       setDataCache(new Map());
       setCacheKey('');
+      setLastIncidentCount(0);
       return;
     }
 
-    // If cache key changed, clear the cache to force reprocessing
-    if (newCacheKey !== cacheKey) {
+    // If cache key changed OR incident count changed, clear cache and reprocess
+    // This handles both filter changes and when fresh query results arrive
+    const cacheKeyChanged = newCacheKey !== cacheKey;
+    const shouldReprocess = cacheKeyChanged || incidentCountChanged;
+    
+    if (shouldReprocess) {
       setDataCache(new Map());
-    }
-
-    // If we have cached data for current scale and same selection, use it
-    if (newCacheKey === cacheKey) {
+      setCacheKey(newCacheKey);
+      setLastIncidentCount(currentIncidentCount);
+      // Don't check cache - we need to process new data
+    } else {
+      // Neither cache key nor incident count changed - safe to use cache
       const cachedData = dataCache.get(timeScale);
       if (cachedData) {
         setChartData(cachedData);
@@ -327,7 +343,6 @@ export default function AnnualIncidentsComparison({
       const result = processIncidentsForTimeScale(spatialResult.incidents, timeScale, filters.dateRange);
       
       setChartData(result);
-      setCacheKey(newCacheKey);
 
       // Update cache with current result and preload other scales
       const others = timeScales.filter(s => s !== timeScale);
@@ -352,7 +367,7 @@ export default function AnnualIncidentsComparison({
     } finally {
       setIsLoading(false);
     }
-  }, [spatialResult, spatialError, selectedGeometry, filters, timeScale, cacheKey, dataService]);
+  }, [spatialResult, spatialError, selectedGeometry, filtersKey, timeScale, dataService]);
 
   const onEvents = useMemo(
     () => ({

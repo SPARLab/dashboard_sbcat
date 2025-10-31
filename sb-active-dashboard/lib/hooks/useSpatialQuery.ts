@@ -323,6 +323,9 @@ export const useSafetyLayerViewSpatialQuery = (
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Serialize filters for proper dependency tracking
+  const filtersKey = filters ? JSON.stringify(filters) : 'null';
+
   useEffect(() => {
     if (!mapView || !incidentsLayer || !selectedGeometry) {
       setResult(null);
@@ -421,7 +424,7 @@ export const useSafetyLayerViewSpatialQuery = (
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [mapView, incidentsLayer, selectedGeometry, filters, debounceMs]);
+  }, [mapView, incidentsLayer, selectedGeometry, filtersKey, debounceMs]);
 
   return {
     result,

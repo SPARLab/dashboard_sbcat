@@ -19,11 +19,13 @@ export default function SummaryStatistics({
   const [isCollapsed, setIsCollapsed] = useState(false);
   
   // 🚀 NEW: Use fast layer view spatial query hook
+  // Note: Filters are already debounced in SafetyApp, so we use a minimal debounce here (50ms)
   const { result, isLoading, error } = useSafetyLayerViewSpatialQuery(
     mapView,
     incidentsLayer,
     selectedGeometry,
-    filters
+    filters,
+    50 // Minimal debounce since filters are already debounced upstream
   );
   
   // Use the summary data from the spatial query only when there's a selection
