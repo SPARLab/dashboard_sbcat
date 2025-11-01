@@ -774,9 +774,8 @@ export class SafetyIncidentsDataService {
     // Calculate severity statistics based on actual database values
     
     const fatalIncidents = incidents.filter(inc => inc.maxSeverity === 'Fatality').length;
-    const injuryIncidents = incidents.filter(inc => 
-      inc.maxSeverity === 'Injury' || inc.maxSeverity === 'Severe Injury'
-    ).length;
+    const severeInjuryIncidents = incidents.filter(inc => inc.maxSeverity === 'Severe Injury').length;
+    const injuryIncidents = incidents.filter(inc => inc.maxSeverity === 'Injury').length;
     const unknownIncidents = incidents.filter(inc => 
       inc.maxSeverity === 'Unknown' || inc.maxSeverity === '' || !inc.maxSeverity
     ).length;
@@ -808,6 +807,7 @@ export class SafetyIncidentsDataService {
       bikeIncidents,
       pedIncidents,
       fatalIncidents,
+      severeInjuryIncidents,
       injuryIncidents,
       nearMissIncidents,
       unknownIncidents,
@@ -881,6 +881,7 @@ export class SafetyIncidentsDataService {
       bikeIncidents: 0,
       pedIncidents: 0,
       fatalIncidents: 0,
+      severeInjuryIncidents: 0,
       injuryIncidents: 0,
       nearMissIncidents: 0,
       unknownIncidents: 0,

@@ -31,8 +31,11 @@ export class SafetySpatialQueryService {
       let whereClause = "1=1"; // Default to all records
       
       // Apply date range filter if provided
-      // NOTE: Temporarily removing date filtering from database query since ArcGIS has issues
-      // comparing Unix timestamps with date strings. We'll filter in the component instead.
+      if (filters?.dateRange) {
+        const startStr = filters.dateRange.start.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
+        const endStr = filters.dateRange.end.toISOString().replace('T', ' ').replace('Z', '').slice(0, 19);
+        whereClause += ` AND timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}'`;
+      }
       
       // Apply data source filter if provided
       if (filters?.dataSource && filters.dataSource.length > 0 && filters.dataSource.length < 2) {
@@ -137,9 +140,8 @@ export class SafetySpatialQueryService {
     // Calculate severity statistics based on actual database values
     // Note: 'No Injury' in database maps to 'Near Miss' in UI display
     const fatalIncidents = incidents.filter(inc => inc.maxSeverity === 'Fatality').length;
-    const injuryIncidents = incidents.filter(inc => 
-      inc.maxSeverity === 'Injury' || inc.maxSeverity === 'Severe Injury'
-    ).length;
+    const severeInjuryIncidents = incidents.filter(inc => inc.maxSeverity === 'Severe Injury').length;
+    const injuryIncidents = incidents.filter(inc => inc.maxSeverity === 'Injury').length;
     const nearMissIncidents = incidents.filter(inc => inc.maxSeverity === 'No Injury').length;
     const unknownIncidents = incidents.filter(inc => 
       inc.maxSeverity === 'Unknown' || inc.maxSeverity === '' || !inc.maxSeverity
@@ -169,6 +171,7 @@ export class SafetySpatialQueryService {
       bikeIncidents,
       pedIncidents,
       fatalIncidents,
+      severeInjuryIncidents,
       injuryIncidents,
       nearMissIncidents,
       unknownIncidents,
@@ -190,6 +193,7 @@ export class SafetySpatialQueryService {
       bikeIncidents: 0,
       pedIncidents: 0,
       fatalIncidents: 0,
+      severeInjuryIncidents: 0,
       injuryIncidents: 0,
       nearMissIncidents: 0,
       unknownIncidents: 0,

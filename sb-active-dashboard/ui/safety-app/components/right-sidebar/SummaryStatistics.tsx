@@ -89,13 +89,13 @@ export default function SummaryStatistics({
                     <div id="safety-summary-severe-injuries" className="bg-gray-100 flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">
                       <span id="safety-summary-severe-injuries-label" className="text-gray-900">Severe Injuries (Hospitalizations)</span>
                       <span id="safety-summary-severe-injuries-value" className="text-gray-900">
-                        {Math.floor(summaryData.injuryIncidents * 0.11).toLocaleString()}
+                        {summaryData.severeInjuryIncidents.toLocaleString()}
                       </span>
                     </div>
                     <div id="safety-summary-injuries" className="bg-white flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">
                       <span id="safety-summary-injuries-label" className="text-gray-900">Injuries</span>
                       <span id="safety-summary-injuries-value" className="text-gray-900">
-                        {Math.floor(summaryData.injuryIncidents * 0.89).toLocaleString()}
+                        {summaryData.injuryIncidents.toLocaleString()}
                       </span>
                     </div>
                     <div id="safety-summary-near-misses" className="bg-gray-100 flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">

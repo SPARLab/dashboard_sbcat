@@ -84,7 +84,8 @@ export interface SafetySummaryData {
   bikeIncidents: number;
   pedIncidents: number;
   fatalIncidents: number;
-  injuryIncidents: number;
+  severeInjuryIncidents: number; // Separate field for Severe Injury
+  injuryIncidents: number; // Now only regular Injury (not including Severe Injury)
   nearMissIncidents: number;
   unknownIncidents: number;
   avgSeverityScore: number;
