@@ -70,10 +70,23 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale, da
       yearMap.set(year, (yearMap.get(year) || 0) + 1);
     });
 
-    // Filter out future years and sort
-    const years = Array.from(yearMap.keys())
-      .filter(year => year <= currentYear)
-      .sort();
+    // Determine which years to show
+    let years: number[];
+    
+    if (dateRange) {
+      // If a date range is specified, show ALL years in that range (including years with 0 incidents)
+      const startYear = dateRange.start.getFullYear();
+      const endYear = Math.min(dateRange.end.getFullYear(), currentYear); // Don't show future years
+      years = [];
+      for (let year = startYear; year <= endYear; year++) {
+        years.push(year);
+      }
+    } else {
+      // If no date range specified, only show years that have incidents
+      years = Array.from(yearMap.keys())
+        .filter(year => year <= currentYear)
+        .sort();
+    }
 
     // The categories are the years themselves for the x-axis
     const categories = years.map(y => y.toString());
