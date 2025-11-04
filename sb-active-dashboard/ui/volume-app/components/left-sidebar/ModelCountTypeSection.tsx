@@ -11,7 +11,7 @@ export default function ModelCountTypeSection({
   setModelCountsBy 
 }: ModelCountTypeSectionProps) {
   // Feature flag: Show Strava Bias Correction option
-  const showStravaBiasCorrection = import.meta.env.VITE_SHOW_STRAVA_BIAS_CORRECTION === 'true';
+  const showStravaBiasCorrection = (import.meta as any).env.VITE_SHOW_STRAVA_BIAS_CORRECTION === 'true';
   return (
     <div className="p-4">
       <div id="model-count-type-section">

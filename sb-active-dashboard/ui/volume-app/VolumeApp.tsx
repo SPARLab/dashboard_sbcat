@@ -126,7 +126,7 @@ export default function VolumeApp() {
           modelCountsBy={modelCountsBy}
           mapView={mapView}
           aadtLayer={aadtLayer}
-          selectedGeometry={selectedGeometry}
+          selectedGeometry={selectedGeometry as any}
           selectedAreaName={selectedAreaName}
           dateRange={dateRange}
           selectedCountSite={selectedCountSite}

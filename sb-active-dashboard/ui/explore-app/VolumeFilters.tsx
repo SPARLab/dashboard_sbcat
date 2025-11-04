@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 
 // map context and types
-import { useMapContext } from "@/app/lib/context/MapContext";
+import { useMapContext } from "@/lib/context/MapContext";
 
 // arcgis js
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";

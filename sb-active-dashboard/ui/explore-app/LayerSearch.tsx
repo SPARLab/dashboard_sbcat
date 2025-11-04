@@ -2,13 +2,13 @@
 import React, { useEffect, useState } from "react";
 
 // map context and types
-import { useMapContext } from "@/app/lib/context/MapContext";
+import { useMapContext } from "@/lib/context/MapContext";
 import {
   SafetyChecks,
   VolumeChecks,
   DemographicChecks,
   CountSiteChecks,
-} from "@/app/lib/explore-app/types";
+} from "@/lib/explore-app/types";
 
 // arcgis js
 import LayerList from "@arcgis/core/widgets/LayerList";

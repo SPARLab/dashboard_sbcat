@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 
 // import global state variables
-import { useMapContext } from "@/app/lib/context/MapContext";
+import { useMapContext } from "@/lib/context/MapContext";
 
 import { List, Typography, Box, IconButton } from "@mui/material";
 import { CalciteIcon } from "@esri/calcite-components-react";

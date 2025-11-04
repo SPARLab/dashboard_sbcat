@@ -422,7 +422,7 @@ function ConflictTypeSection({
         }
       };
       console.log('🔄 ALL button - Resetting filters to:', resetFilters);
-      onFiltersChange(resetFilters);
+      onFiltersChange(resetFilters as any);
     } else if (mode === 'none') {
       onFiltersChange({ 
         conflictType: [],
@@ -442,7 +442,7 @@ function ConflictTypeSection({
         // Don't change showPedestrian - let user toggle it
       };
       console.log('⚡ E-BIKE button - Setting filters to:', ebikeFilters);
-      onFiltersChange(ebikeFilters);
+      onFiltersChange(ebikeFilters as any);
     }
   };
 

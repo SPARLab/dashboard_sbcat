@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useRef } from "react";
 
 // map context and types
-import { useMapContext } from "@/app/lib/context/MapContext";
-import { DemographicChecks } from "@/app/lib/explore-app/types";
+import { useMapContext } from "@/lib/context/MapContext";
+import { DemographicChecks } from "@/lib/explore-app/types";
 
 // arcgis js
 

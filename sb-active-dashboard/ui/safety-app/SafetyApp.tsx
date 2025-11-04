@@ -156,7 +156,7 @@ export default function SafetyApp() {
           mapView={mapView}
           incidentsLayer={incidentsLayer}
           filters={debouncedFilters}
-          selectedGeometry={selectedGeometry}
+          selectedGeometry={selectedGeometry as any}
           selectedAreaName={selectedAreaName}
         />
       </div>

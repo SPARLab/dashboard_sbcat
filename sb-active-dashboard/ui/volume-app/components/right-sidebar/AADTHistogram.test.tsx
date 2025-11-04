@@ -153,7 +153,7 @@ describe('AADVHistogram', () => {
         mockDateRange,
         true,
         true,
-        10
+        30
       );
     });
 
@@ -215,10 +215,10 @@ describe('AADVHistogram', () => {
     fireEvent.change(modeSelect, { target: { value: 'histogram' } });
     
     await waitFor(() => {
-      expect(screen.getByDisplayValue('10')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('30')).toBeInTheDocument();
     });
 
-    const binsSelect = screen.getByDisplayValue('10');
+    const binsSelect = screen.getByDisplayValue('30');
     fireEvent.change(binsSelect, { target: { value: '8' } });
     
     await waitFor(() => {

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, ReactNode } from "react";
 import ReactDOM from "react-dom";
-import tooltipInfoIcon from "/icons/tooltip-info-icon.svg";
+const tooltipInfoIcon = "/icons/tooltip-info-icon.svg";
 
 interface TooltipProps {
   text: string;

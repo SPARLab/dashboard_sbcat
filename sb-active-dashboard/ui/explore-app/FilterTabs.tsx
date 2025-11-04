@@ -8,8 +8,8 @@ import {
   SafetyChecks,
   VolumeChecks,
   CountSiteChecks,
-} from "@/app/lib/explore-app/types";
-import { useMapContext } from "@/app/lib/context/MapContext";
+} from "@/lib/explore-app/types";
+import { useMapContext } from "@/lib/context/MapContext";
 
 // custom components
 import SafetyFilters from "./SafetyFilters";

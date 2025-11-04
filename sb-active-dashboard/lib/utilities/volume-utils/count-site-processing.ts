@@ -582,8 +582,7 @@ export class CountSiteProcessingService {
       // Use enhanced AADV calculation service with weekday/weekend breakdown
       const enhancedConfig: EnhancedAADVConfig = {
         showBicyclist: filters.showBicyclist,
-        showPedestrian: filters.showPedestrian,
-        dateRange
+        showPedestrian: filters.showPedestrian
       };
 
       const aadvResults = await EnhancedAADVCalculationService.calculateEnhancedAADVWithWeekdayWeekend(

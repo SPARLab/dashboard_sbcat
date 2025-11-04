@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 
 // import global state variables
-import { useMapContext } from "@/app/lib/context/MapContext";
+import { useMapContext } from "@/lib/context/MapContext";
 
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 

@@ -19,7 +19,7 @@ import { VOLUME_LEVEL_CONFIG } from "../../../theme/volumeLevelColors";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 import SketchViewModel from "@arcgis/core/widgets/Sketch/SketchViewModel";
-import { SchoolDistrictFilter } from "../../components/filters/GeographicLevelSection";
+import { SchoolDistrictFilter } from "@/ui/components/filters/GeographicLevelSection";
 
 interface VolumeMapProps {
   activeTab: string;
@@ -429,7 +429,7 @@ export default function VolumeMap({
     };
 
     // Debounce the view change handler
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: any;
     const debouncedHandler = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(handleViewChange, 500);

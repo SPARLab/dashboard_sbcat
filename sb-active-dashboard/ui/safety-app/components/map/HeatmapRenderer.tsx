@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 
-import RenderOptionsForm from "../dashboard/LayerList/RenderOptionsForm";
+import RenderOptionsForm from "@/ui/dashboard/LayerList/RenderOptionsForm";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import { HeatmapRenderer } from "@arcgis/core/renderers";
 

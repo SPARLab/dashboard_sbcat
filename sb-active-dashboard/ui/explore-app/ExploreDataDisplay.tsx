@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 
-import { useMapContext } from "@/app/lib/context/MapContext";
+import { useMapContext } from "@/lib/context/MapContext";
 
 import { List, Typography, Box, IconButton } from "@mui/material";
 import { styled } from "@mui/material";
@@ -13,7 +13,7 @@ import LayerSearch from "./LayerSearch";
 import FilterTabs from "./FilterTabs";
 import StatsView from "./StatsView";
 
-import Grid from "@mui/material/Unstable_Grid2/Grid2"
+import Grid from "@mui/material/Grid"
 
 export default function ExploreDataDisplay(props: any) {
   const { drawerOpen, handleDrawer, drawerWidth } = props;

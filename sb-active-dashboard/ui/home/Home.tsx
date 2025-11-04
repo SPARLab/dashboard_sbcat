@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { Container, Typography, Toolbar, Box } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import AppCard from "./AppCard";

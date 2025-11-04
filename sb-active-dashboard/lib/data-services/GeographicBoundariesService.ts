@@ -131,7 +131,7 @@ export class GeographicBoundariesService {
     };
     
     // Feature flag: Show all California cities vs filtered list
-    const showAllCaliforniaCities = import.meta.env.VITE_SHOW_ALL_CA_CITIES === 'true';
+    const showAllCaliforniaCities = (import.meta as any).env.VITE_SHOW_ALL_CA_CITIES === 'true';
     
     let cityWhereClause: string;
     if (showAllCaliforniaCities) {
@@ -158,7 +158,7 @@ export class GeographicBoundariesService {
     );
     
     // Feature flag: Show all California service areas vs filtered list
-    const showAllCaliforniaServiceAreas = import.meta.env.VITE_SHOW_ALL_CA_SERVICE_AREAS === 'true';
+    const showAllCaliforniaServiceAreas = (import.meta as any).env.VITE_SHOW_ALL_CA_SERVICE_AREAS === 'true';
     
     let serviceAreaWhereClause: string;
     if (showAllCaliforniaServiceAreas) {
@@ -683,8 +683,7 @@ export class GeographicBoundariesService {
 
         // Use tolerance-based hit testing for better polygon detection
         mapView.hitTest(event, { 
-            include: layers,
-            tolerance: 3 // 3 pixel tolerance to catch nearby polygons
+            include: layers
         })
             .then(response => {
                 
@@ -755,8 +754,7 @@ export class GeographicBoundariesService {
 
         // Now do the boundary-specific hitTest with tolerance
         mapView.hitTest(event, { 
-            include: layers,
-            tolerance: 3 // 3 pixel tolerance for better polygon detection
+            include: layers
         }).then(response => {
             // Enhanced polygon selection: show UI for overlapping polygons
             const graphic = this.selectBestPolygonFromHitResults(response.results);
@@ -1117,12 +1115,12 @@ export class GeographicBoundariesService {
    * Enhanced polygon selection logic for overlapping polygons.
    * When multiple polygons overlap, shows UI selector instead of auto-selecting.
    */
-  private selectBestPolygonFromHitResults(results: __esri.HitTestResult[]): Graphic | null {
+  private selectBestPolygonFromHitResults(results: any[]): Graphic | null {
     // Store results for potential UI callback
     this.lastHitResults = results;
     
     // Filter to only graphic results
-    const graphicResults = results.filter(result => result.type === "graphic") as __esri.GraphicHit[];
+    const graphicResults = results.filter((result: any) => result.type === "graphic");
     
     if (graphicResults.length === 0) {
       return null;
@@ -1256,7 +1254,7 @@ export class GeographicBoundariesService {
   /**
    * Handle right-click events for context menu polygon selection
    */
-  private handleRightClick(event: __esri.MapViewClickEvent, layers: FeatureLayer[]) {
+  private handleRightClick(event: __esri.ViewClickEvent, layers: FeatureLayer[]) {
     if (!this.mapView || !this.rightClickPolygonCallback) {
       return;
     }
@@ -1268,8 +1266,7 @@ export class GeographicBoundariesService {
 
     // Perform hit test to find overlapping polygons
     this.mapView.hitTest(event, { 
-      include: layers,
-      tolerance: 5 // Slightly larger tolerance for right-click
+      include: layers
     }).then(response => {
       const graphicResults = response.results.filter(result => result.type === "graphic") as __esri.GraphicHit[];
       

@@ -23,10 +23,10 @@ setCalciteComponentsAssetPath(
   "https://js.arcgis.com/calcite-components/2.13.2/assets"
 );
 
-import { createHeatmaps } from "@/app/lib/safety-app/handleSafety";
+import { createHeatmaps } from "@/lib/safety-app/handleSafety";
 
-import SafetyMenu from "./SafetyMenu";
-import SafetyFilterPanel from "./SafetyFilterPanel";
+import SafetyMenu from "../left-sidebar/SafetyMenu";
+import SafetyFilterPanel from "../left-sidebar/SafetyFilterPanel";
 import Grid from "@mui/material/Grid";
 
 export default function SafetyMap() {

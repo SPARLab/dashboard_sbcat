@@ -52,15 +52,15 @@ export class WeightedVisualization {
       // Filter incidents that have traffic data
       let incidentsWithTrafficData = safetyData.data.filter(inc => inc.hasTrafficData);
 
-      
+      let safetyDataWithoutExtent: any = null;
 
       if (incidentsWithTrafficData.length === 0) {
         console.warn('No traffic data available for current extent, trying without extent...');
         
         // Try querying without extent to see if we can get any data
-        const safetyDataWithoutExtent = await SafetyIncidentsDataService.getEnrichedSafetyData(
+        safetyDataWithoutExtent = await SafetyIncidentsDataService.getEnrichedSafetyData(
           undefined,
-          filters
+          filters as any
         );
         
         const incidentsWithTrafficDataWithoutExtent = safetyDataWithoutExtent.data.filter(inc => inc.hasTrafficData);
@@ -83,7 +83,7 @@ export class WeightedVisualization {
         // Try querying without any filters to see if we can get any data at all
         const safetyDataNoFilters = await SafetyIncidentsDataService.getEnrichedSafetyData(
           undefined,
-          {}
+          {} as any
         );
         
 
@@ -95,7 +95,7 @@ export class WeightedVisualization {
         
         if (allIncidents.length === 0) {
           console.warn('No incidents available');
-          incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
+          incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as any);
           incidentsLayer.visible = true;
           return;
         }
@@ -221,7 +221,7 @@ export class WeightedVisualization {
 
       // Create a client-side FeatureLayer for the traffic data
       const trafficLayer = new FeatureLayer({
-        source: trafficFeatures,
+        source: trafficFeatures as any,
         title: "Traffic-Based Safety Incidents",
         objectIdField: "objectid",
         fields: [
@@ -275,7 +275,7 @@ export class WeightedVisualization {
   
       // Fallback to regular heatmap
       if (incidentsLayer) {
-        incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters);
+        incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as any);
         incidentsLayer.visible = true;
       }
     }

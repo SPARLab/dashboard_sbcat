@@ -4,8 +4,8 @@ import "@arcgis/map-components/dist/components/arcgis-layer-list";
 
 import { List } from "@mui/material";
 
-import MenuItem from "../dashboard/Menu/MenuItem";
-import MenuPanel from "../dashboard/Menu/MenuPanel";
+import MenuItem from "@/ui/dashboard/Menu/MenuItem";
+import MenuPanel from "@/ui/dashboard/Menu/MenuPanel";
 
 export default function SafetyMenu(props: any) {
   const {

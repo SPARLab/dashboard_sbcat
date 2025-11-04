@@ -106,7 +106,7 @@ export default function NewSafetyMap({
           setViewReady(true);
           
           // Expose MapView globally for testing purposes
-          if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+          if (typeof window !== 'undefined' && (import.meta as any).env.MODE !== 'production') {
             (window as any).__testMapView = mapView;
             (window as any).__testBoundaryService = boundaryService.current;
           }

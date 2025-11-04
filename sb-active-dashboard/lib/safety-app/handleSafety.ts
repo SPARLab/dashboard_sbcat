@@ -485,7 +485,7 @@ export async function createHeatmaps() {
   return layer;
 }
 
-import addHeatmapRenderPanel from "@/app/ui/safety-app/HeatmapRenderer";
+import addHeatmapRenderPanel from "@/ui/safety-app/components/map/HeatmapRenderer";
 import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 

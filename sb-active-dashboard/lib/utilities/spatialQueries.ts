@@ -72,6 +72,7 @@ export async function queryAADTWithinPolygon(
     const aadtFeatures: AADTFeature[] = results.features.map(feature => ({
       objectId: feature.attributes.objectid,
       name: "Unknown",
+      locality: "",
       all_aadt: 0,
       weekday_aadt: 0,
       weekend_aadt: 0,
@@ -231,7 +232,7 @@ export async function checkLayerIntersection(
       query.geometry = selectedPolygon;
       query.spatialRelationship = "intersects";
       query.returnGeometry = false;
-      query.returnCountOnly = true;
+      (query as any).returnCountOnly = true;
 
       const result = await layer.queryFeatureCount(query);
       return result > 0;

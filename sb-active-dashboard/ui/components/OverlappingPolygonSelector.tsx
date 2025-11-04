@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ExpandLess as ChevronUpIcon, ExpandMore as ChevronDownIcon } from '@mui/icons-material';
 
 interface PolygonOption {
   id: string;

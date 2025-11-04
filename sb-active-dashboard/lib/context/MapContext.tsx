@@ -13,7 +13,7 @@ import {
   VolumeChecks,
   DemographicChecks,
   CountSiteChecks,
-} from "@/app/lib/explore-app/types";
+} from "@/lib/explore-app/types";
 
 type MapContextType = {
   mapRef: Map | null;

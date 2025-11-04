@@ -144,6 +144,7 @@ describe('VolumeMap - Zoom-Dependent Layer Switching', () => {
 
   afterEach(() => {
     vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
   it('should render the map component', async () => {
@@ -200,9 +201,9 @@ describe('VolumeMap - Zoom-Dependent Layer Switching', () => {
     render(<VolumeMap {...defaultProps} />);
     
     // Check that volume level indicators are shown with ranges
-    expect(screen.getByText(/Low \(<50\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Medium \(50-200\)/)).toBeInTheDocument(); 
-    expect(screen.getByText(/High \(≥200\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Low \(<150\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Medium \(150-299\)/)).toBeInTheDocument(); 
+    expect(screen.getByText(/High \(≥300\)/)).toBeInTheDocument();
   });
 
   it('should handle road user mode selection', async () => {

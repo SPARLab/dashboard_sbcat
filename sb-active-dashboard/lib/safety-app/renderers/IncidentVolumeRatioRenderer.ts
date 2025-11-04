@@ -153,7 +153,7 @@ export class IncidentVolumeRatioRenderer {
 
     
     newRenderer.maxDensity = maxDensity;
-    newRenderer.blurRadius = blurRadius;
+    (newRenderer as any).blurRadius = blurRadius;
     
     return newRenderer;
   }

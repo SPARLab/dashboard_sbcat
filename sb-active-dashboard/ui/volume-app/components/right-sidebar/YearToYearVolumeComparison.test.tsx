@@ -378,13 +378,13 @@ describe('YearToYearVolumeComparison', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Compare')).toBeInTheDocument();
+        expect(screen.getByText('Highlight Sites')).toBeInTheDocument();
       });
 
       // Clear the mock to count only button click calls
       mockSetHighlightedBinSites.mockClear();
 
-      const compareButton = screen.getByText('Compare');
+      const compareButton = screen.getByText('Highlight Sites');
       await user.click(compareButton);
 
       // Should call highlighting at least once for the button click
