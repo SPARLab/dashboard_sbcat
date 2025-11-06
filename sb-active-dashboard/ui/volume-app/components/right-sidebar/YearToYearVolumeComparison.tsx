@@ -241,7 +241,7 @@ export default function YearToYearVolumeComparison({
               <label htmlFor="yoy-year-select-a" className="text-sm text-gray-600">A:</label>
               <select
                 id="yoy-year-select-a"
-                className="rounded p-2 w-20 bg-white border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="rounded p-2 w-20 bg-white border border-gray-300 text-sm focus:outline-none"
                 value={selectedYearA || ''}
                 onChange={(e) => setSelectedYearA(e.target.value ? parseInt(e.target.value) : null)}
                 disabled={isLoading || availableYears.length === 0}
@@ -265,7 +265,7 @@ export default function YearToYearVolumeComparison({
               <label htmlFor="yoy-year-select-b" className="text-sm text-gray-600">B:</label>
               <select
                 id="yoy-year-select-b"
-                className="rounded p-2 w-20 bg-white border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="rounded p-2 w-20 bg-white border border-gray-300 text-sm focus:outline-none"
                 value={selectedYearB || ''}
                 onChange={(e) => setSelectedYearB(e.target.value ? parseInt(e.target.value) : null)}
                 disabled={isLoading || availableYears.length === 0}
