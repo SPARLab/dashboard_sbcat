@@ -16,6 +16,7 @@ interface SafetyFilterPanelProps {
   onGeographicLevelChange: (level: string) => void;
   schoolDistrictFilter?: SchoolDistrictFilter;
   onSchoolDistrictFilterChange?: (filter: SchoolDistrictFilter) => void;
+  selectedAreaName?: string | null;
 }
 
 export default function SafetyFilterPanel({
@@ -24,7 +25,8 @@ export default function SafetyFilterPanel({
   geographicLevel,
   onGeographicLevelChange,
   schoolDistrictFilter,
-  onSchoolDistrictFilterChange
+  onSchoolDistrictFilterChange,
+  selectedAreaName
 }: SafetyFilterPanelProps) {
   // Convert SafetyFilters dateRange format to DateRangeValue format for the component
   const dateRangeFromFilters: DateRangeValue = {
@@ -60,6 +62,7 @@ export default function SafetyFilterPanel({
             filters={filters}
             onFiltersChange={onFiltersChange}
             geographicLevel={geographicLevel}
+            selectedAreaName={selectedAreaName}
           />
           <hr className="border-gray-200" />
         </>
@@ -713,15 +716,19 @@ function WeekdaysWeekendsSection({
 function HighwayFilterSection({
   filters,
   onFiltersChange,
-  geographicLevel
+  geographicLevel,
+  selectedAreaName
 }: {
   filters: Partial<SafetyFilters>;
   onFiltersChange: (filters: Partial<SafetyFilters>) => void;
   geographicLevel: string;
+  selectedAreaName?: string | null;
 }) {
   const excludeHighways = filters.excludeHighwayIncidents || false;
+  const isDisabled = !selectedAreaName;
 
   const handleToggle = () => {
+    if (isDisabled) return;
     console.log(`🛣️ [Highway Filter] Toggle: ${!excludeHighways}`);
     onFiltersChange({ 
       ...filters,
@@ -738,7 +745,12 @@ function HighwayFilterSection({
     <div id="safety-highway-filter-section" className="px-4 py-3">
       <div id="safety-highway-filter-container" className="flex items-center justify-between">
         <div id="safety-highway-filter-label-container" className="flex items-center gap-2">
-          <span id="safety-highway-filter-label" className="text-sm font-medium text-gray-700">
+          <span 
+            id="safety-highway-filter-label" 
+            className={`text-sm font-medium transition-colors ${
+              isDisabled ? 'text-gray-400' : 'text-gray-700'
+            }`}
+          >
             Exclude Highway Incidents
           </span>
           <MoreInformationIcon 
@@ -751,15 +763,24 @@ function HighwayFilterSection({
         <div 
           id="safety-highway-filter-toggle"
           onClick={handleToggle}
-          className={`w-8 h-5 rounded-full flex items-center p-0.5 cursor-pointer transition-all duration-200 focus:outline-none active:outline-none ${
-            excludeHighways ? 'bg-blue-500 justify-end' : 'bg-gray-300 justify-start'
+          className={`w-8 h-5 rounded-full flex items-center p-0.5 transition-all duration-200 focus:outline-none active:outline-none ${
+            isDisabled 
+              ? 'bg-gray-200 cursor-not-allowed justify-start' 
+              : excludeHighways 
+                ? 'bg-blue-500 justify-end cursor-pointer' 
+                : 'bg-gray-300 justify-start cursor-pointer'
           }`}
         >
-          <div id="safety-highway-filter-toggle-dot" className="w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200"></div>
+          <div 
+            id="safety-highway-filter-toggle-dot" 
+            className={`w-4 h-4 rounded-full shadow-sm transition-transform duration-200 ${
+              isDisabled ? 'bg-gray-300' : 'bg-white'
+            }`}
+          ></div>
         </div>
       </div>
 
-      {excludeHighways && (
+      {excludeHighways && !isDisabled && (
         <div id="safety-highway-filter-info" className="mt-2 text-xs text-gray-600 bg-blue-50 p-2 rounded">
           ✓ Filtering out incidents within 75ft of Caltrans highways
         </div>

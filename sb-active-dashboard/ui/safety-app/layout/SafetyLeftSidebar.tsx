@@ -9,6 +9,7 @@ interface SafetyLeftSidebarProps {
   onGeographicLevelChange: (level: string) => void;
   schoolDistrictFilter?: SchoolDistrictFilter;
   onSchoolDistrictFilterChange?: (filter: SchoolDistrictFilter) => void;
+  selectedAreaName?: string | null;
 }
 
 export default function SafetyLeftSidebar({
@@ -17,7 +18,8 @@ export default function SafetyLeftSidebar({
   geographicLevel,
   onGeographicLevelChange,
   schoolDistrictFilter,
-  onSchoolDistrictFilterChange
+  onSchoolDistrictFilterChange,
+  selectedAreaName
 }: SafetyLeftSidebarProps) {
   return (
     <div id="safety-filters-sidebar" className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
@@ -35,6 +37,7 @@ export default function SafetyLeftSidebar({
           onGeographicLevelChange={onGeographicLevelChange}
           schoolDistrictFilter={schoolDistrictFilter}
           onSchoolDistrictFilterChange={onSchoolDistrictFilterChange}
+          selectedAreaName={selectedAreaName}
         />
       </div>
     </div>

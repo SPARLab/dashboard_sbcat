@@ -142,6 +142,7 @@ export default function SafetyApp() {
           onGeographicLevelChange={setGeographicLevel}
           schoolDistrictFilter={schoolDistrictFilter}
           onSchoolDistrictFilterChange={setSchoolDistrictFilter}
+          selectedAreaName={selectedAreaName}
         />
         <SafetyMapArea 
           filters={debouncedFilters}
