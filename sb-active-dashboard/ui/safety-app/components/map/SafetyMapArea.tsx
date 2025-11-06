@@ -15,6 +15,7 @@ interface SafetyMapAreaProps {
   onIncidentsLayerReady?: (layer: __esri.FeatureLayer) => void;
   onSelectionChange?: (data: { geometry: __esri.Polygon | null; areaName?: string | null } | null) => void;
   selectedAreaName?: string | null;
+  selectedGeometry?: __esri.Polygon | null;
 }
 
 export default function SafetyMapArea({ 
@@ -24,7 +25,8 @@ export default function SafetyMapArea({
   onMapViewReady,
   onIncidentsLayerReady,
   onSelectionChange,
-  selectedAreaName
+  selectedAreaName,
+  selectedGeometry
 }: SafetyMapAreaProps) {
   const [activeMapTab, setActiveMapTab] = useState<SafetyVisualizationType>('raw-incidents');
   const [volumeWeights, setVolumeWeights] = useState<VolumeWeightConfig>(DEFAULT_VOLUME_WEIGHTS);
@@ -77,6 +79,7 @@ export default function SafetyMapArea({
             onIncidentsLayerReady={onIncidentsLayerReady}
             onSelectionChange={onSelectionChange}
             volumeWeights={volumeWeights}
+            selectedGeometry={selectedGeometry}
           />
         </div>
 

@@ -145,14 +145,40 @@ export class HighwayFilterService {
   }
 
   /**
+   * Generate a cache key from polygon geometry
+   */
+  private static generateCacheKey(polygon: Polygon | Polyline, bufferDistance: number): string {
+    // Use polygon extent and buffer distance as cache key
+    const extent = polygon.extent;
+    return `${extent.xmin.toFixed(2)}_${extent.ymin.toFixed(2)}_${extent.xmax.toFixed(2)}_${extent.ymax.toFixed(2)}_${bufferDistance}`;
+  }
+
+  /**
    * Create a single combined highway buffer
    * Use for Scenario B: Exclude all highway incidents
+   * Now with caching to improve performance
    */
   static async createCombinedHighwayBuffer(
     polygon: Polygon | Polyline,
     bufferDistance = 75
   ): Promise<Polygon | null> {
+    // Check cache first
+    const cacheKey = this.generateCacheKey(polygon, bufferDistance);
+    const cached = this.bufferCache.get(cacheKey);
+    
+    if (cached) {
+      console.log(`🛣️ [Highway Buffer Cache] Using cached buffer (${this.bufferCache.size} entries)`);
+      return cached.combinedBuffer;
+    }
+    
+    // Not in cache, compute it
+    console.log(`🛣️ [Highway Buffer Cache] Computing new buffer for cache key: ${cacheKey}`);
     const result = await this.createHighwayBuffersByRoute(polygon, bufferDistance);
+    
+    // Store in cache
+    this.bufferCache.set(cacheKey, result);
+    console.log(`🛣️ [Highway Buffer Cache] Stored buffer (cache size: ${this.bufferCache.size})`);
+    
     return result.combinedBuffer;
   }
 

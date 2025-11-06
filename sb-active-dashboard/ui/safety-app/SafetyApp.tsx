@@ -152,6 +152,7 @@ export default function SafetyApp() {
           onIncidentsLayerReady={handleIncidentsLayerReady}
           onSelectionChange={onSelectionChange}
           selectedAreaName={selectedAreaName}
+          selectedGeometry={selectedGeometry as any}
         />
         <SafetyRightSidebar 
           mapView={mapView}

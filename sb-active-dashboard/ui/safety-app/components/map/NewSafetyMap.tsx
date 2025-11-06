@@ -28,6 +28,7 @@ interface NewSafetyMapProps {
   onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | null) => void;
   showLoadingOverlay?: boolean;
   volumeWeights?: VolumeWeightConfig;
+  selectedGeometry?: __esri.Polygon | null;
 }
 
 export default function NewSafetyMap({ 
@@ -39,13 +40,15 @@ export default function NewSafetyMap({
   schoolDistrictFilter,
   onSelectionChange,
   showLoadingOverlay = true,
-  volumeWeights
+  volumeWeights,
+  selectedGeometry
 }: NewSafetyMapProps) {
   // Map and state management
   const mapViewRef = useRef<__esri.MapView | null>(null);
   const [viewReady, setViewReady] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
+  const highwayFilterTimeoutRef = useRef<number | null>(null);
   const [serviceReady, setServiceReady] = useState(false);
   
   // Services
@@ -188,7 +191,6 @@ export default function NewSafetyMap({
         weekdayFilter: filters.weekdayFilter,
         ebikeMode: filters.ebikeMode,
       });
-      
 
       // Raw incidents now use the same incidentsLayer with different renderer,
       // so they get filtered automatically by the SafetyLayerService above
@@ -203,6 +205,95 @@ export default function NewSafetyMap({
       }, 200);
     }
   }, [filters, safetyLayerService, serviceReady, incidentsLayer]);
+
+  // Separate effect for highway filtering - only runs when highway filter or geometry changes
+  useEffect(() => {
+    if (!incidentsLayer || !serviceReady) {
+      return;
+    }
+
+    // Clear any pending highway filter operation
+    if (highwayFilterTimeoutRef.current) {
+      clearTimeout(highwayFilterTimeoutRef.current);
+    }
+
+    const applyHighwayFilter = async () => {
+      // 🛣️ Apply highway filtering if enabled and geometry is selected
+      if (filters.excludeHighwayIncidents && selectedGeometry) {
+        console.log('🛣️ [NewSafetyMap] Applying highway exclusion filter to map layer...');
+        const startTime = performance.now();
+        try {
+          const { HighwayFilterService } = await import('../../../../lib/data-services/HighwayFilterService');
+          
+          // OPTIMIZATION: Query features from the already-filtered layer instead of re-querying database
+          const query = incidentsLayer.createQuery();
+          query.where = '1=1'; // Get all features that pass the current filters
+          query.outFields = ['id', 'source_id'];
+          query.returnGeometry = true;
+          
+          const featureSet = await incidentsLayer.queryFeatures(query);
+          console.log(`🛣️ [NewSafetyMap] Queried ${featureSet.features.length} features from layer in ${(performance.now() - startTime).toFixed(0)}ms`);
+          
+          if (featureSet.features.length === 0) {
+            incidentsLayer.definitionExpression = '1=0';
+            console.log('🛣️ [NewSafetyMap] No incidents in layer to filter');
+            return;
+          }
+          
+          // Convert features to minimal incident objects for filtering
+          const incidents = featureSet.features.map(feature => ({
+            id: feature.attributes.id,
+            source_id: feature.attributes.source_id,
+            geometry: feature.geometry
+          }));
+          
+          // Filter out highway incidents using spatial operations
+          const filterStartTime = performance.now();
+          const filteredIncidents = await HighwayFilterService.filterIncidentsExcludingHighways(
+            incidents as any,
+            selectedGeometry,
+            75 // 75 feet buffer distance
+          );
+          console.log(`🛣️ [NewSafetyMap] Highway filtering took ${(performance.now() - filterStartTime).toFixed(0)}ms`);
+          
+          // Get IDs of incidents to show (non-highway incidents)
+          const incidentIdsToShow = new Set(filteredIncidents.map(inc => inc.id));
+          
+          // Create a definition expression to only show non-highway incidents
+          const idsArray = Array.from(incidentIdsToShow);
+          if (idsArray.length > 0) {
+            const definitionExpression = `id IN (${idsArray.join(',')})`;
+            incidentsLayer.definitionExpression = definitionExpression;
+            const totalTime = (performance.now() - startTime).toFixed(0);
+            console.log(`🛣️ [NewSafetyMap] Applied highway filter in ${totalTime}ms - showing ${idsArray.length} non-highway incidents (filtered out ${featureSet.features.length - idsArray.length})`);
+          } else {
+            // No incidents to show
+            incidentsLayer.definitionExpression = '1=0';
+            console.log('🛣️ [NewSafetyMap] No non-highway incidents to display');
+          }
+        } catch (error) {
+          console.error('🛣️ [NewSafetyMap] Failed to apply highway filter:', error);
+        }
+      } else {
+        // Clear highway filter if it was previously applied
+        if (incidentsLayer.definitionExpression && incidentsLayer.definitionExpression.includes('id IN (')) {
+          incidentsLayer.definitionExpression = '';
+          console.log('🛣️ [NewSafetyMap] Cleared highway exclusion filter from map layer');
+        }
+      }
+    };
+
+    // Debounce the highway filter application slightly
+    highwayFilterTimeoutRef.current = setTimeout(() => {
+      applyHighwayFilter();
+    }, 100);
+
+    return () => {
+      if (highwayFilterTimeoutRef.current) {
+        clearTimeout(highwayFilterTimeoutRef.current);
+      }
+    };
+  }, [filters.excludeHighwayIncidents, selectedGeometry, incidentsLayer, serviceReady]);
 
   // SIMPLIFIED: Handle visualization changes using single layer approach
   useEffect(() => {
