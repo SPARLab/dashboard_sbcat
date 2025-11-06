@@ -225,58 +225,52 @@ export default function NewSafetyMap({
         try {
           const { HighwayFilterService } = await import('../../../../lib/data-services/HighwayFilterService');
           
-          // OPTIMIZATION: Query features from the already-filtered layer instead of re-querying database
-          const query = incidentsLayer.createQuery();
-          query.where = '1=1'; // Get all features that pass the current filters
-          query.outFields = ['id', 'source_id'];
-          query.returnGeometry = true;
-          
-          const featureSet = await incidentsLayer.queryFeatures(query);
-          console.log(`🛣️ [NewSafetyMap] Queried ${featureSet.features.length} features from layer in ${(performance.now() - startTime).toFixed(0)}ms`);
-          
-          if (featureSet.features.length === 0) {
-            incidentsLayer.definitionExpression = '1=0';
-            console.log('🛣️ [NewSafetyMap] No incidents in layer to filter');
-            return;
-          }
-          
-          // Convert features to minimal incident objects for filtering
-          const incidents = featureSet.features.map(feature => ({
-            id: feature.attributes.id,
-            source_id: feature.attributes.source_id,
-            geometry: feature.geometry
-          }));
-          
-          // Filter out highway incidents using spatial operations
-          const filterStartTime = performance.now();
-          const filteredIncidents = await HighwayFilterService.filterIncidentsExcludingHighways(
-            incidents as any,
+          // Get the highway buffer (will use cache if available)
+          const bufferStartTime = performance.now();
+          const highwayBuffer = await HighwayFilterService.createCombinedHighwayBuffer(
             selectedGeometry,
             75 // 75 feet buffer distance
           );
-          console.log(`🛣️ [NewSafetyMap] Highway filtering took ${(performance.now() - filterStartTime).toFixed(0)}ms`);
+          console.log(`🛣️ [NewSafetyMap] Got highway buffer in ${(performance.now() - bufferStartTime).toFixed(0)}ms`);
           
-          // Get IDs of incidents to show (non-highway incidents)
-          const incidentIdsToShow = new Set(filteredIncidents.map(inc => inc.id));
+          if (!highwayBuffer) {
+            console.log('🛣️ [NewSafetyMap] No highways found in area');
+            return;
+          }
           
-          // Create a definition expression to only show non-highway incidents
-          const idsArray = Array.from(incidentIdsToShow);
-          if (idsArray.length > 0) {
-            const definitionExpression = `id IN (${idsArray.join(',')})`;
+          // OPTIMIZATION: Query for incidents IN the highway buffer (typically small set)
+          // Then EXCLUDE those IDs - much faster than querying for 'disjoint'
+          const query = incidentsLayer.createQuery();
+          query.where = '1=1'; // Get all features that pass the current filters
+          query.geometry = highwayBuffer as any;
+          query.spatialRelationship = 'intersects'; // Get incidents IN the highway buffer
+          query.outFields = ['id'];
+          query.returnGeometry = false; // Don't need geometry, just IDs
+          
+          const spatialStartTime = performance.now();
+          const result = await incidentsLayer.queryFeatures(query);
+          console.log(`🛣️ [NewSafetyMap] ArcGIS spatial query completed in ${(performance.now() - spatialStartTime).toFixed(0)}ms`);
+          
+          // Get IDs of highway incidents to EXCLUDE
+          const highwayIncidentIds = result.features.map(f => f.attributes.id);
+          
+          if (highwayIncidentIds.length > 0) {
+            // Exclude highway incidents
+            const definitionExpression = `id NOT IN (${highwayIncidentIds.join(',')})`;
             incidentsLayer.definitionExpression = definitionExpression;
             const totalTime = (performance.now() - startTime).toFixed(0);
-            console.log(`🛣️ [NewSafetyMap] Applied highway filter in ${totalTime}ms - showing ${idsArray.length} non-highway incidents (filtered out ${featureSet.features.length - idsArray.length})`);
+            console.log(`🛣️ [NewSafetyMap] ✅ Applied highway filter in ${totalTime}ms - excluded ${highwayIncidentIds.length} highway incidents`);
           } else {
-            // No incidents to show
-            incidentsLayer.definitionExpression = '1=0';
-            console.log('🛣️ [NewSafetyMap] No non-highway incidents to display');
+            // No highway incidents found - show all incidents
+            incidentsLayer.definitionExpression = '';
+            console.log('🛣️ [NewSafetyMap] No highway incidents found - showing all incidents');
           }
         } catch (error) {
           console.error('🛣️ [NewSafetyMap] Failed to apply highway filter:', error);
         }
       } else {
         // Clear highway filter if it was previously applied
-        if (incidentsLayer.definitionExpression && incidentsLayer.definitionExpression.includes('id IN (')) {
+        if (incidentsLayer.definitionExpression && incidentsLayer.definitionExpression.includes('id NOT IN (')) {
           incidentsLayer.definitionExpression = '';
           console.log('🛣️ [NewSafetyMap] Cleared highway exclusion filter from map layer');
         }
