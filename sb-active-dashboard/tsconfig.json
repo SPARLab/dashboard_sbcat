@@ -25,5 +25,5 @@
     }
   },
   "include": ["lib/**/*.ts", "lib/**/*.tsx", "ui/**/*.tsx", "ui/**/*.ts", "src/main.tsx", "src/App.tsx", "src/theme.d.ts", "src/vite-env.d.ts"],
-  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx", "e2e", "src/test-setup.ts", "src/test-utils", "ui/explore-app", "lib/explore-app", "ui/test", "src/pages", "ui/safety-app/components/map/SafetyMap.tsx", "ui/safety-app/components/map/handlers/MapClickHandler.ts", "lib/safety-app/renderers", "ui/safety-app/components/map/visualizations/RawIncidentsVisualization.ts", "lib/utilities/volume-utils", "lib/utils.ts"]
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx", "e2e", "src/test-setup.ts", "src/test-utils", "ui/explore-app", "lib/explore-app", "ui/test", "src/pages", "ui/safety-app/components/map/handlers/MapClickHandler.ts", "lib/safety-app/renderers", "ui/safety-app/components/map/visualizations/RawIncidentsVisualization.ts", "lib/utilities/volume-utils", "lib/utils.ts"]
 }

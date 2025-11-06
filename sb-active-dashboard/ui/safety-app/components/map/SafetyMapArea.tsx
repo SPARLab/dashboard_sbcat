@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { SafetyFilters, SafetyVisualizationType } from "../../../../lib/safety-app/types";
 import { IncidentHeatmapRenderer } from "../../../../lib/safety-app/renderers/IncidentHeatmapRenderer";
-import NewSafetyMap from "./NewSafetyMap";
+import SafetyMap from "./SafetyMap";
 import HeatmapLegend from "./HeatmapLegend";
 import { SchoolDistrictFilter } from "../../../components/filters/GeographicLevelSection";
 import { DEFAULT_VOLUME_WEIGHTS, VolumeWeightConfig } from "../../../../lib/safety-app/utils/incidentRiskMatrix";
@@ -70,7 +70,7 @@ export default function SafetyMapArea({
         </div>
         {/* Actual Map Component */}
         <div id="safety-map-container" className="w-full h-full">
-          <NewSafetyMap
+          <SafetyMap
             activeVisualization={activeMapTab}
             filters={filters}
             geographicLevel={geographicLevel}

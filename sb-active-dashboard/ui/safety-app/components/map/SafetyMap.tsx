@@ -1,239 +1,546 @@
-"use client";
-
-import React, { useRef, useState, useEffect } from "react";
-import "@esri/calcite-components";
-import "@arcgis/map-components/dist/components/arcgis-map";
-import "@arcgis/map-components/dist/components/arcgis-legend";
-import "@arcgis/map-components/dist/components/arcgis-layer-list";
-import "@arcgis/map-components/dist/components/arcgis-time-slider";
-import "@arcgis/map-components/dist/components/arcgis-print";
-import Map from "@arcgis/core/Map";
-import MapView from "@arcgis/core/views/MapView";
-import LayerList from "@arcgis/core/widgets/LayerList";
-import TimeInterval from "@arcgis/core/time/TimeInterval";
-import Legend from "@arcgis/core/widgets/Legend";
-import TimeSlider from "@arcgis/core/widgets/TimeSlider";
-import Print from "@arcgis/core/widgets/Print";
-
+import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
+import Polygon from "@arcgis/core/geometry/Polygon";
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
+import SketchViewModel from "@arcgis/core/widgets/Sketch/SketchViewModel";
 import { ArcgisMap } from "@arcgis/map-components-react";
-import { CssBaseline, Box, Popover, Typography, Toolbar } from "@mui/material";
+import { CircularProgress, Box as MuiBox } from "@mui/material";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { GeographicBoundariesService } from "../../../../lib/data-services/GeographicBoundariesService";
+import { SafetyFilters, SafetyVisualizationType } from "../../../../lib/safety-app/types";
+import { SafetyLayerService } from "../../../../lib/safety-app/improvedSafetyLayers";
+import { IncidentHeatmapRenderer } from "../../../../lib/safety-app/renderers/IncidentHeatmapRenderer";
+import { RawIncidentRenderer } from "../../../../lib/safety-app/renderers/RawIncidentRenderer";
 
-import { setAssetPath as setCalciteComponentsAssetPath } from "@esri/calcite-components/dist/components";
-setCalciteComponentsAssetPath(
-  "https://js.arcgis.com/calcite-components/2.13.2/assets"
-);
+import { WeightedVisualization } from "./visualizations/WeightedVisualization";
+import { useLayerCache } from "../../hooks/useLayerCache";
+import { useSafetyLayers } from "../../hooks/useSafetyLayers";
+import { SchoolDistrictFilter } from "../../../components/filters/GeographicLevelSection";
+import { VolumeWeightConfig } from "../../../../lib/safety-app/utils/incidentRiskMatrix";
 
-import { createHeatmaps } from "@/lib/safety-app/handleSafety";
+interface SafetyMapProps {
+  activeVisualization: SafetyVisualizationType;
+  filters: Partial<SafetyFilters>;
+  onMapViewReady?: (mapView: __esri.MapView) => void;
+  onIncidentsLayerReady?: (layer: __esri.FeatureLayer) => void;
+  geographicLevel: string;
+  schoolDistrictFilter?: SchoolDistrictFilter;
+  onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | null) => void;
+  showLoadingOverlay?: boolean;
+  volumeWeights?: VolumeWeightConfig;
+  selectedGeometry?: __esri.Polygon | null;
+}
 
-import SafetyMenu from "../left-sidebar/SafetyMenu";
-import SafetyFilterPanel from "../left-sidebar/SafetyFilterPanel";
-import Grid from "@mui/material/Grid";
+export default function SafetyMap({ 
+  activeVisualization,
+  filters,
+  onMapViewReady,
+  onIncidentsLayerReady,
+  geographicLevel,
+  schoolDistrictFilter,
+  onSelectionChange,
+  showLoadingOverlay = true,
+  volumeWeights,
+  selectedGeometry
+}: SafetyMapProps) {
+  // Map and state management
+  const mapViewRef = useRef<__esri.MapView | null>(null);
+  const [viewReady, setViewReady] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+  const highwayFilterTimeoutRef = useRef<number | null>(null);
+  const [serviceReady, setServiceReady] = useState(false);
+  
+  // Services
+  const boundaryService = useRef(new GeographicBoundariesService());
+  const safetyLayerService = useMemo(() => new SafetyLayerService(), []);
+  
+  // Layer references - keep both improved and original layers
+  const [safetyGroupLayer, setSafetyGroupLayer] = useState<__esri.GroupLayer | null>(null);
+  
+  // Sketch functionality state (same as volume page)
+  const [sketchViewModel, setSketchViewModel] = useState<SketchViewModel | null>(null);
+  const [sketchLayer, setSketchLayer] = useState<GraphicsLayer | null>(null);
+  
+  // SIMPLIFIED: Only use cache for weighted visualization
+  const {
+    cachedWeightedLayer,
+    setCachedWeightedLayer,
+    cachedExtentKey,
+    setCachedExtentKey,
+    generateCacheKey
+  } = useLayerCache();
 
-export default function SafetyMap() {
-  const [showWidgetPanel, setShowWidgetPanel] = useState<Boolean>(false);
-  const [showLegend, setShowLegend] = useState<Boolean>(false);
-  const [showLayerList, setShowLayerList] = useState<Boolean>(false);
-  const [showPrint, setShowPrint] = useState<Boolean>(false);
-  const [showFilter, setShowFilter] = useState<Boolean>(false);
-  const [mapElRef, setMapElRef] = useState(null);
-  const [mapRef, setMapRef] = useState<Map | null>(null);
-  const [viewRef, setViewRef] = useState<MapView | null>(null);
-  const [heatmapLayer, setHeatmapLayer] = useState<FeatureLayer | null>(null);
-  const [timeSlider, setTimeSlider] = useState<TimeSlider | null>(null);
+  // Use safety layers hook for the original layer infrastructure
+  const { incidentsLayer } = useSafetyLayers(
+    viewReady,
+    mapViewRef.current,
+    boundaryService.current,
+    setDataLoading,
+    setDataError
+  );
 
-  const menuProps = {
-    showWidgetPanel,
-    setShowWidgetPanel,
-    showLegend,
-    setShowLegend,
-    showLayerList,
-    setShowLayerList,
-    showFilter,
-    setShowFilter,
-    showPrint,
-    setShowPrint,
-  };
-
-  const filterProps = {
-    timeSlider,
-    viewRef,
-    heatmapLayer,
-  };
-
-  // once map is generated, load feature layers and add to the map
+  // Notify parent when incidents layer is ready
   useEffect(() => {
-    if (mapRef !== null) {
-      const createLayers = async () => {
-        // const safetyLayer = await createSafetyLayers()
-        const safetyHeatmapLayer = await createHeatmaps();
-        mapRef.add(safetyHeatmapLayer);
-
-        setHeatmapLayer(safetyHeatmapLayer);
-        // setCensusGroupLayer(censusGroupLayer)
-        // setCountGroupLayer(countGroupLayer)
-        // setIncidentGroupLayer(incidentGroupLayer)
-      };
-
-      createLayers();
+    if (incidentsLayer && onIncidentsLayerReady) {
+      onIncidentsLayerReady(incidentsLayer);
     }
-  }, [mapRef]);
+  }, [incidentsLayer, onIncidentsLayerReady]);
 
-  // set map center and zoom once view has been set and add custom widgets
-  useEffect(() => {
-    if (viewRef !== null) {
-      viewRef.goTo({
-        center: [-120, 34.7],
-        zoom: 9,
-      });
+  // Handle ArcGIS view ready
+  const handleArcgisViewReadyChange = (event: CustomEvent) => {
+    if (event.target) {
+      const mapView = (event.target as any).view as __esri.MapView;
+      mapViewRef.current = mapView;
 
-      if (heatmapLayer !== null) {
-        // const layerList = new LayerList({
-        //     view: viewRef,
-        //     container: 'layer-list-container',
-        //     listItemCreatedFunction: addHeatmapVisOptions
-        // })
-
-        const legend = new Legend({
-          view: viewRef,
-          container: "legend-container",
-        });
-
-        const print = new Print({
-          view: viewRef,
-          container: "safety-print-container",
-
-          printServiceUrl:
-            "https://spatialcenter.grit.ucsb.edu/server/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task",
-        });
-
-        // time filter
-
-        const timeSlider = new TimeSlider({
-          container: "safety-time-slider-container",
-          mode: "time-window",
-          timeZone: "system",
-          stops: {
-            interval: new TimeInterval({
-              value: 1,
-              unit: "years",
-            }),
-          },
-        });
-        if (heatmapLayer.timeInfo?.fullTimeExtent) {
-          const { start, end } = heatmapLayer.timeInfo.fullTimeExtent;
-
-          timeSlider.fullTimeExtent = {
-            start: start,
-            end: end,
-          };
-          timeSlider.timeExtent = {
-            start: start,
-            end: end,
-          };
+      if (mapView) {
+        // Ensure popups are enabled
+        if (mapView.popup) {
+          mapView.popup.autoCloseEnabled = false; // We'll handle popup opening manually
         }
-        setTimeSlider(timeSlider);
-
-        setShowLegend(true);
-        setShowLayerList(true);
-        setShowFilter(true);
+        mapView.popupEnabled = true;
+        
+        // Note: Removed zoom listener - using referenceScale in renderer for consistent visualization
+        
+        mapView.goTo({
+          center: [-120, 34.7],
+          zoom: 9,
+        }).then(() => {
+          setViewReady(true);
+          
+          // Expose MapView globally for testing purposes
+          if (typeof window !== 'undefined' && (import.meta as any).env.MODE !== 'production') {
+            (window as any).__testMapView = mapView;
+            (window as any).__testBoundaryService = boundaryService.current;
+          }
+          
+          if (onMapViewReady) {
+            onMapViewReady(mapView);
+          }
+          
+        }).catch((error: Error) => {
+          setViewReady(true);
+          if (onMapViewReady) {
+            onMapViewReady(mapView);
+          }
+        });
       }
     }
-  }, [viewRef, heatmapLayer]);
-
-  const assignMap = (event: any) => {
-    setMapElRef(event.target);
-    setMapRef(event.target.map);
-    setViewRef(event.target.view);
   };
 
+  // Initialize improved layer service when both layers are ready
+  useEffect(() => {
+    if (!viewReady || !mapViewRef.current || !incidentsLayer) return;
+
+    const initializeLayerService = async () => {
+      try {
+        if (!mapViewRef.current) return;
+        // Initialize the safety layer service for efficient DATA SOURCE filtering
+        // This provides instant filtering for Police Reports vs BikeMaps.org toggles
+        await safetyLayerService.initialize(mapViewRef.current, incidentsLayer);
+        setServiceReady(true);
+
+        // Add boundary layers
+        const boundaryLayers = boundaryService.current.getBoundaryLayers();
+        const map = mapViewRef.current?.map;
+        if (map) {
+          boundaryLayers.forEach(layer => map.add(layer));
+        }
+
+        // Create and add sketch layer for custom draw tool
+        const graphicsLayer = new GraphicsLayer();
+        if (mapViewRef.current.map) {
+          mapViewRef.current.map.add(graphicsLayer);
+        }
+        setSketchLayer(graphicsLayer);
+
+        // Initialize geographic boundaries
+        boundaryService.current.switchGeographicLevel(geographicLevel as any, mapViewRef.current);
+
+
+
+      } catch (error) {
+
+        setDataError(error instanceof Error ? error.message : 'Failed to initialize filtering service');
+      }
+    };
+
+    initializeLayerService();
+  }, [viewReady, incidentsLayer, geographicLevel, safetyLayerService]);
+
+
+
+
+
+  // This single effect handles ALL filter changes by applying a client-side FeatureFilter.
+  // It is completely decoupled from the visualization logic and does NOT trigger data reloads.
+  useEffect(() => {
+    if (!safetyLayerService || !serviceReady) {
+      return;
+    }
+
+    const applyFilters = () => {
+      
+      // Apply filter to the main incidents layer (for heatmaps)
+      safetyLayerService.applyAdditionalFilters({
+        dataSources: filters.dataSource || [],
+        severityTypes: (filters.severityTypes as any) || [],
+        conflictTypes: filters.conflictType || [],
+        dateRange: filters.dateRange,
+        timeOfDay: filters.timeOfDay,
+        weekdayFilter: filters.weekdayFilter,
+        ebikeMode: filters.ebikeMode,
+      });
+
+      // Raw incidents now use the same incidentsLayer with different renderer,
+      // so they get filtered automatically by the SafetyLayerService above
+    };
+
+    applyFilters();
+    
+    // CRITICAL: Force layer refresh when switching from e-bike to all
+    if (incidentsLayer && !filters.ebikeMode) {
+      setTimeout(() => {
+        incidentsLayer.refresh();
+      }, 200);
+    }
+  }, [filters, safetyLayerService, serviceReady, incidentsLayer]);
+
+  // Separate effect for highway filtering - only runs when highway filter or geometry changes
+  useEffect(() => {
+    if (!incidentsLayer || !serviceReady) {
+      return;
+    }
+
+    // Clear any pending highway filter operation
+    if (highwayFilterTimeoutRef.current) {
+      clearTimeout(highwayFilterTimeoutRef.current);
+    }
+
+    const applyHighwayFilter = async () => {
+      // 🛣️ Apply highway filtering if enabled and geometry is selected
+      if (filters.excludeHighwayIncidents && selectedGeometry) {
+        console.log('🛣️ [NewSafetyMap] Applying highway exclusion filter to map layer...');
+        const startTime = performance.now();
+        try {
+          const { HighwayFilterService } = await import('../../../../lib/data-services/HighwayFilterService');
+          
+          // Get the highway buffer (will use cache if available)
+          const bufferStartTime = performance.now();
+          const highwayBuffer = await HighwayFilterService.createCombinedHighwayBuffer(
+            selectedGeometry,
+            75 // 75 feet buffer distance
+          );
+          console.log(`🛣️ [NewSafetyMap] Got highway buffer in ${(performance.now() - bufferStartTime).toFixed(0)}ms`);
+          
+          if (!highwayBuffer) {
+            console.log('🛣️ [NewSafetyMap] No highways found in area');
+            return;
+          }
+          
+          // OPTIMIZATION: Query for incidents IN the highway buffer (typically small set)
+          // Then EXCLUDE those IDs - much faster than querying for 'disjoint'
+          const query = incidentsLayer.createQuery();
+          query.where = '1=1'; // Get all features that pass the current filters
+          query.geometry = highwayBuffer as any;
+          query.spatialRelationship = 'intersects'; // Get incidents IN the highway buffer
+          query.outFields = ['id'];
+          query.returnGeometry = false; // Don't need geometry, just IDs
+          
+          const spatialStartTime = performance.now();
+          const result = await incidentsLayer.queryFeatures(query);
+          console.log(`🛣️ [NewSafetyMap] ArcGIS spatial query completed in ${(performance.now() - spatialStartTime).toFixed(0)}ms`);
+          
+          // Get IDs of highway incidents to EXCLUDE
+          const highwayIncidentIds = result.features.map(f => f.attributes.id);
+          
+          if (highwayIncidentIds.length > 0) {
+            // Exclude highway incidents
+            const definitionExpression = `id NOT IN (${highwayIncidentIds.join(',')})`;
+            incidentsLayer.definitionExpression = definitionExpression;
+            const totalTime = (performance.now() - startTime).toFixed(0);
+            console.log(`🛣️ [NewSafetyMap] ✅ Applied highway filter in ${totalTime}ms - excluded ${highwayIncidentIds.length} highway incidents`);
+          } else {
+            // No highway incidents found - show all incidents
+            incidentsLayer.definitionExpression = '';
+            console.log('🛣️ [NewSafetyMap] No highway incidents found - showing all incidents');
+          }
+        } catch (error) {
+          console.error('🛣️ [NewSafetyMap] Failed to apply highway filter:', error);
+        }
+      } else {
+        // Clear highway filter if it was previously applied
+        if (incidentsLayer.definitionExpression && incidentsLayer.definitionExpression.includes('id NOT IN (')) {
+          incidentsLayer.definitionExpression = '';
+          console.log('🛣️ [NewSafetyMap] Cleared highway exclusion filter from map layer');
+        }
+      }
+    };
+
+    // Debounce the highway filter application slightly
+    highwayFilterTimeoutRef.current = setTimeout(() => {
+      applyHighwayFilter();
+    }, 100);
+
+    return () => {
+      if (highwayFilterTimeoutRef.current) {
+        clearTimeout(highwayFilterTimeoutRef.current);
+      }
+    };
+  }, [filters.excludeHighwayIncidents, selectedGeometry, incidentsLayer, serviceReady]);
+
+  // SIMPLIFIED: Handle visualization changes using single layer approach
+  useEffect(() => {
+    if (!viewReady || !mapViewRef.current) return;
+    
+    // All visualizations now use the main incidentsLayer
+    if (!incidentsLayer) return;
+
+    const updateVisualization = async () => {
+
+      try {
+        setDataLoading(true);
+
+        // SIMPLIFIED: Only hide weighted layer, keep main layer visible
+        
+        // Only hide weighted layer, main incidents layer stays visible
+        if (cachedWeightedLayer) {
+          cachedWeightedLayer.visible = false;
+        }
+
+        // SIMPLIFIED: Use only the main incidents layer for all visualizations
+        if (incidentsLayer) {
+          
+          // CRITICAL: Always refresh the renderer to ensure proper display
+          let newRenderer;
+          
+          switch (activeVisualization) {
+            case 'raw-incidents':
+              newRenderer = RawIncidentRenderer.getRenderer('severity', filters as SafetyFilters);
+              break;
+              
+            case 'incident-heatmap':
+              newRenderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
+              break;
+              
+            case 'incident-to-volume-ratio':
+              // For weighted visualization, we still need the special layer
+              await WeightedVisualization.createVisualization(
+                mapViewRef.current!, filters, incidentsLayer,
+                cachedWeightedLayer, cachedExtentKey, generateCacheKey,
+                setCachedWeightedLayer, setCachedExtentKey,
+                volumeWeights
+              );
+              return; // Early return for weighted visualization
+              
+            default:
+              console.warn(`Unknown visualization type: ${activeVisualization}`);
+              return;
+          }
+          
+          // Force renderer update
+          incidentsLayer.renderer = newRenderer;
+          
+          // CRITICAL: Force layer refresh to ensure all features are visible
+          incidentsLayer.refresh();
+          
+          // Make sure the main layer is visible for all non-weighted visualizations
+          incidentsLayer.visible = true;
+          
+          // Hide weighted layer if it exists
+          if (cachedWeightedLayer) {
+            cachedWeightedLayer.visible = false;
+          }
+          
+        }
+        
+        
+      } catch (error) {
+
+        setDataError(error instanceof Error ? error.message : `Failed to update to ${activeVisualization}`);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    updateVisualization();
+    // Re-run this effect when the visualization type or volume weights change. Filter changes are handled separately.
+  }, [activeVisualization, incidentsLayer, viewReady, volumeWeights]);
+
+  // Raw incidents now use the same layer as heatmaps, so no special cleanup needed
+
+  // Handle geographic level changes and custom draw tool (combined like volume page)
+  useEffect(() => {
+    if (viewReady && boundaryService.current && geographicLevel && mapViewRef.current) {
+
+      
+      if (geographicLevel === 'custom' && sketchLayer) {
+
+        // Disable boundary service interactivity and hide its layers
+        boundaryService.current.cleanupInteractivity();
+        // Also hide the layers associated with the service
+        boundaryService.current.getBoundaryLayers().forEach(layer => {
+          if (layer.type === 'feature' || layer.type === 'graphics') {
+            layer.visible = false;
+          }
+        });
+
+        // Mark that layer recreation will be needed after SketchViewModel usage
+        boundaryService.current.markLayerRecreationNeeded();
+
+        const sketchVM = new SketchViewModel({
+          view: mapViewRef.current,
+          layer: sketchLayer,
+          polygonSymbol: new SimpleFillSymbol({
+            color: [138, 43, 226, 0.2], // BlueViolet
+            outline: {
+              color: [138, 43, 226, 1],
+              width: 2,
+            },
+          }),
+        });
+
+        setSketchViewModel(sketchVM);
+
+        sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
+          if (event.state === 'complete') {
+            const polygon = event.graphic.geometry as Polygon;
+            
+            // 🔍 DEBUG: Log detailed polygon coordinates
+            console.group('🔍 [SAFETY DEBUG] Custom Draw Tool - Polygon Created');
+            console.log('Raw polygon object:', polygon);
+            console.log('Polygon type:', polygon.type);
+            console.log('Spatial Reference WKID:', polygon.spatialReference?.wkid);
+            console.log('Number of rings:', polygon.rings?.length);
+            
+            if (polygon.rings && polygon.rings.length > 0) {
+              console.log('First ring coordinates (first 5 points):');
+              polygon.rings[0].slice(0, 5).forEach((point, index) => {
+                console.log(`  Point ${index}: [${point[0]}, ${point[1]}]`);
+              });
+              console.log('Polygon extent:', {
+                xmin: polygon.extent?.xmin,
+                ymin: polygon.extent?.ymin,
+                xmax: polygon.extent?.xmax,
+                ymax: polygon.extent?.ymax
+              });
+            }
+            console.groupEnd();
+            
+            if (onSelectionChange) {
+              // Match the working VolumeMap.tsx implementation exactly
+              onSelectionChange({ 
+                geometry: polygon,
+                areaName: 'Custom Selected Area'
+              });
+            }
+          }
+        });
+
+        sketchVM.create('polygon');
+
+      } else {
+
+        if (sketchViewModel) {
+          sketchViewModel.destroy();
+          setSketchViewModel(null);
+        }
+        if (sketchLayer) {
+          sketchLayer.removeAll();
+        }
+        // Re-enable boundary service interactivity with layer recreation
+        boundaryService.current.switchGeographicLevel(geographicLevel as any, mapViewRef.current);
+      }
+    }
+
+    return () => {
+      if (sketchViewModel) {
+        sketchViewModel.destroy();
+        setSketchViewModel(null);
+      }
+    };
+  }, [geographicLevel, sketchLayer, viewReady]); // Removed sketchViewModel and onSelectionChange from dependencies
+
+  // Apply school district filtering when filter changes
+  useEffect(() => {
+    if (geographicLevel === 'school-districts' && schoolDistrictFilter && boundaryService.current) {
+      boundaryService.current.applySchoolDistrictFilter(schoolDistrictFilter);
+    }
+  }, [schoolDistrictFilter, geographicLevel]);
+
+  // Popup handling is now done via popupTemplate on the layers themselves
+  // No need for manual click handlers - ArcGIS handles this automatically
+  // This approach is more reliable and follows the same pattern as the volume page
+
+  // Handle selection changes
+  useEffect(() => {
+    if (!onSelectionChange) return;
+
+        boundaryService.current.setSelectionChangeCallback(onSelectionChange as (data: Polygon | { geometry: Polygon | null; areaName?: string | null; } | null) => void);
+  }, [onSelectionChange]);
+
   return (
-    <Box
-      id="app-container"
-      sx={{ display: "flex", height: "calc(100vh - 70px)" }}
-    >
-      <CssBaseline />
-      {/* <Header open={open} handleDrawerOpen={handleDrawerOpen} /> */}
-      <Box sx={{ height: "100%" }}>
-        <SafetyMenu {...menuProps} />
-      </Box>
+    <div id="improved-safety-map-container" className="w-full h-full relative">
+      {/* Loading Overlay */}
+      {dataLoading && showLoadingOverlay && (
+        <div 
+          id="safety-map-loading-overlay" 
+          className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50"
+        >
+          <div id="safety-map-loading-content" className="text-center">
+            <CircularProgress size={40} />
+            <div id="safety-map-loading-text" className="mt-2 text-sm text-gray-600">
+              Loading safety data...
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Widget Panel */}
+      {/* Error Display */}
+      {dataError && (
+        <div 
+          id="safety-map-error-overlay" 
+          className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50"
+        >
+          <div id="safety-map-error-content" className="text-center max-w-md p-4">
+            <div id="safety-map-error-title" className="text-red-600 font-medium mb-2">
+              Error Loading Data
+            </div>
+            <div id="safety-map-error-message" className="text-sm text-gray-600 mb-4">
+              {dataError}
+            </div>
+            <button
+              id="safety-map-error-retry-button"
+              onClick={() => {
+                setDataError(null);
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
 
-      <Box
+      {/* ArcGIS Map */}
+      <MuiBox
+        id="safety-arcgis-map-wrapper"
         sx={{
-          display:
-            showLegend || showLayerList || showFilter || showPrint
-              ? "flex"
-              : "none", // Always render, visibility controlled via `display`
-          flexDirection: "column", // Stack vertically first
-          flexWrap: "wrap", // Wrap into another column when needed
-          alignItems: "stretch", // Aligns properly to the left
-          // maxHeight: "100vh", // Prevents overflow
-          // maxWidth: "80vw", // Shrinks to only needed width
-          padding: 1,
-          flexShrink: 3,
-          maxHeight: "calc(100vh - 70px)", // Prevents it from growing indefinitely
-          maxWidth: "none",
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          '& arcgis-map': {
+            width: '100%',
+            height: '100%',
+          }
         }}
       >
-        {/* Layer List */}
-        {/* <Grid justifyContent="center" className="esri-widget" sx={{display: showLayerList ? 'block': 'none'}}>
-                    <Grid size={12} my={2}>
-                        <Typography align='center' variant='h5'>Layers</Typography>
-                    </Grid>
-                    <div id="layer-list-container"></div>
-                </Grid>   */}
-
-        {/* Filter Panel */}
-        <Grid
-          justifyContent="center"
-          className="esri-widget"
-          sx={{ display: showFilter ? "block" : "none" }}
-        >
-          <Grid size={12} my={2}>
-            <Typography align="center" variant="h5">
-              Filters
-            </Typography>
-          </Grid>
-          <SafetyFilterPanel {...filterProps} />
-        </Grid>
-
-        {/* Legend Panel */}
-        <Grid
-          justifyContent="center"
-          className="esri-widget"
-          sx={{ display: showLegend ? "block" : "none" }}
-        >
-          <Grid size={12} my={2}>
-            <Typography align="center" variant="h5">
-              Legend
-            </Typography>
-          </Grid>
-          <div id="legend-container"></div>
-        </Grid>
-
-        {/* Print Panel */}
-        <Grid
-          justifyContent="center"
-          className="esri-widget"
-          sx={{ display: showPrint ? "block" : "none" }}
-        >
-          <Grid size={12} my={2}>
-            <Typography align="center" variant="h5">
-              Print Map
-            </Typography>
-          </Grid>
-          <div id="safety-print-container"></div>
-        </Grid>
-      </Box>
-
-      <Box component="main" sx={{ flexGrow: 1, flexShrink: 1 }}>
-        <ArcgisMap
-          basemap="topo-vector"
-          // itemId="d5dda743788a4b0688fe48f43ae7beb9"
-          onArcgisViewReadyChange={assignMap}
-        ></ArcgisMap>
-      </Box>
-    </Box>
+                  <ArcgisMap
+            basemap="topo-vector"
+            onArcgisViewReadyChange={handleArcgisViewReadyChange}
+          />
+      </MuiBox>
+    </div>
   );
 }
