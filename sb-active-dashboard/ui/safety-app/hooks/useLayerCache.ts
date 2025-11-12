@@ -3,10 +3,25 @@ import { useState } from "react";
 import { SafetyFilters } from "../../../lib/safety-app/types";
 import { VolumeWeightConfig } from "../../../lib/safety-app/utils/incidentRiskMatrix";
 
+// Type for the three volume category layers
+export interface VolumeCategoryLayers {
+  low: FeatureLayer | null;
+  medium: FeatureLayer | null;
+  high: FeatureLayer | null;
+}
+
 export function useLayerCache() {
-  // Cache for the weighted layer to avoid expensive recreation
+  // Cache for the weighted layer to avoid expensive recreation (deprecated - keeping for backwards compatibility)
   const [cachedWeightedLayer, setCachedWeightedLayer] = useState<FeatureLayer | null>(null);
   const [cachedExtentKey, setCachedExtentKey] = useState<string | null>(null);
+  
+  // NEW: Cache for the three volume category layers
+  const [cachedVolumeLayers, setCachedVolumeLayers] = useState<VolumeCategoryLayers>({
+    low: null,
+    medium: null,
+    high: null
+  });
+  const [volumeLayersCacheKey, setVolumeLayersCacheKey] = useState<string | null>(null);
   
   // Cache for raw incidents data to avoid re-querying on every zoom/pan
   const [cachedRawIncidentsData, setCachedRawIncidentsData] = useState<any[] | null>(null);
@@ -49,12 +64,40 @@ export function useLayerCache() {
     setCachedExtentKey(null);
   };
 
+  const clearVolumeCategoriesCache = (mapView?: __esri.MapView) => {
+    // Remove all three volume category layers from the map
+    if (mapView) {
+      if (cachedVolumeLayers.low && mapView.map.layers.includes(cachedVolumeLayers.low)) {
+        mapView.map.remove(cachedVolumeLayers.low);
+      }
+      if (cachedVolumeLayers.medium && mapView.map.layers.includes(cachedVolumeLayers.medium)) {
+        mapView.map.remove(cachedVolumeLayers.medium);
+      }
+      if (cachedVolumeLayers.high && mapView.map.layers.includes(cachedVolumeLayers.high)) {
+        mapView.map.remove(cachedVolumeLayers.high);
+      }
+    }
+    
+    setCachedVolumeLayers({
+      low: null,
+      medium: null,
+      high: null
+    });
+    setVolumeLayersCacheKey(null);
+  };
+
   return {
-    // Weighted layer cache
+    // Weighted layer cache (deprecated - keeping for backwards compatibility)
     cachedWeightedLayer,
     setCachedWeightedLayer,
     cachedExtentKey,
     setCachedExtentKey,
+    
+    // Volume categories cache (NEW)
+    cachedVolumeLayers,
+    setCachedVolumeLayers,
+    volumeLayersCacheKey,
+    setVolumeLayersCacheKey,
     
     // Raw incidents cache
     cachedRawIncidentsData,
@@ -67,6 +110,7 @@ export function useLayerCache() {
     // Utilities
     generateCacheKey,
     clearRawIncidentsCache,
-    clearWeightedCache
+    clearWeightedCache,
+    clearVolumeCategoriesCache
   };
 }

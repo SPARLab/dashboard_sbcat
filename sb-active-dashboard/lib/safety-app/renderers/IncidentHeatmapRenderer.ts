@@ -10,14 +10,14 @@ export class IncidentHeatmapRenderer {
   /**
    * Create a standard heatmap renderer for incident density
    */
-  static createDensityHeatmap(colorScheme: 'purple' | 'yellow-pink' | 'green-purple' | 'orange' = 'purple'): HeatmapRenderer {
+  static createDensityHeatmap(): HeatmapRenderer {
     return new HeatmapRenderer({
       field: undefined, // Use point density, not a specific field
       radius: 10,
       maxDensity: 0.04, // Lower value = darker/more intense heatmap (adjusted from 0.08)
       minDensity: 0,
       referenceScale: 72224, // Lock visualization to this scale for consistency across zoom levels
-      colorStops: this.getColorScheme(colorScheme)
+      colorStops: this.getColorScheme('purple')
     });
   }
 
@@ -195,9 +195,7 @@ export class IncidentHeatmapRenderer {
         return this.createDataSourceHeatmap(options?.dataSource || 'SWITRS');
       case 'density':
       default:
-        // You can easily test different color schemes by changing the parameter:
-        // 'purple' (current), 'yellow-pink', 'green-purple', or 'orange'
-        return this.createDensityHeatmap('purple');
+        return this.createDensityHeatmap();
     }
   }
 
@@ -210,52 +208,56 @@ export class IncidentHeatmapRenderer {
   }
 
   /**
-   * Alternative color schemes for testing
+   * Color schemes for heatmap visualizations
    */
-  static getColorScheme(scheme: 'purple' | 'yellow-pink' | 'green-purple' | 'orange'): Array<{ ratio: number; color: string }> {
+  static getColorScheme(scheme: 'purple' | 'low-volume-blue' | 'medium-volume-yellow' | 'high-volume-red'): Array<{ ratio: number; color: string }> {
     switch (scheme) {
       case 'purple':
+        // Purple for incident density heatmap
         return [
-          { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
-          { ratio: 0.1, color: "rgba(159, 74, 150, 0.1)" }, // Very light purple
-          { ratio: 0.3, color: "rgba(159, 74, 150, 0.3)" }, // Light purple
-          { ratio: 0.5, color: "rgba(159, 74, 150, 0.5)" }, // Medium purple
-          { ratio: 0.7, color: "rgba(159, 74, 150, 0.7)" }, // Stronger purple
-          { ratio: 0.85, color: "rgba(159, 74, 150, 0.85)" }, // Strong purple
-          { ratio: 1.0, color: "rgba(159, 74, 150, 1.0)" } // Full purple
-        ];
-      
-      case 'yellow-pink':
-        return [
-          { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
-          { ratio: 0.1, color: "rgba(244, 179, 1, 0.2)" }, // Light yellow
-          { ratio: 0.3, color: "rgba(244, 179, 1, 0.4)" }, // Yellow
-          { ratio: 0.5, color: "rgba(244, 150, 50, 0.6)" }, // Yellow-orange
-          { ratio: 0.7, color: "rgba(244, 120, 100, 0.7)" }, // Orange-pink
-          { ratio: 0.85, color: "rgba(219, 16, 72, 0.85)" }, // Pink-red
-          { ratio: 1.0, color: "rgba(219, 16, 72, 1.0)" } // Full pink
+          { ratio: 0, color: "rgba(159, 74, 150, 0)" },
+          { ratio: 0.1, color: "rgba(159, 74, 150, 0.2)" },
+          { ratio: 0.3, color: "rgba(159, 74, 150, 0.4)" },
+          { ratio: 0.5, color: "rgba(159, 74, 150, 0.6)" },
+          { ratio: 0.7, color: "rgba(159, 74, 150, 0.8)" },
+          { ratio: 0.85, color: "rgba(159, 74, 150, 0.9)" },
+          { ratio: 1.0, color: "rgba(159, 74, 150, 1.0)" }
         ];
 
-      case 'green-purple':
+      case 'low-volume-blue':
+        // Red for low-volume incidents (#DC3220)
         return [
-          { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
-          { ratio: 0.1, color: "rgba(120, 200, 120, 0.2)" }, // Light green
-          { ratio: 0.3, color: "rgba(100, 180, 140, 0.4)" }, // Green-teal
-          { ratio: 0.5, color: "rgba(80, 160, 160, 0.6)" }, // Teal
-          { ratio: 0.7, color: "rgba(100, 120, 180, 0.7)" }, // Blue-purple
-          { ratio: 0.85, color: "rgba(120, 80, 160, 0.85)" }, // Purple
-          { ratio: 1.0, color: "rgba(159, 74, 150, 1.0)" } // Full purple
+          { ratio: 0, color: "rgba(220, 50, 32, 0)" },
+          { ratio: 0.1, color: "rgba(220, 50, 32, 0.2)" },
+          { ratio: 0.3, color: "rgba(220, 50, 32, 0.4)" },
+          { ratio: 0.5, color: "rgba(220, 50, 32, 0.6)" },
+          { ratio: 0.7, color: "rgba(220, 50, 32, 0.8)" },
+          { ratio: 0.85, color: "rgba(220, 50, 32, 0.9)" },
+          { ratio: 1.0, color: "rgba(220, 50, 32, 1.0)" }
         ];
 
-      case 'orange':
+      case 'medium-volume-yellow':
+        // Yellow for medium-volume incidents (#FFC20A)
         return [
-          { ratio: 0, color: "rgba(255, 255, 255, 0)" }, // Transparent
-          { ratio: 0.1, color: "rgba(255, 200, 100, 0.2)" }, // Very light orange
-          { ratio: 0.3, color: "rgba(255, 180, 80, 0.4)" }, // Light orange
-          { ratio: 0.5, color: "rgba(255, 160, 60, 0.6)" }, // Medium orange
-          { ratio: 0.7, color: "rgba(255, 140, 40, 0.7)" }, // Stronger orange
-          { ratio: 0.85, color: "rgba(255, 120, 20, 0.85)" }, // Strong orange
-          { ratio: 1.0, color: "rgba(255, 100, 0, 1.0)" } // Full orange
+          { ratio: 0, color: "rgba(255, 194, 10, 0)" },
+          { ratio: 0.1, color: "rgba(255, 194, 10, 0.2)" },
+          { ratio: 0.3, color: "rgba(255, 194, 10, 0.4)" },
+          { ratio: 0.5, color: "rgba(255, 194, 10, 0.6)" },
+          { ratio: 0.7, color: "rgba(255, 194, 10, 0.8)" },
+          { ratio: 0.85, color: "rgba(255, 194, 10, 0.9)" },
+          { ratio: 1.0, color: "rgba(255, 194, 10, 1.0)" }
+        ];
+
+      case 'high-volume-red':
+        // Blue for high-volume incidents (#0C7BDC)
+        return [
+          { ratio: 0, color: "rgba(12, 123, 220, 0)" },
+          { ratio: 0.1, color: "rgba(12, 123, 220, 0.2)" },
+          { ratio: 0.3, color: "rgba(12, 123, 220, 0.4)" },
+          { ratio: 0.5, color: "rgba(12, 123, 220, 0.6)" },
+          { ratio: 0.7, color: "rgba(12, 123, 220, 0.8)" },
+          { ratio: 0.85, color: "rgba(12, 123, 220, 0.9)" },
+          { ratio: 1.0, color: "rgba(12, 123, 220, 1.0)" }
         ];
 
       default:

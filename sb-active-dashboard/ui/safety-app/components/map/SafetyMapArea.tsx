@@ -4,8 +4,8 @@ import { IncidentHeatmapRenderer } from "../../../../lib/safety-app/renderers/In
 import SafetyMap from "./SafetyMap";
 import HeatmapLegend from "./HeatmapLegend";
 import { SchoolDistrictFilter } from "../../../components/filters/GeographicLevelSection";
-import { DEFAULT_VOLUME_WEIGHTS, VolumeWeightConfig } from "../../../../lib/safety-app/utils/incidentRiskMatrix";
-import VolumeWeightControls from "../controls/VolumeWeightControls";
+import { DEFAULT_RISK_FILTERS, RiskCategoryFilters } from "../../../../lib/safety-app/utils/incidentRiskMatrix";
+import RiskCategoryControls from "../controls/RiskCategoryControls";
 
 interface SafetyMapAreaProps {
   filters?: Partial<SafetyFilters>;
@@ -29,7 +29,7 @@ export default function SafetyMapArea({
   selectedGeometry
 }: SafetyMapAreaProps) {
   const [activeMapTab, setActiveMapTab] = useState<SafetyVisualizationType>('raw-incidents');
-  const [volumeWeights, setVolumeWeights] = useState<VolumeWeightConfig>(DEFAULT_VOLUME_WEIGHTS);
+  const [riskFilters, setRiskFilters] = useState<RiskCategoryFilters>(DEFAULT_RISK_FILTERS);
 
   const mapTabs: Array<{ id: SafetyVisualizationType; label: string }> = [
     { id: 'raw-incidents', label: 'Raw Incidents' },
@@ -78,30 +78,51 @@ export default function SafetyMapArea({
             onMapViewReady={onMapViewReady}
             onIncidentsLayerReady={onIncidentsLayerReady}
             onSelectionChange={onSelectionChange}
-            volumeWeights={volumeWeights}
+            riskFilters={riskFilters}
             selectedGeometry={selectedGeometry}
           />
         </div>
 
-        {/* Volume Weight Controls - Show only for ratio visualization */}
+        {/* Volume Category Controls - Show only for volume-categorized visualization */}
         {activeMapTab === 'incident-to-volume-ratio' && (
-          <div id="safety-weight-controls" className="absolute top-20 right-2 z-20 w-72">
-            <VolumeWeightControls
-              weights={volumeWeights}
-              onWeightsChange={setVolumeWeights}
+          <div id="safety-volume-category-controls" className="absolute top-20 right-2 z-20 w-72">
+            <RiskCategoryControls
+              filters={riskFilters}
+              onFiltersChange={setRiskFilters}
             />
           </div>
         )}
 
         {/* Dynamic Legend - positioned in bottom right with proper z-index */}
         <div id="safety-map-legend" className="absolute bottom-6 right-2 z-10">
-          {(activeMapTab === 'incident-heatmap' || activeMapTab === 'incident-to-volume-ratio') ? (
+          {activeMapTab === 'incident-heatmap' ? (
             <HeatmapLegend 
               colorStops={IncidentHeatmapRenderer.createDensityHeatmap().colorStops as Array<{ ratio: number; color: string | __esri.Color }>}
-              title={activeMapTab === 'incident-heatmap' ? "Incident Density" : "Volume-Weighted Incidents"}
+              title="Incident Density"
               minLabel="Low"
               maxLabel="High"
             />
+          ) : activeMapTab === 'incident-to-volume-ratio' ? (
+            <div id="safety-volume-category-legend" className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-48">
+              <h4 id="safety-volume-legend-title" className="text-xs font-normal text-gray-900 mb-3">Volume Categories</h4>
+              <div id="safety-volume-legend-items" className="space-y-2">
+                <div id="safety-legend-low-volume" className="flex items-center gap-2">
+                  <div id="safety-legend-low-volume-dot" className="w-3 h-3 rounded-full" style={{ backgroundColor: 'rgba(220, 50, 32, 0.8)' }}></div>
+                  <span id="safety-legend-low-volume-label" className="text-xs text-gray-700">Low Volume</span>
+                </div>
+                <div id="safety-legend-medium-volume" className="flex items-center gap-2">
+                  <div id="safety-legend-medium-volume-dot" className="w-3 h-3 rounded-full" style={{ backgroundColor: 'rgba(255, 194, 10, 0.8)' }}></div>
+                  <span id="safety-legend-medium-volume-label" className="text-xs text-gray-700">Medium Volume</span>
+                </div>
+                <div id="safety-legend-high-volume" className="flex items-center gap-2">
+                  <div id="safety-legend-high-volume-dot" className="w-3 h-3 rounded-full" style={{ backgroundColor: 'rgba(12, 123, 220, 0.8)' }}></div>
+                  <span id="safety-legend-high-volume-label" className="text-xs text-gray-700">High Volume</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-200">
+                Traffic volume of incident location
+              </p>
+            </div>
           ) : (
             <div id="safety-incident-legend" className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-36">
               <h4 id="safety-legend-title" className="text-xs font-normal text-gray-900 mb-3">Legend</h4>

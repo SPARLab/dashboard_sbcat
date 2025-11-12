@@ -37,54 +37,60 @@ export const INCIDENT_RISK_THRESHOLDS: RiskThresholds = {
 };
 
 /**
- * Configuration for volume-based weight adjustments
- * Users can customize these to explore different risk perspectives
+ * Configuration for risk category visibility filters
+ * Users can toggle which risk categories are visible on the map
  */
-export interface VolumeWeightConfig {
-  low: number;    // Weight for low-volume areas (default 2.0)
-  medium: number; // Weight for medium-volume areas (default 1.0)
-  high: number;   // Weight for high-volume areas (default 0.5)
+export interface RiskCategoryFilters {
+  low: boolean;    // Show low-risk incidents (default true)
+  medium: boolean; // Show medium-risk incidents (default true)
+  high: boolean;   // Show high-risk incidents (default true)
 }
 
 /**
- * Default weights represent a hypothesis that incidents in low-volume areas
- * are more concerning than in high-volume areas (4x difference: 2.0 vs 0.5)
+ * Default filter state - all categories visible
  */
-export const DEFAULT_VOLUME_WEIGHTS: VolumeWeightConfig = {
-  low: 2.0,    // 2x baseline - incidents in quieter areas are more notable
-  medium: 1.0, // Baseline reference
-  high: 0.5    // 0.5x baseline - incidents in busy areas are expected
+export const DEFAULT_RISK_FILTERS: RiskCategoryFilters = {
+  low: true,
+  medium: true,
+  high: true
 };
 
 /**
- * Get the normalization weight for a point based on its volume level
- * 
- * Higher weights = more visual prominence (darker heatmap contribution)
- * Lower weights = less visual prominence (lighter heatmap contribution)
- * Zero weight = effectively filters out that category
- * 
- * In the heatmap visualization:
- * - Each incident creates a "fuzzy circle"
- * - Overlapping circles intensify the color
- * - The weight determines how much each incident contributes to the intensity
- * 
- * @param volumeLevel - The traffic volume level ('Low', 'Medium', or 'High')
- * @param customWeights - Optional custom weight configuration
- * @returns The normalization weight for heatmap rendering
+ * All incidents use uniform weight for visualization
+ * Risk level is communicated through color, not intensity
+ */
+export const UNIFORM_HEATMAP_WEIGHT = 1.0;
+
+/**
+ * Legacy support for volume-based weights (deprecated)
+ * @deprecated Use RiskCategoryFilters instead
+ */
+export interface VolumeWeightConfig {
+  low: number;
+  medium: number;
+  high: number;
+}
+
+/**
+ * Legacy default weights (deprecated)
+ * @deprecated Use DEFAULT_RISK_FILTERS instead
+ */
+export const DEFAULT_VOLUME_WEIGHTS: VolumeWeightConfig = {
+  low: 2.0,
+  medium: 1.0,
+  high: 0.5
+};
+
+/**
+ * Legacy weight function (deprecated)
+ * Now returns uniform weight for all risk levels
+ * @deprecated Risk is now communicated through color, not weight
  */
 export function getNormalizationWeight(
   volumeLevel: 'Low' | 'Medium' | 'High',
   customWeights?: VolumeWeightConfig
 ): number {
-  const weights = customWeights || DEFAULT_VOLUME_WEIGHTS;
-  
-  const weightMap = {
-    'Low': weights.low,
-    'Medium': weights.medium,
-    'High': weights.high
-  };
-  
-  return weightMap[volumeLevel];
+  return UNIFORM_HEATMAP_WEIGHT;
 }
 
 /**

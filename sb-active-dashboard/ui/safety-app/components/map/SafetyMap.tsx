@@ -16,7 +16,7 @@ import { WeightedVisualization } from "./visualizations/WeightedVisualization";
 import { useLayerCache } from "../../hooks/useLayerCache";
 import { useSafetyLayers } from "../../hooks/useSafetyLayers";
 import { SchoolDistrictFilter } from "../../../components/filters/GeographicLevelSection";
-import { VolumeWeightConfig } from "../../../../lib/safety-app/utils/incidentRiskMatrix";
+import { VolumeWeightConfig, RiskCategoryFilters } from "../../../../lib/safety-app/utils/incidentRiskMatrix";
 
 interface SafetyMapProps {
   activeVisualization: SafetyVisualizationType;
@@ -27,7 +27,7 @@ interface SafetyMapProps {
   schoolDistrictFilter?: SchoolDistrictFilter;
   onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | null) => void;
   showLoadingOverlay?: boolean;
-  volumeWeights?: VolumeWeightConfig;
+  riskFilters?: RiskCategoryFilters;
   selectedGeometry?: __esri.Polygon | null;
 }
 
@@ -40,7 +40,7 @@ export default function SafetyMap({
   schoolDistrictFilter,
   onSelectionChange,
   showLoadingOverlay = true,
-  volumeWeights,
+  riskFilters,
   selectedGeometry
 }: SafetyMapProps) {
   // Map and state management
@@ -68,7 +68,11 @@ export default function SafetyMap({
     setCachedWeightedLayer,
     cachedExtentKey,
     setCachedExtentKey,
-    generateCacheKey
+    generateCacheKey,
+    cachedVolumeLayers,
+    setCachedVolumeLayers,
+    volumeLayersCacheKey,
+    setVolumeLayersCacheKey
   } = useLayerCache();
 
   // Use safety layers hook for the original layer infrastructure
@@ -303,9 +307,16 @@ export default function SafetyMap({
 
         // SIMPLIFIED: Only hide weighted layer, keep main layer visible
         
-        // Only hide weighted layer, main incidents layer stays visible
+        // Hide old weighted layer (deprecated)
         if (cachedWeightedLayer) {
           cachedWeightedLayer.visible = false;
+        }
+        
+        // Hide volume category layers when switching away from that visualization
+        if (activeVisualization !== 'incident-to-volume-ratio') {
+          if (cachedVolumeLayers.low) cachedVolumeLayers.low.visible = false;
+          if (cachedVolumeLayers.medium) cachedVolumeLayers.medium.visible = false;
+          if (cachedVolumeLayers.high) cachedVolumeLayers.high.visible = false;
         }
 
         // SIMPLIFIED: Use only the main incidents layer for all visualizations
@@ -324,14 +335,20 @@ export default function SafetyMap({
               break;
               
             case 'incident-to-volume-ratio':
-              // For weighted visualization, we still need the special layer
+              // For volume-categorized visualization, create layers once and cache them
+              // Layer visibility is controlled separately via the riskFilters effect
               await WeightedVisualization.createVisualization(
                 mapViewRef.current!, filters, incidentsLayer,
                 cachedWeightedLayer, cachedExtentKey, generateCacheKey,
                 setCachedWeightedLayer, setCachedExtentKey,
-                volumeWeights
+                undefined, // deprecated volumeWeights
+                riskFilters,
+                cachedVolumeLayers,
+                setCachedVolumeLayers,
+                volumeLayersCacheKey,
+                setVolumeLayersCacheKey
               );
-              return; // Early return for weighted visualization
+              return; // Early return for volume-categorized visualization
               
             default:
               console.warn(`Unknown visualization type: ${activeVisualization}`);
@@ -364,8 +381,18 @@ export default function SafetyMap({
     };
 
     updateVisualization();
-    // Re-run this effect when the visualization type or volume weights change. Filter changes are handled separately.
-  }, [activeVisualization, incidentsLayer, viewReady, volumeWeights]);
+    // Re-run this effect when the visualization type changes. Filter changes are handled separately.
+    // NOTE: riskFilters is intentionally NOT in the dependency array to prevent layer recreation on toggle
+  }, [activeVisualization, incidentsLayer, viewReady]);
+
+  // Update volume category layer visibility when filters change (performance optimized)
+  // This effect only toggles layer visibility without recreating layers
+  useEffect(() => {
+    if (mapViewRef.current && riskFilters && activeVisualization === 'incident-to-volume-ratio' && viewReady) {
+      // Only update visibility if we're viewing the volume-categorized visualization
+      WeightedVisualization.updateRiskLayerVisibility(mapViewRef.current, riskFilters);
+    }
+  }, [riskFilters, activeVisualization, viewReady]);
 
   // Raw incidents now use the same layer as heatmaps, so no special cleanup needed
 
