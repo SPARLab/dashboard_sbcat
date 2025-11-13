@@ -399,7 +399,10 @@ export default function SafetyMap({
   // Handle geographic level changes and custom draw tool (combined like volume page)
   useEffect(() => {
     if (viewReady && boundaryService.current && geographicLevel && mapViewRef.current) {
-
+      // Clear any existing selection when switching geographic levels
+      if (onSelectionChange) {
+        onSelectionChange(null);
+      }
       
       if (geographicLevel === 'custom' && sketchLayer) {
 
@@ -467,7 +470,7 @@ export default function SafetyMap({
         sketchVM.create('polygon');
 
       } else {
-
+        // Switching away from custom draw tool - clean up
         if (sketchViewModel) {
           sketchViewModel.destroy();
           setSketchViewModel(null);
