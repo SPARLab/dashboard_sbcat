@@ -63,9 +63,10 @@ export class WeightedVisualization {
       
       console.log('🔄 Creating new volume category layers (first time or cache invalid)...');
 
-      // Query incidents for current map extent
+      // Query ALL incidents (no extent restriction) so cached layers work at any zoom level
+      // This ensures that when users zoom out, they see all incidents, not just those in the original view
       const safetyData = await SafetyIncidentsDataService.getEnrichedSafetyData(
-        mapView.extent,
+        undefined, // No extent - load all data for caching
         filters
       );
 
@@ -74,125 +75,102 @@ export class WeightedVisualization {
       // Filter incidents that have traffic data
       let incidentsWithTrafficData = safetyData.data.filter(inc => inc.hasTrafficData);
 
-      let safetyDataWithoutExtent: any = null;
-
+      // If no traffic data available with current filters, try without filters as fallback
       if (incidentsWithTrafficData.length === 0) {
-        console.warn('No traffic data available for current extent, trying without extent...');
+        console.warn('No traffic data available with current filters, trying without filters...');
         
-        // Try querying without extent to see if we can get any data
-        safetyDataWithoutExtent = await SafetyIncidentsDataService.getEnrichedSafetyData(
-          undefined,
-          filters as any
-        );
-        
-        const incidentsWithTrafficDataWithoutExtent = safetyDataWithoutExtent.data.filter(inc => inc.hasTrafficData);
-        
-        if (incidentsWithTrafficDataWithoutExtent.length === 0) {
-          console.warn('No traffic data available even without extent, using all incidents with severity-based visualization');
-          
-          // Create a visualization using all incidents with severity-based scoring
-          const allIncidents = safetyData.data.length > 0 ? safetyData.data : safetyDataWithoutExtent.data;
-        
-        } else {
-          // Use the incidents with traffic data from the broader query
-          incidentsWithTrafficData = incidentsWithTrafficDataWithoutExtent;
-        }
-      }
-      
-      if (incidentsWithTrafficData.length === 0) {
-        console.warn('No traffic data available, trying without any filters...');
-        
-        // Try querying without any filters to see if we can get any data at all
         const safetyDataNoFilters = await SafetyIncidentsDataService.getEnrichedSafetyData(
           undefined,
           {} as any
         );
         
+        incidentsWithTrafficData = safetyDataNoFilters.data.filter(inc => inc.hasTrafficData);
+        
+        // If STILL no traffic data, fall back to severity-based visualization
+        if (incidentsWithTrafficData.length === 0) {
+          console.warn('No traffic data available even without filters, using severity-based fallback visualization');
+          
+          const allIncidents = safetyData.data.length > 0 ? safetyData.data : safetyDataNoFilters.data;
+          
+          if (allIncidents.length === 0) {
+            console.warn('No incidents available at all');
+            incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as any);
+            incidentsLayer.visible = true;
+            return;
+          }
+          
+          // Create features array for client-side feature layer with severity-based scoring
+          const severityFeatures = allIncidents.map((incident, index) => {
+            // Calculate severity score (Fatality=5, Severe Injury=4, Injury=3, No Injury=2, Unknown=1)
+            const severityScores = { 'Fatality': 5, 'Severe Injury': 4, 'Injury': 3, 'No Injury': 2, 'Unknown': 1 };
+            const severityScore = severityScores[incident.maxSeverity as keyof typeof severityScores] || 1;
+            const normalizedSeverityScore = severityScore / 5; // Normalize to 0-1 scale
+            
+            const feature = {
+              geometry: incident.geometry,
+              attributes: {
+                objectid: incident.OBJECTID || index + 1,
+                id: incident.id,
+                severity: incident.maxSeverity || 'unknown',
+                severityScore: severityScore,
+                normalizedSeverityScore: normalizedSeverityScore,
+                data_source: incident.data_source || 'unknown'
+              }
+            };
+            
+            return feature;
+          });
 
-        
-        // Create a visualization using all incidents with severity-based scoring
-        const allIncidents = safetyData.data.length > 0 ? safetyData.data : 
-                           safetyDataWithoutExtent?.data.length > 0 ? safetyDataWithoutExtent.data :
-                           safetyDataNoFilters.data;
-        
-        if (allIncidents.length === 0) {
-          console.warn('No incidents available');
-          incidentsLayer.renderer = IncidentHeatmapRenderer.getRenderer('density', filters as any);
-          incidentsLayer.visible = true;
+          // Remove existing traffic layer if it exists
+          const existingTrafficLayer = mapView.map.layers.find(
+            (layer: any) => layer.title === "Traffic-Based Safety Incidents"
+          );
+          if (existingTrafficLayer) {
+            mapView.map.remove(existingTrafficLayer);
+          }
+
+          // Create a client-side FeatureLayer for the severity data
+          const severityLayer = new FeatureLayer({
+            source: severityFeatures as any,
+            title: "Traffic-Based Safety Incidents",
+            objectIdField: "objectid",
+            fields: [
+              { name: "objectid", type: "oid" as const },
+              { name: "id", type: "integer" as const },
+              { name: "severity", type: "string" as const },
+              { name: "severityScore", type: "integer" as const },
+              { name: "normalizedSeverityScore", type: "double" as const },
+              { name: "data_source", type: "string" as const }
+            ],
+            geometryType: "point",
+            spatialReference: mapView.spatialReference
+          });
+
+          // Add the new severity layer
+          mapView.map.add(severityLayer);
+          
+          // Create a custom renderer using consistent purple scheme
+          const severityRenderer = new (await import("@arcgis/core/renderers/HeatmapRenderer")).default({
+            field: "normalizedSeverityScore", // Use our severity score field
+            radius: 15, // Match incident heatmap radius
+            maxDensity: 0.02, // Match incident heatmap maxDensity
+            minDensity: 0,
+            referenceScale: 72224, // Match incident heatmap referenceScale
+            colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Use same purple scheme
+          });
+          
+          severityLayer.renderer = severityRenderer;
+
+          // Cache the severity layer and extent key for future use
+          setCachedWeightedLayer(severityLayer);
+          setCachedExtentKey(currentCacheKey);
+
+          // Hide the regular incidents layer and show the severity layer
+          incidentsLayer.visible = false;
+          severityLayer.visible = true;
+          
           return;
         }
-        
-        // Create features array for client-side feature layer with severity-based scoring
-        const severityFeatures = allIncidents.map((incident, index) => {
-          // Calculate severity score (Fatality=5, Severe Injury=4, Injury=3, No Injury=2, Unknown=1)
-          const severityScores = { 'Fatality': 5, 'Severe Injury': 4, 'Injury': 3, 'No Injury': 2, 'Unknown': 1 };
-          const severityScore = severityScores[incident.maxSeverity as keyof typeof severityScores] || 1;
-          const normalizedSeverityScore = severityScore / 5; // Normalize to 0-1 scale
-          
-          const feature = {
-            geometry: incident.geometry,
-            attributes: {
-              objectid: incident.OBJECTID || index + 1,
-              id: incident.id,
-              severity: incident.maxSeverity || 'unknown',
-              severityScore: severityScore,
-              normalizedSeverityScore: normalizedSeverityScore,
-              data_source: incident.data_source || 'unknown'
-            }
-          };
-          
-          return feature;
-        });
-
-        // Remove existing traffic layer if it exists
-        const existingTrafficLayer = mapView.map.layers.find(
-          (layer: any) => layer.title === "Traffic-Based Safety Incidents"
-        );
-        if (existingTrafficLayer) {
-          mapView.map.remove(existingTrafficLayer);
-        }
-
-        // Create a client-side FeatureLayer for the severity data
-        const severityLayer = new FeatureLayer({
-          source: severityFeatures,
-          title: "Traffic-Based Safety Incidents",
-          objectIdField: "objectid",
-          fields: [
-            { name: "objectid", type: "oid" },
-            { name: "id", type: "integer" },
-            { name: "severity", type: "string" },
-            { name: "severityScore", type: "integer" },
-            { name: "normalizedSeverityScore", type: "double" },
-            { name: "data_source", type: "string" }
-          ],
-          geometryType: "point",
-          spatialReference: mapView.spatialReference
-        });
-
-        // Add the new severity layer
-        mapView.map.add(severityLayer);
-        
-        // Create a custom renderer using consistent purple scheme
-        const severityRenderer = new (await import("@arcgis/core/renderers/HeatmapRenderer")).default({
-          field: "normalizedSeverityScore", // Use our severity score field
-          radius: 15, // Match incident heatmap radius
-          maxDensity: 0.02, // Match incident heatmap maxDensity
-          minDensity: 0,
-          referenceScale: 72224, // Match incident heatmap referenceScale
-          colorStops: IncidentHeatmapRenderer.getColorScheme('purple') // Use same purple scheme
-        });
-        
-        severityLayer.renderer = severityRenderer;
-
-        // Cache the severity layer and extent key for future use
-        setCachedWeightedLayer(severityLayer);
-        setCachedExtentKey(currentCacheKey);
-
-        // Hide the regular incidents layer and show the severity layer
-        incidentsLayer.visible = false;
-        severityLayer.visible = true;
-        
-        return;
       }
 
       // Group incidents by risk category (volume level)

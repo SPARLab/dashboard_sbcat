@@ -195,9 +195,6 @@ export default function RiskCategoryControls({
             <p className="text-xs text-gray-700">
               💡 <strong>How volume categories work:</strong> Incidents are grouped by the traffic volume level of the area where they occurred. This helps identify patterns in low-traffic vs. high-traffic locations.
             </p>
-            <p className="text-xs text-gray-700">
-              <strong>Colors:</strong> Red (#DC3220) = Low volume, Yellow (#FFC20A) = Medium volume, Blue (#0C7BDC) = High volume.
-            </p>
             <p className="text-xs text-gray-600">
               <strong>Data Source:</strong> Volume categories based on 2023 bike traffic estimates. This is not based on vehicle volumes.
             </p>
