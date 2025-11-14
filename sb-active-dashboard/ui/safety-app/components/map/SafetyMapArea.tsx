@@ -13,6 +13,7 @@ interface SafetyMapAreaProps {
   schoolDistrictFilter?: SchoolDistrictFilter;
   onMapViewReady?: (mapView: __esri.MapView) => void;
   onIncidentsLayerReady?: (layer: __esri.FeatureLayer) => void;
+  onJitteredIncidentsLayerReady?: (layer: __esri.FeatureLayer) => void;
   onSelectionChange?: (data: { geometry: __esri.Polygon | null; areaName?: string | null } | null) => void;
   selectedAreaName?: string | null;
   selectedGeometry?: __esri.Polygon | null;
@@ -24,6 +25,7 @@ export default function SafetyMapArea({
   schoolDistrictFilter,
   onMapViewReady,
   onIncidentsLayerReady,
+  onJitteredIncidentsLayerReady,
   onSelectionChange,
   selectedAreaName,
   selectedGeometry
@@ -77,6 +79,7 @@ export default function SafetyMapArea({
             schoolDistrictFilter={schoolDistrictFilter}
             onMapViewReady={onMapViewReady}
             onIncidentsLayerReady={onIncidentsLayerReady}
+            onJitteredIncidentsLayerReady={onJitteredIncidentsLayerReady}
             onSelectionChange={onSelectionChange}
             riskFilters={riskFilters}
             selectedGeometry={selectedGeometry}

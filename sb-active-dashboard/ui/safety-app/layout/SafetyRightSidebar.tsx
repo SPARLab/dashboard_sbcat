@@ -10,6 +10,7 @@ import LocationIndicator from "../../components/LocationIndicator";
 interface SafetyRightSidebarProps {
   mapView: __esri.MapView | null;
   incidentsLayer: __esri.FeatureLayer | null;
+  jitteredIncidentsLayer: __esri.FeatureLayer | null;
   filters: Partial<SafetyFilters>;
   selectedGeometry: __esri.Polygon | null;
   selectedAreaName?: string | null;
@@ -18,6 +19,7 @@ interface SafetyRightSidebarProps {
 export default function SafetyRightSidebar({
   mapView,
   incidentsLayer,
+  jitteredIncidentsLayer,
   filters,
   selectedGeometry,
   selectedAreaName
@@ -50,6 +52,7 @@ export default function SafetyRightSidebar({
           <MostDangerousAreas 
             mapView={mapView}
             incidentsLayer={incidentsLayer}
+            jitteredIncidentsLayer={jitteredIncidentsLayer}
             selectedGeometry={selectedGeometry}
             filters={filters}
           />

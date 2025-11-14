@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
+import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import CollapseExpandIcon from "../../../components/CollapseExpandIcon";
 import MoreInformationIcon from './MoreInformationIcon';
 import { SafetyFilters } from "../../../../lib/safety-app/types";
@@ -10,20 +11,22 @@ import { StravaSegmentService } from "../../../../lib/data-services/StravaSegmen
 
 interface MostDangerousAreasProps {
   mapView: __esri.MapView | null;
-  incidentsLayer: __esri.FeatureLayer | null;
+  incidentsLayer: __esri.FeatureLayer | null; // Original layer for queries
+  jitteredIncidentsLayer: __esri.FeatureLayer | null; // Jittered layer for getting display geometries
   selectedGeometry?: __esri.Polygon | null;
   filters?: Partial<SafetyFilters>;
 }
 
 interface DangerousAreaData {
-  location: string;
+  location: string; // Display name from incident's loc_desc
   incidentCount: number;
-  stravaId?: number; // For potential click-to-highlight functionality
+  stravaId: number; // Grouped by strava_id for accurate per-segment counts
 }
 
 export default function MostDangerousAreas({ 
   mapView,
   incidentsLayer,
+  jitteredIncidentsLayer,
   selectedGeometry = null, 
   filters = {}
 }: MostDangerousAreasProps) {
@@ -87,40 +90,41 @@ export default function MostDangerousAreas({
       setError(null);
 
       try {
-        // Group incidents by location (loc_desc field)
-        const locationMap = new Map<string, {
+        // Group incidents by strava_id for accurate per-segment counts
+        const segmentMap = new Map<number, {
           incidents: number;
-          stravaId?: number; // Capture first non-null strava_id for this location
+          locationName: string; // Use loc_desc from incidents for display
         }>();
 
         // Process each incident
         result.incidents.forEach(incident => {
-          const locationKey = incident.loc_desc || 'Unknown Location';
+          // Skip incidents without a strava_id
+          if (!incident.strava_id) {
+            return;
+          }
           
-          if (!locationMap.has(locationKey)) {
-            locationMap.set(locationKey, {
+          const stravaId = incident.strava_id;
+          const locationName = incident.loc_desc || 'Unknown Location';
+          
+          if (!segmentMap.has(stravaId)) {
+            segmentMap.set(stravaId, {
               incidents: 0,
-              stravaId: incident.strava_id || undefined
+              locationName: locationName
             });
           }
           
-          const location = locationMap.get(locationKey)!;
-          location.incidents += 1;
-          
-          // Capture strava_id if we don't have one yet for this location
-          if (!location.stravaId && incident.strava_id) {
-            location.stravaId = incident.strava_id;
-          }
+          const segment = segmentMap.get(stravaId)!;
+          segment.incidents += 1;
         });
 
         // Convert to array and get top 5 by incident count
-        const processedData: DangerousAreaData[] = Array.from(locationMap.entries())
-          .map(([locationName, data]) => ({
-            location: locationName,
+        const processedData: DangerousAreaData[] = Array.from(segmentMap.entries())
+          .map(([stravaId, data]) => ({
+            location: data.locationName,
             incidentCount: data.incidents,
-            stravaId: data.stravaId
+            stravaId: stravaId
           }))
-          .filter(area => area.incidentCount > 0) // Only include locations with incidents
+          .filter(area => area.incidentCount > 0) // Only include segments with incidents
           .sort((a, b) => b.incidentCount - a.incidentCount) // Sort by incident count (highest first)
           .slice(0, 5); // Take top 5
 
@@ -147,49 +151,98 @@ export default function MostDangerousAreas({
       // Clear previous highlights
       highlightLayerRef.current.removeAll();
 
-      // If we have a strava_id, try to get the segment geometry
-      if (area.stravaId) {
-        const segmentFeature = await stravaServiceRef.current.getSegmentByStravaId(area.stravaId);
-        
-        if (segmentFeature && segmentFeature.geometry) {
-          // Create yellow halo line (wider, behind the main line)
-          const haloSymbol = new SimpleLineSymbol({
-            color: [255, 255, 0, 0.8], // Yellow halo
-            width: 8,
-            style: "solid"
-          });
+      // Get the segment geometry using strava_id
+      const segmentFeature = await stravaServiceRef.current.getSegmentByStravaId(area.stravaId);
+      
+      if (segmentFeature && segmentFeature.geometry) {
+        // Create yellow halo line (wider, behind the main line)
+        const haloSymbol = new SimpleLineSymbol({
+          color: [255, 255, 0, 0.8], // Yellow halo
+          width: 8,
+          style: "solid"
+        });
 
-          // Create highlight line symbol
-          const lineSymbol = new SimpleLineSymbol({
-            color: [220, 38, 127, 1], // Pink/red for dangerous areas
-            width: 4,
-            style: "solid"
-          });
+        // Create highlight line symbol
+        const lineSymbol = new SimpleLineSymbol({
+          color: [220, 38, 127, 1], // Pink/red for dangerous areas
+          width: 4,
+          style: "solid"
+        });
 
-          // Add halo first (so it appears behind)
-          const haloGraphic = new Graphic({
-            geometry: segmentFeature.geometry,
-            symbol: haloSymbol
-          });
-          highlightLayerRef.current.add(haloGraphic);
+        // Add halo first (so it appears behind)
+        const haloGraphic = new Graphic({
+          geometry: segmentFeature.geometry,
+          symbol: haloSymbol
+        });
+        highlightLayerRef.current.add(haloGraphic);
 
-          // Add main line on top
-          const lineGraphic = new Graphic({
-            geometry: segmentFeature.geometry,
-            symbol: lineSymbol
-          });
-          highlightLayerRef.current.add(lineGraphic);
+        // Add main line on top
+        const lineGraphic = new Graphic({
+          geometry: segmentFeature.geometry,
+          symbol: lineSymbol
+        });
+        highlightLayerRef.current.add(lineGraphic);
 
-          // Zoom to the segment with some padding
-          const zoomExtent = segmentFeature.geometry.extent?.expand(2);
-          if (zoomExtent) {
-            await mapView.goTo(zoomExtent, { duration: 500 });
+          // Highlight associated incidents with light blue outline
+          // Query the JITTERED layer to get jittered geometries for display
+          if (jitteredIncidentsLayer && result?.incidents) {
+            try {
+              // Get incident OBJECTIDs from the query result
+              const incidentObjectIds = result.incidents
+                .filter(incident => incident.strava_id === area.stravaId && incident.OBJECTID)
+                .map(inc => inc.OBJECTID);
+
+              if (incidentObjectIds.length === 0) {
+                console.log(`No incidents found for segment ${area.stravaId}`);
+                return;
+              }
+
+              // Query the jittered layer using objectIds for accurate jittered geometries
+              const jitteredQuery = jitteredIncidentsLayer.createQuery();
+              jitteredQuery.objectIds = incidentObjectIds; // ArcGIS standard way to query by IDs
+              jitteredQuery.outFields = ["*"];
+              jitteredQuery.returnGeometry = true;
+
+              const jitteredResult = await jitteredIncidentsLayer.queryFeatures(jitteredQuery);
+              
+              console.log(`Segment ${area.stravaId} (${area.location}):`);
+              console.log(`  Total incidents: ${incidentObjectIds.length}`);
+              console.log(`  Jittered geometries found: ${jitteredResult.features.length}`);
+
+              // Create circle symbols with light blue outline for each incident
+              jitteredResult.features.forEach((feature) => {
+                if (feature.geometry) {
+                  // Create light blue outline symbol
+                  const incidentSymbol = new SimpleMarkerSymbol({
+                    style: "circle",
+                    size: 14,
+                    color: [135, 206, 250, 0.3], // Light blue fill with transparency
+                    outline: {
+                      color: [0, 191, 255, 1], // Deep sky blue outline
+                      width: 3
+                    }
+                  });
+
+                  const incidentGraphic = new Graphic({
+                    geometry: feature.geometry, // Use jittered geometry from jittered layer
+                    symbol: incidentSymbol
+                  });
+
+                  highlightLayerRef.current.add(incidentGraphic);
+                }
+              });
+            } catch (error) {
+              console.error('Error querying jittered layer for highlights:', error);
+            }
           }
-        } else {
-          console.warn(`No geometry found for strava_id: ${area.stravaId}`);
+
+        // Zoom to the segment with some padding
+        const zoomExtent = segmentFeature.geometry.extent?.expand(2);
+        if (zoomExtent) {
+          await mapView.goTo(zoomExtent, { duration: 500 });
         }
       } else {
-        console.warn(`No strava_id found for location: ${area.location}`);
+        console.warn(`No geometry found for strava_id: ${area.stravaId}`);
       }
 
     } catch (error) {
@@ -224,9 +277,9 @@ export default function MostDangerousAreas({
                 Locations with the highest incident counts and severity scores
                 <span id="safety-dangerous-areas-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
-                    text="Highlights areas within the selected region that have the highest number of safety incidents. Click on a location for a closer view."
+                    text="Highlights areas within the selected region that have the highest number of safety incidents. Click on a location to see the line segment and all associated incidents (shown with light blue outlines)."
                     align="center"
-                    width="w-72"
+                    width="w-80"
                     yOffset="-0.15rem"
                   />
                 </span>

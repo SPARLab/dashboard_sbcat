@@ -23,6 +23,7 @@ function useDebouncedValue<T>(value: T, delayMs: number = 300): T {
 export default function SafetyApp() {
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const [incidentsLayer, setIncidentsLayer] = useState<__esri.FeatureLayer | null>(null);
+  const [jitteredIncidentsLayer, setJitteredIncidentsLayer] = useState<__esri.FeatureLayer | null>(null);
   const [showDisclaimer, setShowDisclaimer] = useState(true);
   
   // Selection hook for polygon selection (same as volume page)
@@ -66,6 +67,10 @@ export default function SafetyApp() {
 
   const handleIncidentsLayerReady = (layer: __esri.FeatureLayer) => {
     setIncidentsLayer(layer);
+  };
+
+  const handleJitteredIncidentsLayerReady = (layer: __esri.FeatureLayer) => {
+    setJitteredIncidentsLayer(layer);
   };
 
   // Preload parties cache when component mounts
@@ -150,6 +155,7 @@ export default function SafetyApp() {
           schoolDistrictFilter={schoolDistrictFilter}
           onMapViewReady={handleMapViewReady}
           onIncidentsLayerReady={handleIncidentsLayerReady}
+          onJitteredIncidentsLayerReady={handleJitteredIncidentsLayerReady}
           onSelectionChange={onSelectionChange}
           selectedAreaName={selectedAreaName}
           selectedGeometry={selectedGeometry as any}
@@ -157,6 +163,7 @@ export default function SafetyApp() {
         <SafetyRightSidebar 
           mapView={mapView}
           incidentsLayer={incidentsLayer}
+          jitteredIncidentsLayer={jitteredIncidentsLayer}
           filters={debouncedFilters}
           selectedGeometry={selectedGeometry as any}
           selectedAreaName={selectedAreaName}

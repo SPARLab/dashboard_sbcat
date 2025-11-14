@@ -23,6 +23,7 @@ interface SafetyMapProps {
   filters: Partial<SafetyFilters>;
   onMapViewReady?: (mapView: __esri.MapView) => void;
   onIncidentsLayerReady?: (layer: __esri.FeatureLayer) => void;
+  onJitteredIncidentsLayerReady?: (layer: __esri.FeatureLayer) => void;
   geographicLevel: string;
   schoolDistrictFilter?: SchoolDistrictFilter;
   onSelectionChange?: (data: { geometry: Polygon | null; areaName?: string | null } | null) => void;
@@ -36,6 +37,7 @@ export default function SafetyMap({
   filters,
   onMapViewReady,
   onIncidentsLayerReady,
+  onJitteredIncidentsLayerReady,
   geographicLevel,
   schoolDistrictFilter,
   onSelectionChange,
@@ -75,8 +77,10 @@ export default function SafetyMap({
     setVolumeLayersCacheKey
   } = useLayerCache();
 
-  // Use safety layers hook for the original layer infrastructure
-  const { incidentsLayer } = useSafetyLayers(
+  // Use safety layers hook for dual-layer infrastructure
+  // - incidentsLayer: Original layer (invisible, for spatial queries)
+  // - jitteredIncidentsLayer: Jittered layer (visible, for user interaction)
+  const { incidentsLayer, jitteredIncidentsLayer } = useSafetyLayers(
     viewReady,
     mapViewRef.current,
     boundaryService.current,
@@ -90,6 +94,13 @@ export default function SafetyMap({
       onIncidentsLayerReady(incidentsLayer);
     }
   }, [incidentsLayer, onIncidentsLayerReady]);
+
+  // Notify parent when jittered incidents layer is ready
+  useEffect(() => {
+    if (jitteredIncidentsLayer && onJitteredIncidentsLayerReady) {
+      onJitteredIncidentsLayerReady(jitteredIncidentsLayer);
+    }
+  }, [jitteredIncidentsLayer, onJitteredIncidentsLayerReady]);
 
   // Handle ArcGIS view ready
   const handleArcgisViewReadyChange = (event: CustomEvent) => {
@@ -297,15 +308,17 @@ export default function SafetyMap({
   useEffect(() => {
     if (!viewReady || !mapViewRef.current) return;
     
-    // All visualizations now use the main incidentsLayer
-    if (!incidentsLayer) return;
+    // DUAL-LAYER: We need BOTH layers
+    // - incidentsLayer: Original (for queries)
+    // - jitteredIncidentsLayer: Jittered (for display)
+    if (!incidentsLayer || !jitteredIncidentsLayer) return;
 
     const updateVisualization = async () => {
 
       try {
         setDataLoading(true);
 
-        // SIMPLIFIED: Only hide weighted layer, keep main layer visible
+        // SIMPLIFIED: Only hide weighted layer, keep jittered layer visible
         
         // Hide old weighted layer (deprecated)
         if (cachedWeightedLayer) {
@@ -319,57 +332,64 @@ export default function SafetyMap({
           if (cachedVolumeLayers.high) cachedVolumeLayers.high.visible = false;
         }
 
-        // SIMPLIFIED: Use only the main incidents layer for all visualizations
-        if (incidentsLayer) {
-          
-          // CRITICAL: Always refresh the renderer to ensure proper display
-          let newRenderer;
-          
-          switch (activeVisualization) {
-            case 'raw-incidents':
-              newRenderer = RawIncidentRenderer.getRenderer('severity', filters as SafetyFilters);
-              break;
-              
-            case 'incident-heatmap':
-              newRenderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
-              break;
-              
-            case 'incident-to-volume-ratio':
-              // For volume-categorized visualization, create layers once and cache them
-              // Layer visibility is controlled separately via the riskFilters effect
-              await WeightedVisualization.createVisualization(
-                mapViewRef.current!, filters, incidentsLayer,
-                cachedWeightedLayer, cachedExtentKey, generateCacheKey,
-                setCachedWeightedLayer, setCachedExtentKey,
-                undefined, // deprecated volumeWeights
-                riskFilters,
-                cachedVolumeLayers,
-                setCachedVolumeLayers,
-                volumeLayersCacheKey,
-                setVolumeLayersCacheKey
-              );
-              return; // Early return for volume-categorized visualization
-              
-            default:
-              console.warn(`Unknown visualization type: ${activeVisualization}`);
-              return;
-          }
-          
-          // Force renderer update
-          incidentsLayer.renderer = newRenderer;
-          
-          // CRITICAL: Force layer refresh to ensure all features are visible
-          incidentsLayer.refresh();
-          
-          // Make sure the main layer is visible for all non-weighted visualizations
-          incidentsLayer.visible = true;
-          
-          // Hide weighted layer if it exists
-          if (cachedWeightedLayer) {
-            cachedWeightedLayer.visible = false;
-          }
-          
+        // DUAL-LAYER: Apply renderers to JITTERED layer (for display)
+        // The original layer stays invisible and is only used for spatial queries
+        console.log(`🎨 Applying ${activeVisualization} renderer to jittered display layer`);
+        
+        // CRITICAL: Always refresh the renderer to ensure proper display
+        let newRenderer;
+        
+        switch (activeVisualization) {
+          case 'raw-incidents':
+            newRenderer = RawIncidentRenderer.getRenderer('severity', filters as SafetyFilters);
+            break;
+            
+          case 'incident-heatmap':
+            newRenderer = IncidentHeatmapRenderer.getRenderer('density', filters as SafetyFilters);
+            break;
+            
+          case 'incident-to-volume-ratio':
+            // For volume-categorized visualization, create layers once and cache them
+            // Layer visibility is controlled separately via the riskFilters effect
+            // NOTE: This still uses incidentsLayer for queries, but creates separate display layers
+            await WeightedVisualization.createVisualization(
+              mapViewRef.current!, filters, incidentsLayer,
+              cachedWeightedLayer, cachedExtentKey, generateCacheKey,
+              setCachedWeightedLayer, setCachedExtentKey,
+              undefined, // deprecated volumeWeights
+              riskFilters,
+              cachedVolumeLayers,
+              setCachedVolumeLayers,
+              volumeLayersCacheKey,
+              setVolumeLayersCacheKey
+            );
+            // Hide the jittered layer for volume visualization (uses its own layers)
+            jitteredIncidentsLayer.visible = false;
+            return; // Early return for volume-categorized visualization
+            
+          default:
+            console.warn(`Unknown visualization type: ${activeVisualization}`);
+            return;
         }
+        
+        // Apply renderer to JITTERED layer (for display)
+        jitteredIncidentsLayer.renderer = newRenderer;
+        
+        // CRITICAL: Force layer refresh to ensure all features are visible
+        jitteredIncidentsLayer.refresh();
+        
+        // Make sure the jittered layer is visible for all non-weighted visualizations
+        jitteredIncidentsLayer.visible = true;
+        
+        // Keep original layer invisible (only for queries)
+        incidentsLayer.visible = false;
+        
+        // Hide weighted layer if it exists
+        if (cachedWeightedLayer) {
+          cachedWeightedLayer.visible = false;
+        }
+        
+        console.log('✅ Visualization applied to jittered layer');
         
         
       } catch (error) {
@@ -383,7 +403,7 @@ export default function SafetyMap({
     updateVisualization();
     // Re-run this effect when the visualization type changes. Filter changes are handled separately.
     // NOTE: riskFilters is intentionally NOT in the dependency array to prevent layer recreation on toggle
-  }, [activeVisualization, incidentsLayer, viewReady]);
+  }, [activeVisualization, incidentsLayer, jitteredIncidentsLayer, viewReady]);
 
   // Update volume category layer visibility when filters change (performance optimized)
   // This effect only toggles layer visibility without recreating layers
