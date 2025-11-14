@@ -25,22 +25,16 @@ export function useSafetyLayers(
         setDataLoading(true);
         setDataError(null);
 
-        console.log('🎯 Creating dual-layer system: Original (for queries) + Jittered (for display)');
-
         // 1. Create the enriched incidents layer (original, for queries)
         // Note: Date filtering is handled client-side via FeatureFilter, so we load all dates
         const enrichedIncidentsLayer = await createEnrichedSafetyIncidentsLayer();
         enrichedIncidentsLayer.visible = false; // Hide original layer - only used for queries
         enrichedIncidentsLayer.title = "Safety Incidents (Query Layer)";
         
-        console.log('✅ Original incidents layer created (invisible, for queries)');
-        
         // 2. Create jittered display layer from the original
         const jitteredLayer = await createJitteredDisplayLayer(enrichedIncidentsLayer, 20);
         jitteredLayer.visible = true; // Show jittered layer
         jitteredLayer.title = "Safety Incidents (Display Layer)";
-        
-        console.log('✅ Jittered display layer created (visible, for user interaction)');
         
         // 3. Initialize the standard layers for data access (parties)
         const layers = SafetyIncidentsDataService.initializeLayers();
@@ -49,8 +43,6 @@ export function useSafetyLayers(
         setIncidentsLayer(enrichedIncidentsLayer); // Original for queries
         setJitteredIncidentsLayer(jitteredLayer); // Jittered for display
         setPartiesLayer(layers.partiesLayer);
-        
-        console.log('✅ Layers stored in state');
 
         // 5. Add boundary layers to map
         const boundaryLayers = boundaryService.getBoundaryLayers();
@@ -59,13 +51,11 @@ export function useSafetyLayers(
         // 6. Add BOTH layers to map (order matters: original first, then jittered on top)
         mapView.map?.add(enrichedIncidentsLayer); // Invisible, for queries
         mapView.map?.add(jitteredLayer); // Visible, for display
-
-        console.log('✅ Dual-layer system ready!');
   
         setDataLoading(false);
 
       } catch (error) {
-        console.error('❌ Error initializing safety layers:', error);
+        console.error('Error initializing safety layers:', error);
         setDataError(error instanceof Error ? error.message : 'Failed to load safety data');
         setDataLoading(false);
       }

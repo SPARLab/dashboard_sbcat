@@ -6,6 +6,7 @@
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import Graphic from "@arcgis/core/Graphic";
 import Point from "@arcgis/core/geometry/Point";
+import { generateIncidentPopupContent } from "../../ui/safety-app/utils/popupContentGenerator";
 
 /**
  * Generates a random jitter offset using a deterministic seed based on incident ID
@@ -40,8 +41,6 @@ export async function createJitteredDisplayLayer(
   maxJitterMeters: number = 20
 ): Promise<FeatureLayer> {
   
-  console.log('🔀 Creating jittered display layer...');
-  
   try {
     // Query all features from the original layer
     const query = originalLayer.createQuery();
@@ -50,7 +49,6 @@ export async function createJitteredDisplayLayer(
     query.returnGeometry = true;
     
     const result = await originalLayer.queryFeatures(query);
-    console.log(`📊 Jittering ${result.features.length} incidents...`);
     
     // Create jittered graphics
     const jitteredGraphics = result.features.map(feature => {
@@ -74,10 +72,20 @@ export async function createJitteredDisplayLayer(
       });
     });
     
-    console.log('✅ Jittered graphics created');
-    
     // Get fields from original layer
     const fields = await originalLayer.when().then(layer => layer.fields);
+    
+    // Create popup template with function (cannot be cloned properly)
+    // Must explicitly define with the function reference
+    // CRITICAL: Close over originalLayer so we can query it for full attributes
+    const popupTemplate = {
+      title: "Safety Incident Details",
+      content: async ({ graphic }: { graphic: __esri.Graphic }) => {
+        // With outFields: ["*"], the graphic should have all attributes
+        // If needed, we can query the original layer for additional data
+        return await generateIncidentPopupContent(graphic.attributes);
+      }
+    };
     
     // Create new client-side FeatureLayer with jittered geometries
     const jitteredLayer = new FeatureLayer({
@@ -88,16 +96,16 @@ export async function createJitteredDisplayLayer(
       geometryType: "point",
       spatialReference: originalLayer.spatialReference,
       renderer: originalLayer.renderer?.clone(),
-      popupTemplate: originalLayer.popupTemplate?.clone(),
+      popupTemplate: popupTemplate, // Use explicitly defined popup template instead of clone
       visible: true,
-      listMode: "hide" // Hide from layer list to avoid confusion
+      listMode: "hide", // Hide from layer list to avoid confusion
+      outFields: ["*"] // CRITICAL: Ensure ALL fields are available for queries/popups
     });
     
-    console.log('✅ Jittered display layer created');
     return jitteredLayer;
     
   } catch (error) {
-    console.error('❌ Error creating jittered display layer:', error);
+    console.error('Error creating jittered display layer:', error);
     throw error;
   }
 }
@@ -112,9 +120,6 @@ export async function updateJitteredLayer(
   whereClause: string = "1=1",
   maxJitterMeters: number = 20
 ): Promise<void> {
-  
-  console.log('🔄 Updating jittered layer with filter:', whereClause);
-  
   try {
     // Query filtered features from original layer
     const query = originalLayer.createQuery();
@@ -123,7 +128,6 @@ export async function updateJitteredLayer(
     query.returnGeometry = true;
     
     const result = await originalLayer.queryFeatures(query);
-    console.log(`📊 Re-jittering ${result.features.length} incidents...`);
     
     // Create jittered graphics
     const jitteredGraphics = result.features.map(feature => {
@@ -160,10 +164,8 @@ export async function updateJitteredLayer(
       });
     });
     
-    console.log('✅ Jittered layer updated');
-    
   } catch (error) {
-    console.error('❌ Error updating jittered layer:', error);
+    console.error('Error updating jittered layer:', error);
     throw error;
   }
 }

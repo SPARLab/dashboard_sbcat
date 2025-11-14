@@ -162,8 +162,15 @@ export class MapClickHandler {
   ): Promise<void> {
     const attributes = graphic.attributes;
     
-    // Skip manual popup for Raw Safety Incidents layer - it has its own popupTemplate
-    if (graphic.layer?.title === "Raw Safety Incidents (Test)" || graphic.layer?.title === "Raw Safety Incidents") {
+    // For layers that have their own popupTemplate, let ArcGIS handle the popup automatically
+    // These layers have async popupTemplates that fetch enriched data
+    if (
+      graphic.layer?.title === "Raw Safety Incidents (Test)" || 
+      graphic.layer?.title === "Raw Safety Incidents" ||
+      graphic.layer?.title === "Safety Incidents (Display)" ||
+      graphic.layer?.title === "Safety Incidents (Display Layer)"
+    ) {
+      // Layer has its own popupTemplate - ArcGIS will handle it automatically
       return;
     }
 
