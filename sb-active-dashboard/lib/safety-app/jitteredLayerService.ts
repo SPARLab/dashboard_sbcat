@@ -62,8 +62,8 @@ export async function createJitteredDisplayLayer(
       
       // Create new jittered point
       const jitteredGeometry = new Point({
-        longitude: originalGeometry.longitude + offsetX,
-        latitude: originalGeometry.latitude + offsetY,
+        longitude: (originalGeometry.longitude ?? 0) + offsetX,
+        latitude: (originalGeometry.latitude ?? 0) + offsetY,
         spatialReference: originalGeometry.spatialReference
       });
       
@@ -133,8 +133,8 @@ export async function updateJitteredLayer(
       const { offsetX, offsetY } = generateJitterOffset(incidentId, maxJitterMeters);
       
       const jitteredGeometry = new Point({
-        longitude: originalGeometry.longitude + offsetX,
-        latitude: originalGeometry.latitude + offsetY,
+        longitude: (originalGeometry.longitude ?? 0) + offsetX,
+        latitude: (originalGeometry.latitude ?? 0) + offsetY,
         spatialReference: originalGeometry.spatialReference
       });
       

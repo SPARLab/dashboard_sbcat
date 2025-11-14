@@ -338,6 +338,7 @@ export async function createImprovedSafetyLayers(): Promise<GroupLayer> {
 export class SafetyLayerService {
   private safetyLayerView: __esri.FeatureLayerView | null = null;
   private mapView: __esri.MapView | null = null;
+  private currentWhereClause: string = "1=1";
 
   /**
    * Initialize the service with the map view and wait for the layer view to be ready
@@ -356,6 +357,14 @@ export class SafetyLayerService {
    */
   isReady(): boolean {
     return this.safetyLayerView !== null;
+  }
+
+  /**
+   * Get the current whereClause being used for filtering
+   * This is useful for syncing other layers (e.g., jittered display layer)
+   */
+  getCurrentWhereClause(): string {
+    return this.currentWhereClause;
   }
 
   /**
@@ -574,6 +583,8 @@ export class SafetyLayerService {
     // Combine all where clauses
     const finalWhereClause = whereClauses.length > 0 ? whereClauses.join(' AND ') : "1=1";
 
+    // Store the current where clause for external access
+    this.currentWhereClause = finalWhereClause;
 
     // Apply the comprehensive FeatureFilter
     const featureFilter = new FeatureFilter({

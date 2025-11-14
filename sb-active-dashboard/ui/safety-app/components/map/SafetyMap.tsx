@@ -194,7 +194,7 @@ export default function SafetyMap({
       return;
     }
 
-    const applyFilters = () => {
+    const applyFilters = async () => {
       
       // Apply filter to the main incidents layer (for heatmaps)
       safetyLayerService.applyAdditionalFilters({
@@ -206,6 +206,15 @@ export default function SafetyMap({
         weekdayFilter: filters.weekdayFilter,
         ebikeMode: filters.ebikeMode,
       });
+
+      // CRITICAL: Update jittered layer to match the filtered data
+      if (incidentsLayer && jitteredIncidentsLayer) {
+        const whereClause = safetyLayerService.getCurrentWhereClause();
+        console.log('🔄 Syncing jittered layer with filters:', whereClause);
+        
+        const { updateJitteredLayer } = await import('../../../../lib/safety-app/jitteredLayerService');
+        await updateJitteredLayer(incidentsLayer, jitteredIncidentsLayer, whereClause, 20);
+      }
 
       // Raw incidents now use the same incidentsLayer with different renderer,
       // so they get filtered automatically by the SafetyLayerService above
@@ -219,7 +228,7 @@ export default function SafetyMap({
         incidentsLayer.refresh();
       }, 200);
     }
-  }, [filters, safetyLayerService, serviceReady, incidentsLayer]);
+  }, [filters, safetyLayerService, serviceReady, incidentsLayer, jitteredIncidentsLayer]);
 
   // Separate effect for highway filtering - only runs when highway filter or geometry changes
   useEffect(() => {
@@ -275,6 +284,14 @@ export default function SafetyMap({
             incidentsLayer.definitionExpression = definitionExpression;
             const totalTime = (performance.now() - startTime).toFixed(0);
             console.log(`🛣️ [NewSafetyMap] ✅ Applied highway filter in ${totalTime}ms - excluded ${highwayIncidentIds.length} highway incidents`);
+            
+            // CRITICAL: Update jittered layer to match highway filter
+            if (jitteredIncidentsLayer && safetyLayerService) {
+              const whereClause = safetyLayerService.getCurrentWhereClause();
+              console.log('🔄 Syncing jittered layer with highway filter');
+              const { updateJitteredLayer } = await import('../../../../lib/safety-app/jitteredLayerService');
+              await updateJitteredLayer(incidentsLayer, jitteredIncidentsLayer, whereClause, 20);
+            }
           } else {
             // No highway incidents found - show all incidents
             incidentsLayer.definitionExpression = '';
@@ -288,6 +305,14 @@ export default function SafetyMap({
         if (incidentsLayer.definitionExpression && incidentsLayer.definitionExpression.includes('id NOT IN (')) {
           incidentsLayer.definitionExpression = '';
           console.log('🛣️ [NewSafetyMap] Cleared highway exclusion filter from map layer');
+          
+          // CRITICAL: Update jittered layer to show all incidents again
+          if (jitteredIncidentsLayer && safetyLayerService) {
+            const whereClause = safetyLayerService.getCurrentWhereClause();
+            console.log('🔄 Syncing jittered layer after clearing highway filter');
+            const { updateJitteredLayer } = await import('../../../../lib/safety-app/jitteredLayerService');
+            await updateJitteredLayer(incidentsLayer, jitteredIncidentsLayer, whereClause, 20);
+          }
         }
       }
     };
@@ -302,7 +327,7 @@ export default function SafetyMap({
         clearTimeout(highwayFilterTimeoutRef.current);
       }
     };
-  }, [filters.excludeHighwayIncidents, selectedGeometry, incidentsLayer, serviceReady]);
+  }, [filters.excludeHighwayIncidents, selectedGeometry, incidentsLayer, jitteredIncidentsLayer, safetyLayerService, serviceReady]);
 
   // SIMPLIFIED: Handle visualization changes using single layer approach
   useEffect(() => {
