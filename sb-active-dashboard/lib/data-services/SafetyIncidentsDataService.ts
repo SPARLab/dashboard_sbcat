@@ -780,7 +780,13 @@ export class SafetyIncidentsDataService {
       inc.maxSeverity === 'Unknown' || inc.maxSeverity === '' || !inc.maxSeverity
     ).length;
     
-    // Near misses are "No Injury" incidents from BikeMaps.org
+    // Separate "No Injury" (actual collisions) from "Near Miss" (crowd-sourced close calls)
+    // No Injury: Actual collisions with no injury (typically from SWITRS)
+    const noInjuryIncidents = incidents.filter(inc => 
+      inc.data_source === 'SWITRS' && inc.maxSeverity === 'No Injury'
+    ).length;
+    
+    // Near Miss: Crowd-sourced near misses from BikeMaps.org
     const nearMissIncidents = incidents.filter(inc => 
       inc.data_source === 'BikeMaps.org' && inc.maxSeverity === 'No Injury'
     ).length;
@@ -809,6 +815,7 @@ export class SafetyIncidentsDataService {
       fatalIncidents,
       severeInjuryIncidents,
       injuryIncidents,
+      noInjuryIncidents,
       nearMissIncidents,
       unknownIncidents,
       avgSeverityScore,
@@ -883,6 +890,7 @@ export class SafetyIncidentsDataService {
       fatalIncidents: 0,
       severeInjuryIncidents: 0,
       injuryIncidents: 0,
+      noInjuryIncidents: 0,
       nearMissIncidents: 0,
       unknownIncidents: 0,
       avgSeverityScore: 0,

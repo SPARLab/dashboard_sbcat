@@ -83,7 +83,7 @@ export class SafetyChartDataService {
     const incidents = result.data;
     
     // Updated categories to match UI expectations
-    const categories = ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'];
+    const categories = ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Near Miss', 'Unknown'];
     
     const bikeIncidents = incidents.filter(inc => inc.bicyclist_involved === 1);
     const pedIncidents = incidents.filter(inc => inc.pedestrian_involved === 1);
@@ -98,7 +98,15 @@ export class SafetyChartDataService {
       } else if (severity === 'Injury') {
         count = incidentList.filter(inc => inc.maxSeverity === 'Injury').length;
       } else if (severity === 'No Injury') {
-        count = incidentList.filter(inc => inc.maxSeverity === 'No Injury').length;
+        // No Injury: Actual collisions with no injury (typically from SWITRS)
+        count = incidentList.filter(inc => 
+          inc.maxSeverity === 'No Injury' && inc.data_source === 'SWITRS'
+        ).length;
+      } else if (severity === 'Near Miss') {
+        // Near Miss: Crowd-sourced near misses from BikeMaps.org
+        count = incidentList.filter(inc => 
+          inc.maxSeverity === 'No Injury' && inc.data_source === 'BikeMaps.org'
+        ).length;
       } else if (severity === 'Unknown') {
         // Count incidents with no severity or from BikeMaps without severity
         count = incidentList.filter(inc => 

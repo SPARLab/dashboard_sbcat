@@ -35,7 +35,7 @@ export default function SafetyApp() {
     showBicyclist: true,
     roadUser: ['pedestrian', 'bicyclist'],
     dataSource: ['SWITRS', 'BikeMaps.org'],
-    severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'],
+    severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Near Miss', 'Unknown'],
     conflictType: ['Bike vs vehicle', 'Bike vs other', 'Bike vs bike', 'Bike vs pedestrian', 'Bike vs infrastructure', 'Pedestrian vs vehicle', 'Pedestrian vs other'],
     ebikeMode: false, // Default to regular bike mode
     dateRange: {

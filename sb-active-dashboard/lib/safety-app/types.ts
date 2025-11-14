@@ -62,7 +62,7 @@ export interface SafetyFilters {
   };
   dataSource: ('SWITRS' | 'BikeMaps.org')[];
   conflictType: string[];
-  severityTypes: ('Fatality' | 'Severe Injury' | 'Injury' | 'No Injury' | 'Unknown')[];
+  severityTypes: ('Fatality' | 'Severe Injury' | 'Injury' | 'No Injury' | 'Near Miss' | 'Unknown')[];
   roadUser: ('pedestrian' | 'bicyclist')[];
   showPedestrian: boolean;
   showBicyclist: boolean;
@@ -86,7 +86,8 @@ export interface SafetySummaryData {
   fatalIncidents: number;
   severeInjuryIncidents: number; // Separate field for Severe Injury
   injuryIncidents: number; // Now only regular Injury (not including Severe Injury)
-  nearMissIncidents: number;
+  noInjuryIncidents: number; // Actual collisions with no injury (typically from SWITRS)
+  nearMissIncidents: number; // Crowd-sourced near misses (from BikeMaps.org)
   unknownIncidents: number;
   avgSeverityScore: number;
   incidentsPerDay: number;

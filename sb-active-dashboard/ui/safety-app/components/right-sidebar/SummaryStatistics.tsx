@@ -98,8 +98,12 @@ export default function SummaryStatistics({
                         {summaryData.injuryIncidents.toLocaleString()}
                       </span>
                     </div>
-                    <div id="safety-summary-near-misses" className="bg-gray-100 flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">
-                      <span id="safety-summary-near-misses-label" className="text-gray-900">Near Misses</span>
+                    <div id="safety-summary-no-injury" className="bg-gray-100 flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">
+                      <span id="safety-summary-no-injury-label" className="text-gray-900">No Injury</span>
+                      <span id="safety-summary-no-injury-value" className="text-gray-900">{summaryData.noInjuryIncidents.toLocaleString()}</span>
+                    </div>
+                    <div id="safety-summary-near-misses" className="bg-white flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">
+                      <span id="safety-summary-near-misses-label" className="text-gray-900">Near Miss</span>
                       <span id="safety-summary-near-misses-value" className="text-gray-900">{summaryData.nearMissIncidents.toLocaleString()}</span>
                     </div>
                     <div id="safety-summary-unknown" className="bg-white flex justify-between items-center pl-4 pr-1 py-0.5 rounded-md text-sm">

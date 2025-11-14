@@ -404,7 +404,7 @@ export class SafetyLayerService {
    */
   applyAdditionalFilters(filters: {
     dataSources: ('SWITRS' | 'BikeMaps.org')[];
-    severityTypes?: ('Fatal' | 'Severe Injury' | 'Other Injury' | 'Near-miss')[];
+    severityTypes?: ('Fatality' | 'Severe Injury' | 'Injury' | 'No Injury' | 'Near Miss' | 'Unknown')[];
     conflictTypes?: string[];
     dateRange?: { start: Date; end: Date };
     timeOfDay?: {
@@ -450,9 +450,22 @@ export class SafetyLayerService {
         // If no severity types selected, show nothing
 
         whereClauses.push('1=0');
-      } else if (filters.severityTypes.length < 5) {
-        // Use severity values directly - no special handling needed
-        const severityConditions = filters.severityTypes.map(type => `maxSeverity = '${type}'`);
+      } else if (filters.severityTypes.length < 6) {
+        // Build severity conditions with special handling for "No Injury" vs "Near Miss"
+        const severityConditions: string[] = [];
+        
+        for (const type of filters.severityTypes) {
+          if (type === 'Near Miss') {
+            // Near Miss = maxSeverity='No Injury' AND data_source='BikeMaps.org'
+            severityConditions.push(`(maxSeverity = 'No Injury' AND data_source = 'BikeMaps.org')`);
+          } else if (type === 'No Injury') {
+            // No Injury = maxSeverity='No Injury' AND data_source='SWITRS'
+            severityConditions.push(`(maxSeverity = 'No Injury' AND data_source = 'SWITRS')`);
+          } else {
+            // All other severity types can be matched directly
+            severityConditions.push(`maxSeverity = '${type}'`);
+          }
+        }
         
         if (severityConditions.length > 0) {
           const severityClause = `(${severityConditions.join(' OR ')})`;

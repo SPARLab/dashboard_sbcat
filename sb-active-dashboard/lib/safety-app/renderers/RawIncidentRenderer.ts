@@ -11,10 +11,26 @@ import { SafetyFilters } from "../types";
 export class RawIncidentRenderer {
   /**
    * Create a renderer for raw safety incidents based on severity
+   * Uses Arcade expression to differentiate between "No Injury" (SWITRS) and "Near Miss" (BikeMaps.org)
    */
   static createSeverityRenderer(): UniqueValueRenderer {
     return new UniqueValueRenderer({
-      field: "maxSeverity", // This field is computed from joined parties data
+      // Use Arcade to differentiate "No Injury" from "Near Miss" based on data source
+      valueExpression: `
+        var severity = $feature.maxSeverity;
+        var source = $feature.data_source;
+        
+        // If severity is "No Injury", distinguish by data source
+        if (severity == "No Injury") {
+          if (source == "BikeMaps.org") {
+            return "Near Miss";
+          } else {
+            return "No Injury";
+          }
+        }
+        
+        return severity;
+      `,
       defaultSymbol: new SimpleMarkerSymbol({
         style: "circle",
         color: [153, 153, 153, 1], // Gray (#999999) for unknown severity
@@ -59,7 +75,17 @@ export class RawIncidentRenderer {
           value: "No Injury",
           symbol: new SimpleMarkerSymbol({
             style: "circle",
-            color: [0, 114, 178, 1], // Blue (#0072B2) for near miss
+            color: [86, 180, 233, 1], // Sky Blue (#56B4E9) for no injury (actual collision)
+            size: 8,
+            outline: { color: [255, 255, 255, 1], width: 1 }
+          }),
+          label: "No Injury"
+        },
+        {
+          value: "Near Miss",
+          symbol: new SimpleMarkerSymbol({
+            style: "circle",
+            color: [0, 114, 178, 1], // Blue (#0072B2) for near miss (reported close call)
             size: 8,
             outline: { color: [255, 255, 255, 1], width: 1 }
           }),

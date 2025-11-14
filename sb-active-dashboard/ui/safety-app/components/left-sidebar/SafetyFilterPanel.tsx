@@ -181,11 +181,18 @@ function SeverityOfIncidentSection({
             onChange={() => toggleSeverity('Injury')}
           />
         </div>
+        <div id="safety-severity-no-injury-container">
+          <SeverityToggle 
+            label="No Injury" 
+            checked={currentSeverityTypes.includes('No Injury')}
+            onChange={() => toggleSeverity('No Injury')}
+          />
+        </div>
         <div id="safety-severity-near-miss-container">
           <SeverityToggle 
             label="Near Miss" 
-            checked={currentSeverityTypes.includes('No Injury')}
-            onChange={() => toggleSeverity('No Injury')}
+            checked={currentSeverityTypes.includes('Near Miss')}
+            onChange={() => toggleSeverity('Near Miss')}
           />
         </div>
         <div id="safety-severity-unknown-container">
@@ -412,7 +419,7 @@ function ConflictTypeSection({
         showPedestrian: true,
         showBicyclist: true,
         // Also restore severity types and data sources to defaults
-        severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'],
+        severityTypes: ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Near Miss', 'Unknown'],
         dataSource: ['SWITRS', 'BikeMaps.org'],
         // Reset time filters to show all times and days
         weekdayFilter: {

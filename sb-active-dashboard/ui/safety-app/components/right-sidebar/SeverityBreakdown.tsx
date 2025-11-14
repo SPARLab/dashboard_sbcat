@@ -67,7 +67,13 @@ export default function SeverityBreakdown({
         const severityMap = new Map<string, { total: number, bike: number, ped: number }>();
         
         spatialResult.incidents.forEach(incident => {
-          const severity = incident.severity || 'Unknown';
+          // Determine severity, differentiating "No Injury" from "Near Miss" by data source
+          let severity = incident.severity || 'Unknown';
+          if (severity === 'No Injury') {
+            // Check data_source to differentiate between actual collision and near miss
+            severity = incident.data_source === 'BikeMaps.org' ? 'Near Miss' : 'No Injury';
+          }
+          
           const isBike = incident.parties?.some(p => p.party_type?.toLowerCase().includes('bike')) || false;
           const isPed = incident.parties?.some(p => p.party_type?.toLowerCase().includes('ped')) || false;
           
@@ -82,7 +88,7 @@ export default function SeverityBreakdown({
         });
 
         // Convert to the expected format
-        const categories = ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Unknown'];
+        const categories = ['Fatality', 'Severe Injury', 'Injury', 'No Injury', 'Near Miss', 'Unknown'];
         const totalByCategory = categories.map(category => severityMap.get(category)?.total || 0);
         const bikeData = categories.map(category => severityMap.get(category)?.bike || 0);
         const pedData = categories.map(category => severityMap.get(category)?.ped || 0);
@@ -138,7 +144,8 @@ export default function SeverityBreakdown({
       '#000000', // Black - Fatality
       '#D55E00', // Vermilion - Severe Injury
       '#E69F00', // Orange - Injury
-      '#0072B2', // Blue - No Injury
+      '#56B4E9', // Sky Blue - No Injury (collision with no injury)
+      '#0072B2', // Blue - Near Miss (reported close call)
       '#999999'  // Gray - Unknown
     ];
 
@@ -285,7 +292,7 @@ export default function SeverityBreakdown({
                 Safety incidents are distributed by severity level for the selected area
                 <span id="safety-severity-breakdown-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
-                    text="Bar chart showing the distribution of safety incidents by severity level: Fatality (most severe), Severe Injury, Injury, No Injury, and Unknown. The colors range from dark (most severe) to light (least severe)"
+                    text="Bar chart showing the distribution of safety incidents by severity level: Fatality (most severe), Severe Injury, Injury, No Injury, Near Miss, and Unknown. The colors range from dark (most severe) to light (least severe)"
                     align="center"
                     width="w-80"
                     yOffset="-0.15rem"

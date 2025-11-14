@@ -206,8 +206,8 @@ export async function generateIncidentPopupContent(incidentData: IncidentPopupDa
   // Severity information
   const severity = enrichedIncidentData.severity || enrichedIncidentData.maxSeverity;
   if (severity) {
-    const severityColor = getSeverityColor(severity);
-    const displayLabel = getSeverityDisplayLabel(severity);
+    const severityColor = getSeverityColor(severity, enrichedIncidentData.data_source);
+    const displayLabel = getSeverityDisplayLabel(severity, enrichedIncidentData.data_source);
     popupContent += `<p style="margin: 0 !important;"><strong>Severity:</strong> <span style="color: ${severityColor}; font-weight: bold;">${displayLabel}</span></p>`;
   }
 
@@ -260,8 +260,8 @@ export async function generateIncidentPopupContent(incidentData: IncidentPopupDa
       }
       
       if (party.injury_severity) {
-        const injuryColor = getSeverityColor(party.injury_severity);
-        const displayLabel = getSeverityDisplayLabel(party.injury_severity);
+        const injuryColor = getSeverityColor(party.injury_severity, enrichedIncidentData.data_source);
+        const displayLabel = getSeverityDisplayLabel(party.injury_severity, enrichedIncidentData.data_source);
         popupContent += ` - <span style="color: ${injuryColor};">${displayLabel}</span>`;
       }
       
@@ -300,7 +300,7 @@ export async function generateRawIncidentPopupContent(
   return await generateIncidentPopupContent(attributes);
 }
 
-function getSeverityColor(severity: string): string {
+function getSeverityColor(severity: string, dataSource?: string): string {
   const normalizedSeverity = severity.toLowerCase();
   
   if (normalizedSeverity === 'fatality' || normalizedSeverity === 'fatal') {
@@ -310,17 +310,27 @@ function getSeverityColor(severity: string): string {
   } else if (normalizedSeverity === 'injury' || normalizedSeverity === 'other visible injury') {
     return '#E69F00'; // Orange for injury
   } else if (normalizedSeverity === 'no injury') {
-    return '#0072B2'; // Blue for near miss
+    // Differentiate between "No Injury" (SWITRS) and "Near Miss" (BikeMaps.org)
+    if (dataSource === 'BikeMaps.org') {
+      return '#0072B2'; // Blue for near miss (reported close call)
+    } else {
+      return '#56B4E9'; // Sky Blue for no injury (actual collision)
+    }
   } else {
     return '#999999'; // Gray for unknown
   }
 }
 
-function getSeverityDisplayLabel(severity: string): string {
+function getSeverityDisplayLabel(severity: string, dataSource?: string): string {
   const normalizedSeverity = severity.toLowerCase();
   
   if (normalizedSeverity === 'no injury') {
-    return 'Near Miss';
+    // Differentiate between "No Injury" (SWITRS) and "Near Miss" (BikeMaps.org)
+    if (dataSource === 'BikeMaps.org') {
+      return 'Near Miss';
+    } else {
+      return 'No Injury';
+    }
   }
   return severity; // Return original label for all other cases
 }

@@ -139,6 +139,10 @@ export default function SafetyMapArea({
                   <div id="safety-legend-injury-dot" className="w-3 h-3 bg-safety-injury rounded-full"></div>
                   <span id="safety-legend-injury-label" className="text-xs text-gray-700">Injury</span>
                 </div>
+                <div id="safety-legend-no-injury" className="flex items-center gap-2">
+                  <div id="safety-legend-no-injury-dot" className="w-3 h-3 bg-safety-no-injury rounded-full"></div>
+                  <span id="safety-legend-no-injury-label" className="text-xs text-gray-700">No Injury</span>
+                </div>
                 <div id="safety-legend-near-miss" className="flex items-center gap-2">
                   <div id="safety-legend-near-miss-dot" className="w-3 h-3 bg-safety-near-miss rounded-full"></div>
                   <span id="safety-legend-near-miss-label" className="text-xs text-gray-700">Near Miss</span>

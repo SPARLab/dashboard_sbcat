@@ -11,11 +11,13 @@ module.exports = {
     'bg-safety-fatality',
     'bg-safety-severe-injury', 
     'bg-safety-injury',
+    'bg-safety-no-injury',
     'bg-safety-near-miss',
     'bg-safety-unknown',
     'text-safety-fatality',
     'text-safety-severe-injury',
-    'text-safety-injury', 
+    'text-safety-injury',
+    'text-safety-no-injury', 
     'text-safety-near-miss',
     'text-safety-unknown',
     // Conflict colors (8 distinct Okabe-Ito colors)
@@ -47,7 +49,8 @@ module.exports = {
           fatality: '#000000',      // Black - Fatality
           'severe-injury': '#D55E00', // Vermilion - Severe Injury  
           injury: '#E69F00',        // Orange - Injury
-          'near-miss': '#0072B2',   // Blue - Near Miss (No Injury)
+          'no-injury': '#56B4E9',   // Sky Blue - No Injury (collision with no injury)
+          'near-miss': '#0072B2',   // Blue - Near Miss (crowd-sourced close call)
           unknown: '#999999',       // Gray - Unknown
         },
         conflict: {
