@@ -172,14 +172,22 @@ export default function MostDangerousAreas({
         // Add halo first (so it appears behind)
         const haloGraphic = new Graphic({
           geometry: segmentFeature.geometry,
-          symbol: haloSymbol
+          symbol: haloSymbol,
+          attributes: {
+            strava_id: area.stravaId,
+            id: area.stravaId
+          }
         });
         highlightLayerRef.current.add(haloGraphic);
 
-        // Add main line on top
+        // Add main line on top with strava_id attribute for click detection
         const lineGraphic = new Graphic({
           geometry: segmentFeature.geometry,
-          symbol: lineSymbol
+          symbol: lineSymbol,
+          attributes: {
+            strava_id: area.stravaId,
+            id: area.stravaId
+          }
         });
         highlightLayerRef.current.add(lineGraphic);
 
@@ -187,26 +195,27 @@ export default function MostDangerousAreas({
           // Query the JITTERED layer to get jittered geometries for display
           if (jitteredIncidentsLayer && result?.incidents) {
             try {
-              // Get incident OBJECTIDs from the query result
-              const incidentObjectIds = result.incidents
-                .filter(incident => incident.strava_id === area.stravaId && incident.OBJECTID)
-                .map(inc => inc.OBJECTID);
+              // Get incident IDs (not OBJECTIDs) from the query result
+              const incidentIds = result.incidents
+                .filter(incident => incident.strava_id === area.stravaId && incident.id)
+                .map(inc => inc.id);
 
-              if (incidentObjectIds.length === 0) {
+              if (incidentIds.length === 0) {
                 console.log(`No incidents found for segment ${area.stravaId}`);
                 return;
               }
 
-              // Query the jittered layer using objectIds for accurate jittered geometries
+              // Query the jittered layer using incident IDs via WHERE clause
+              // (Client-side jittered layer has different OBJECTIDs than original layer)
               const jitteredQuery = jitteredIncidentsLayer.createQuery();
-              jitteredQuery.objectIds = incidentObjectIds; // ArcGIS standard way to query by IDs
+              jitteredQuery.where = `id IN (${incidentIds.join(',')})`; // Use id field, not OBJECTID
               jitteredQuery.outFields = ["*"];
               jitteredQuery.returnGeometry = true;
 
               const jitteredResult = await jitteredIncidentsLayer.queryFeatures(jitteredQuery);
               
               console.log(`Segment ${area.stravaId} (${area.location}):`);
-              console.log(`  Total incidents: ${incidentObjectIds.length}`);
+              console.log(`  Total incidents: ${incidentIds.length}`);
               console.log(`  Jittered geometries found: ${jitteredResult.features.length}`);
 
               // Create circle symbols with light blue outline for each incident

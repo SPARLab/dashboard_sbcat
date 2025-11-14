@@ -547,6 +547,83 @@ export default function SafetyMap({
   // No need for manual click handlers - ArcGIS handles this automatically
   // This approach is more reliable and follows the same pattern as the volume page
 
+  // Set up Strava segment click handling for highlighting
+  useEffect(() => {
+    if (!viewReady || !mapViewRef.current || !incidentsLayer || !jitteredIncidentsLayer) return;
+
+    const setupStravaClickHandler = async () => {
+      const { StravaSegmentHighlightService } = await import('../../../../lib/safety-app/StravaSegmentHighlightService');
+      const highlightService = new StravaSegmentHighlightService();
+      highlightService.initialize(mapViewRef.current!);
+
+      // Add click event listener
+      const clickHandle = mapViewRef.current!.on('click', async (event) => {
+        try {
+          // Hit test to see what was clicked
+          const response = await mapViewRef.current!.hitTest(event);
+          
+          if (response.results.length > 0) {
+            // Check if we clicked on a Strava segment (line geometry with id or strava_id)
+            const stravaHit = response.results.find((result: any) =>
+              result.type === 'graphic' &&
+              result.graphic && 
+              result.graphic.geometry?.type === 'polyline' &&
+              (result.graphic.attributes?.id || result.graphic.attributes?.strava_id)
+            );
+
+            if (stravaHit && stravaHit.type === 'graphic') {
+              const stravaId = stravaHit.graphic.attributes.id || 
+                              stravaHit.graphic.attributes.strava_id;
+              
+              if (stravaId) {
+                console.log(`🔵 Clicked on Strava segment ${stravaId}. Highlighting incidents...`);
+                console.log('  Segment graphic:', stravaHit.graphic);
+                console.log('  Attributes:', stravaHit.graphic.attributes);
+                
+                await highlightService.highlightSegmentAndIncidents(
+                  stravaId, 
+                  incidentsLayer,
+                  jitteredIncidentsLayer
+                );
+                event.stopPropagation();
+              }
+            } else {
+              // If clicked elsewhere (not on a segment), clear highlights
+              const clickedOnIncident = response.results.some((result: any) =>
+                result.type === 'graphic' &&
+                result.graphic &&
+                result.graphic.geometry?.type === 'point'
+              );
+              
+              // Only clear highlights if we didn't click on an incident
+              if (!clickedOnIncident) {
+                console.log('🔵 Clearing Strava segment highlights');
+                highlightService.clearHighlights();
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error handling Strava segment click:', error);
+        }
+      });
+
+      // Cleanup on unmount
+      return () => {
+        clickHandle.remove();
+        highlightService.destroy();
+      };
+    };
+
+    let cleanup: (() => void) | undefined;
+    setupStravaClickHandler().then(cleanupFn => {
+      cleanup = cleanupFn;
+    });
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [viewReady, incidentsLayer, jitteredIncidentsLayer]);
+
   // Handle selection changes
   useEffect(() => {
     if (!onSelectionChange) return;

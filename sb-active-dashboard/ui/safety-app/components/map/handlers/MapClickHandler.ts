@@ -4,17 +4,25 @@ import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import { SafetyIncidentsDataService } from "../../../../../lib/data-services/SafetyIncidentsDataService";
 import { SafetyFilters, SafetyVisualizationType } from "../../../../../lib/safety-app/types";
 import { generateIncidentPopupContent } from "../../../utils/popupContentGenerator";
+import { StravaSegmentHighlightService } from "../../../../../lib/safety-app/StravaSegmentHighlightService";
 
 export class MapClickHandler {
   private static lastClickTime = 0;
   private static readonly CLICK_DEBOUNCE_MS = 300; // Prevent rapid clicks
+  private static highlightService: StravaSegmentHighlightService | null = null;
   
   static setupClickHandler(
     mapView: __esri.MapView,
     incidentsLayer: FeatureLayer | null,
+    jitteredIncidentsLayer: FeatureLayer | null,
     filters: Partial<SafetyFilters>,
     activeVisualization: SafetyVisualizationType
   ): __esri.Handle {
+    // Initialize highlight service if not already done
+    if (!this.highlightService) {
+      this.highlightService = new StravaSegmentHighlightService();
+      this.highlightService.initialize(mapView);
+    }
     const handleMapClick = async (event: any) => {
       try {
         // Debounce rapid clicks to prevent multiple requests
@@ -28,12 +36,25 @@ export class MapClickHandler {
         const response = await mapView.hitTest(event);
         
         let graphicHit = null;
+        let stravaSegmentHit = null;
         
         if (response.results.length > 0) {
+          // Check if we clicked on a Strava segment (line geometry)
+          const stravaHits = response.results.filter((result: any) =>
+            result.graphic && 
+            result.graphic.geometry?.type === 'polyline' &&
+            (result.graphic.attributes?.id || result.graphic.attributes?.strava_id)
+          );
+
+          if (stravaHits.length > 0) {
+            stravaSegmentHit = stravaHits[0];
+          }
+
           // Check if we clicked on an incident feature
           const graphicHits = response.results.filter((result: any) =>
             result.graphic && (
               result.graphic.layer === incidentsLayer ||
+              result.graphic.layer === jitteredIncidentsLayer ||
               result.graphic.layer?.title === "Weighted Safety Incidents" ||
               result.graphic.layer?.title === "Raw Safety Incidents (Test)"
             )
@@ -44,7 +65,32 @@ export class MapClickHandler {
           }
         }
 
-        // For heatmap visualizations, if no direct hit, query the layer at the click point
+        // Priority 1: Handle Strava segment click
+        if (stravaSegmentHit && incidentsLayer && jitteredIncidentsLayer) {
+          const stravaId = stravaSegmentHit.graphic.attributes.id || 
+                          stravaSegmentHit.graphic.attributes.strava_id;
+          
+          if (stravaId && this.highlightService) {
+            console.log(`🔵 Clicked on Strava segment: ${stravaId}`);
+            await this.highlightService.highlightSegmentAndIncidents(
+              stravaId, 
+              incidentsLayer,
+              jitteredIncidentsLayer
+            );
+            event.stopPropagation();
+            return;
+          }
+        }
+
+        // Priority 2: Handle incident click
+        if (graphicHit) {
+          await MapClickHandler.showIncidentPopup(mapView, graphicHit.graphic, event.mapPoint, filters);
+          // Stop event propagation to prevent boundary selection changes
+          event.stopPropagation();
+          return; // Early return to prevent further processing
+        }
+
+        // Priority 3: For heatmap visualizations, if no direct hit, query the layer at the click point
         if (!graphicHit && (activeVisualization === 'incident-heatmap' || activeVisualization === 'incident-to-volume-ratio')) {
           const currentLayer = activeVisualization === 'incident-to-volume-ratio' 
             ? mapView.map.layers.find((layer: any) => layer.title === "Weighted Safety Incidents")
@@ -52,17 +98,19 @@ export class MapClickHandler {
             
           if (currentLayer) {
             graphicHit = await MapClickHandler.queryLayerAtPoint(currentLayer as FeatureLayer, event.mapPoint);
+            
+            if (graphicHit) {
+              await MapClickHandler.showIncidentPopup(mapView, graphicHit.graphic, event.mapPoint, filters);
+              event.stopPropagation();
+              return;
+            }
           }
         }
 
-        if (graphicHit) {
-          await MapClickHandler.showIncidentPopup(mapView, graphicHit.graphic, event.mapPoint, filters);
-          // Stop event propagation to prevent boundary selection changes
-          event.stopPropagation();
-          return; // Early return to prevent further processing
-        } else {
-          // Close popup if clicking somewhere else
-          MapClickHandler.closePopup(mapView);
+        // If nothing was clicked, close popup and clear highlights
+        MapClickHandler.closePopup(mapView);
+        if (this.highlightService) {
+          this.highlightService.clearHighlights();
         }
       } catch (error) {
         console.error('Error handling map click:', error);
@@ -193,6 +241,16 @@ export class MapClickHandler {
   private static closePopup(mapView: __esri.MapView): void {
     if (mapView.popup && typeof mapView.popup.close === 'function') {
       mapView.popup.close();
+    }
+  }
+
+  /**
+   * Cleanup method to destroy the highlight service
+   */
+  static cleanup(): void {
+    if (this.highlightService) {
+      this.highlightService.destroy();
+      this.highlightService = null;
     }
   }
 }
