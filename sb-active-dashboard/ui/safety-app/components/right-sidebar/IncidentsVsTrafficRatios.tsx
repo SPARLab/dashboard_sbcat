@@ -508,7 +508,7 @@ export default function IncidentsVsTrafficRatios({
                     id="safety-incidents-vs-traffic-tooltip"
                     className="text-blue-600 text-sm font-medium"
                   >
-                    <div id="safety-incidents-vs-traffic-tooltip-location" className="w-[18rem] break-words">{hoveredPoint.location}</div>
+                    <div id="safety-incidents-vs-traffic-tooltip-location" className="w-[18rem] line-clamp-2">{hoveredPoint.location}</div>
                     <div id="safety-incidents-vs-traffic-tooltip-incidents">{hoveredPoint.incidentCount} incidents</div>
                   </div>
                 ) : hasData ? (
