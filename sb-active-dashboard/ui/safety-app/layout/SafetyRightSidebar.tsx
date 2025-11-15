@@ -65,6 +65,7 @@ export default function SafetyRightSidebar({
           <IncidentsVsTrafficRatios 
             mapView={mapView}
             incidentsLayer={incidentsLayer}
+            jitteredIncidentsLayer={jitteredIncidentsLayer}
             selectedGeometry={selectedGeometry}
             filters={filters}
           />

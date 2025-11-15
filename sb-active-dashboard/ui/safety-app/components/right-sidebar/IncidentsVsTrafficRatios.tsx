@@ -17,6 +17,7 @@ import { StravaSegmentService } from "../../../../lib/data-services/StravaSegmen
 interface IncidentsVsTrafficRatiosProps {
   mapView: __esri.MapView | null;
   incidentsLayer: __esri.FeatureLayer | null;
+  jitteredIncidentsLayer: __esri.FeatureLayer | null; // Jittered layer for getting display geometries
   selectedGeometry?: __esri.Polygon | null;
   filters?: Partial<SafetyFilters>;
 }
@@ -32,6 +33,7 @@ interface ScatterDataPoint {
 export default function IncidentsVsTrafficRatios({ 
   mapView,
   incidentsLayer,
+  jitteredIncidentsLayer,
   selectedGeometry = null, 
   filters = {}
 }: IncidentsVsTrafficRatiosProps) {
@@ -104,47 +106,48 @@ export default function IncidentsVsTrafficRatios({
       setError(null);
 
       try {
-        // Group incidents by location
-        const locationMap = new Map<string, {
+        // Group incidents by strava_id for accurate per-segment counts
+        const segmentMap = new Map<number, {
           incidents: number;
+          locationName: string; // Use loc_desc from incidents for display
           bikeTrafficLevels: string[];
           pedTrafficLevels: string[];
-          stravaId?: number; // Capture first non-null strava_id for this location
         }>();
 
         // Process each incident
         result.incidents.forEach(incident => {
-          const locationKey = incident.loc_desc || 'Unknown Location';
+          // Skip incidents without a strava_id
+          if (!incident.strava_id) {
+            return;
+          }
           
-          if (!locationMap.has(locationKey)) {
-            locationMap.set(locationKey, {
+          const stravaId = incident.strava_id;
+          const locationName = incident.loc_desc || 'Unknown Location';
+          
+          if (!segmentMap.has(stravaId)) {
+            segmentMap.set(stravaId, {
               incidents: 0,
+              locationName: locationName,
               bikeTrafficLevels: [],
-              pedTrafficLevels: [],
-              stravaId: incident.strava_id || undefined
+              pedTrafficLevels: []
             });
           }
           
-          const location = locationMap.get(locationKey)!;
-          location.incidents += 1;
+          const segment = segmentMap.get(stravaId)!;
+          segment.incidents += 1;
           
-          // Capture strava_id if we don't have one yet for this location
-          if (!location.stravaId && incident.strava_id) {
-            location.stravaId = incident.strava_id;
-          }
-          
-          // Collect traffic levels for this location
+          // Collect traffic levels for this segment
           if (incident.bike_traffic) {
-            location.bikeTrafficLevels.push(incident.bike_traffic.toLowerCase());
+            segment.bikeTrafficLevels.push(incident.bike_traffic.toLowerCase());
           }
           if (incident.ped_traffic) {
-            location.pedTrafficLevels.push(incident.ped_traffic.toLowerCase());
+            segment.pedTrafficLevels.push(incident.ped_traffic.toLowerCase());
           }
         });
 
         // Convert to scatter plot data
-        const processedData: ScatterDataPoint[] = Array.from(locationMap.entries())
-          .map(([locationName, data]) => {
+        const processedData: ScatterDataPoint[] = Array.from(segmentMap.entries())
+          .map(([stravaId, data]) => {
             // Determine the highest traffic level for this location
             const getHighestTrafficLevel = (levels: string[]): 'low' | 'medium' | 'high' => {
               if (levels.length === 0) return 'low';
@@ -157,7 +160,7 @@ export default function IncidentsVsTrafficRatios({
               return 'low';
             };
 
-            // Get the bike traffic level for this location
+            // Get the bike traffic level for this segment
             const bikeLevel = getHighestTrafficLevel(data.bikeTrafficLevels);
             
             // Use only the bike traffic level
@@ -167,14 +170,14 @@ export default function IncidentsVsTrafficRatios({
             const x = trafficLevel === 'low' ? 1 : trafficLevel === 'medium' ? 2 : 3;
 
             return {
-              location: locationName,
+              location: data.locationName,
               incidentCount: data.incidents,
               trafficLevel: trafficLevel as 'low' | 'medium' | 'high',
               x: x,
-              stravaId: data.stravaId
+              stravaId: stravaId
             };
           })
-          .filter(point => point.incidentCount > 0) // Only include locations with incidents
+          .filter(point => point.incidentCount > 0) // Only include segments with incidents
           .sort((a, b) => b.incidentCount - a.incidentCount); // Sort by incident count
 
         setScatterData(processedData);
@@ -235,6 +238,57 @@ export default function IncidentsVsTrafficRatios({
         symbol: lineSymbol
       });
       highlightLayerRef.current.add(lineGraphic);
+
+      // Highlight associated incidents with light blue outline
+      // Query the JITTERED layer to get jittered geometries for display
+      if (jitteredIncidentsLayer && result?.incidents) {
+        try {
+          // Get incident IDs (not OBJECTIDs) from the query result
+          const incidentIds = result.incidents
+            .filter(incident => incident.strava_id === stravaId && incident.id)
+            .map(inc => inc.id);
+
+          if (incidentIds.length > 0) {
+            // Query the jittered layer using incident IDs via WHERE clause
+            // (Client-side jittered layer has different OBJECTIDs than original layer)
+            const jitteredQuery = jitteredIncidentsLayer.createQuery();
+            jitteredQuery.where = `id IN (${incidentIds.join(',')})`; // Use id field, not OBJECTID
+            jitteredQuery.outFields = ["*"];
+            jitteredQuery.returnGeometry = true;
+
+            const jitteredResult = await jitteredIncidentsLayer.queryFeatures(jitteredQuery);
+            
+            console.log(`Strava segment ${stravaId}:`);
+            console.log(`  Total incidents: ${incidentIds.length}`);
+            console.log(`  Jittered geometries found: ${jitteredResult.features.length}`);
+
+            // Create circle symbols with light blue outline for each incident
+            jitteredResult.features.forEach((feature) => {
+              if (feature.geometry) {
+                // Create light blue outline symbol
+                const incidentSymbol = new SimpleMarkerSymbol({
+                  style: "circle",
+                  size: 14,
+                  color: [135, 206, 250, 0.3], // Light blue fill with transparency
+                  outline: {
+                    color: [0, 191, 255, 1], // Deep sky blue outline
+                    width: 3
+                  }
+                });
+
+                const incidentGraphic = new Graphic({
+                  geometry: feature.geometry, // Use jittered geometry from jittered layer
+                  symbol: incidentSymbol
+                });
+
+                highlightLayerRef.current.add(incidentGraphic);
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error querying jittered layer for highlights:', error);
+        }
+      }
 
       // Zoom to the segment with some padding
       const zoomExtent = segmentFeature.geometry.extent?.expand(2);
@@ -491,10 +545,10 @@ export default function IncidentsVsTrafficRatios({
             <>
               <hr className="border-gray-200 mb-2" />
               <div id="safety-incidents-vs-traffic-description" className="w-full text-sm text-gray-600 mb-2">
-                Compares bike volume levels and incident counts by location.
+                Compares bike volume levels and incident counts by road segment.
                 <span id="safety-incidents-vs-traffic-info-icon-container" className="ml-1 inline-flex align-middle">
                   <MoreInformationIcon 
-                    text="With each point representing a single location, see the relationship between bike traffic volume (Low, Medium, High) and incident counts at various locations. Click on a point to highlight its corresponding Strava segment on the map."
+                    text="Each point represents a single road segment, showing the relationship between bike traffic volume (Low, Medium, High) and incident counts. Multiple segments may share the same location name. Click on a point to highlight its corresponding segment on the map and see all associated incidents (shown with light blue outlines)."
                     align="right"
                     width="w-80"
                     yOffset="-0.15rem"
