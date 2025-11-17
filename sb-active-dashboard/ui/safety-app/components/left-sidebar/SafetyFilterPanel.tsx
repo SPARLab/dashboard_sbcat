@@ -406,7 +406,7 @@ function ConflictTypeSection({
     onFiltersChange(updatedFilters);
   };
 
-  const handleModeChange = (mode: 'all' | 'none' | 'ebike') => {
+  const handleModeChange = (mode: 'all' | 'none' | 'bike' | 'ebike' | 'pedestrian') => {
     console.log(`🔘 Conflict Type Mode Changed: ${mode}`);
     
     if (mode === 'all') {
@@ -436,8 +436,25 @@ function ConflictTypeSection({
     } else if (mode === 'none') {
       onFiltersChange({ 
         conflictType: [],
-        ebikeMode: false
+        ebikeMode: false,
+        roadUser: [],
+        showPedestrian: false,
+        showBicyclist: false
       });
+    } else if (mode === 'bike') {
+      // Regular bike mode - show all bike-related conflicts (NOT e-bikes)
+      const bikeConflictTypes = availableConflictTypes.filter(type => 
+        type.startsWith('Bike vs')
+      );
+      const bikeFilters = { 
+        conflictType: bikeConflictTypes,
+        ebikeMode: false,  // Regular bikes, not e-bikes
+        roadUser: ['bicyclist'],
+        showBicyclist: true,
+        showPedestrian: false
+      };
+      console.log('🚴 BIKE button - Setting filters to:', bikeFilters);
+      onFiltersChange(bikeFilters as any);
     } else if (mode === 'ebike') {
       // Enable e-bike mode and keep only bike-related conflicts initially
       // But allow pedestrian toggles to be added later
@@ -448,18 +465,53 @@ function ConflictTypeSection({
         conflictType: bikeConflictTypes,
         ebikeMode: true,
         roadUser: ['bicyclist'],  // Start with bicyclist only
-        showBicyclist: true
-        // Don't change showPedestrian - let user toggle it
+        showBicyclist: true,
+        showPedestrian: false
       };
       console.log('⚡ E-BIKE button - Setting filters to:', ebikeFilters);
       onFiltersChange(ebikeFilters as any);
+    } else if (mode === 'pedestrian') {
+      // Pedestrian mode - show only pedestrian-related conflicts
+      const pedestrianConflictTypes = availableConflictTypes.filter(type => 
+        type.startsWith('Pedestrian vs')
+      );
+      const pedestrianFilters = { 
+        conflictType: pedestrianConflictTypes,
+        ebikeMode: false,
+        roadUser: ['pedestrian'],
+        showPedestrian: true,
+        showBicyclist: false
+      };
+      console.log('🚶 PEDESTRIAN button - Setting filters to:', pedestrianFilters);
+      onFiltersChange(pedestrianFilters as any);
     }
   };
 
   // Determine current mode based on selected conflict types and e-bike mode
   const allSelected = availableConflictTypes.every(type => currentConflictTypes.includes(type)) && !isEbikeMode;
   const noneSelected = currentConflictTypes.length === 0;
-  const currentMode = isEbikeMode ? 'ebike' : allSelected ? 'all' : noneSelected ? 'none' : 'individual';
+  
+  // Check for bike mode (all bike conflicts selected, no pedestrian conflicts, not e-bike mode)
+  const bikeConflictTypes = availableConflictTypes.filter(type => type.startsWith('Bike vs'));
+  const pedestrianConflictTypes = availableConflictTypes.filter(type => type.startsWith('Pedestrian vs'));
+  const isBikeMode = !isEbikeMode && 
+                     bikeConflictTypes.every(type => currentConflictTypes.includes(type)) &&
+                     !pedestrianConflictTypes.some(type => currentConflictTypes.includes(type)) &&
+                     bikeConflictTypes.length === currentConflictTypes.length;
+  
+  // Check for pedestrian mode (all pedestrian conflicts selected, no bike conflicts)
+  const isPedestrianMode = !isEbikeMode &&
+                           pedestrianConflictTypes.every(type => currentConflictTypes.includes(type)) &&
+                           !bikeConflictTypes.some(type => currentConflictTypes.includes(type)) &&
+                           pedestrianConflictTypes.length === currentConflictTypes.length;
+  
+  const currentMode: 'all' | 'none' | 'bike' | 'ebike' | 'pedestrian' | 'individual' = 
+    isEbikeMode ? 'ebike' : 
+    allSelected ? 'all' : 
+    noneSelected ? 'none' : 
+    isBikeMode ? 'bike' :
+    isPedestrianMode ? 'pedestrian' :
+    'individual';
 
   // Get display labels based on e-bike mode
   const getDisplayLabel = (conflictType: string): string => {
@@ -473,8 +525,8 @@ function ConflictTypeSection({
     <div id="safety-conflict-type-section" className="px-4 py-4">
       <h3 id="safety-conflict-type-title" className="text-base font-medium text-gray-700 mb-2">Conflict Type</h3>
       
-      {/* All/None/E-bike buttons */}
-      <div id="safety-conflict-type-mode-buttons" className="flex gap-1 mb-2">
+      {/* All/None/Bike/E-bike/Pedestrian buttons */}
+      <div id="safety-conflict-type-mode-buttons" className="flex flex-wrap gap-1 mb-2">
         <button 
           id="safety-conflict-type-all-button"
           onClick={() => handleModeChange('all')}
@@ -498,6 +550,17 @@ function ConflictTypeSection({
           None
         </button>
         <button 
+          id="safety-conflict-type-bike-button"
+          onClick={() => handleModeChange('bike')}
+          className={`px-2 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none active:outline-none ${
+            currentMode === 'bike' 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-white border border-blue-500 text-blue-500 hover:bg-blue-50'
+          }`}
+        >
+          Bike
+        </button>
+        <button 
           id="safety-conflict-type-ebike-button"
           onClick={() => handleModeChange('ebike')}
           className={`px-2 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none active:outline-none ${
@@ -507,6 +570,17 @@ function ConflictTypeSection({
           }`}
         >
           E-bike
+        </button>
+        <button 
+          id="safety-conflict-type-pedestrian-button"
+          onClick={() => handleModeChange('pedestrian')}
+          className={`px-2 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none active:outline-none ${
+            currentMode === 'pedestrian' 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-white border border-blue-500 text-blue-500 hover:bg-blue-50'
+          }`}
+        >
+          Pedestrian
         </button>
       </div>
 
