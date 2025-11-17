@@ -188,7 +188,8 @@ export default function SeverityBreakdown({
             fontSize: 12,
             interval: 0,
             rotate: 0,
-            lineHeight: 12,
+            lineHeight: 14,
+            formatter: (value: string) => value.replace(/ /g, '\n'),
           },
         },
       yAxis: {
