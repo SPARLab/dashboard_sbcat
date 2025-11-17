@@ -463,11 +463,14 @@ export class GeographicBoundariesService {
       
       await waitForInteractivity();
       
-      // Query for Santa Barbara County feature
+      // Query for Santa Barbara County feature with full-resolution geometry
       const query = this.countyLayer.createQuery();
       query.where = "NAME = 'Santa Barbara'";
       query.returnGeometry = true;
       query.outFields = ["*"];
+      query.maxAllowableOffset = 0; // Force highest resolution geometry (no generalization)
+      
+      console.log('🔍 [Auto-Select] Fetching full-resolution geometry for Santa Barbara County');
       
       const featureSet = await this.countyLayer.queryFeatures(query);
       
@@ -503,6 +506,8 @@ export class GeographicBoundariesService {
         if (this.onSelectionChange) {
           const areaName = countyFeature.attributes.NAME || countyFeature.attributes.name || null;
           
+          console.log('✅ [Auto-Select] Using full-resolution geometry for Santa Barbara County spatial queries');
+          
           this.onSelectionChange({
             geometry: countyFeature.geometry as Polygon | Polyline,
             areaName: areaName,
@@ -522,10 +527,13 @@ export class GeographicBoundariesService {
    */
   private async selectAllUnincorporatedAreas() {
     try {
-      // Query all features from the unincorporated areas layer
+      // Query all features from the unincorporated areas layer with full-resolution geometry
       const query = this.unincorporatedAreasLayer.createQuery();
       query.returnGeometry = true;
       query.outFields = ["*"];
+      query.maxAllowableOffset = 0; // Force highest resolution geometry (no generalization)
+      
+      console.log('🔍 [Unincorporated Areas] Fetching full-resolution geometry for all unincorporated area polygons');
       
       const featureSet = await this.unincorporatedAreasLayer.queryFeatures(query);
       
@@ -544,6 +552,8 @@ export class GeographicBoundariesService {
       if (this.onSelectionChange && featureSet.features.length > 0) {
         const firstFeature = featureSet.features[0];
         const areaName = firstFeature.attributes.NAME || firstFeature.attributes.name || "Unincorporated Areas";
+        
+        console.log('✅ [Unincorporated Areas] Using full-resolution geometry for spatial queries');
         
         // Use the first polygon's geometry for the callback
         // In practice, the consuming code should handle this as a special case
@@ -1041,21 +1051,77 @@ export class GeographicBoundariesService {
       this.refreshHighlight();
     }
     
-    // Notify about the new selection with area name and attributes
-    if (this.onSelectionChange && clickedGraphic.geometry) {
-      // Handle different field names:
-      // - NAME (uppercase) for census layers
-      // - name (lowercase) for school districts
-      // - route_name for highways
-      const areaName = clickedGraphic.attributes.route_name || 
-                       clickedGraphic.attributes.NAME || 
-                       clickedGraphic.attributes.name || 
-                       null;
-      this.onSelectionChange({
-        geometry: clickedGraphic.geometry as Polygon | Polyline,
-        areaName: areaName,
-        attributes: clickedGraphic.attributes  // 🔥 Pass the attributes so we can access segment_group_id!
-      });
+    // CRITICAL FIX: Query for full-resolution geometry instead of using rendered geometry
+    // This ensures consistent spatial query results regardless of zoom level
+    try {
+      const layer = clickedGraphic.layer as FeatureLayer;
+      const query = layer.createQuery();
+      query.objectIds = [clickedObjectId];
+      query.returnGeometry = true;
+      query.outFields = ["*"];
+      query.maxAllowableOffset = 0; // Force highest resolution geometry (no generalization)
+      
+      console.log(`🔍 [Geometry Query] Fetching full-resolution geometry for ${clickedGraphic.attributes.NAME || clickedGraphic.attributes.name || 'feature'}`);
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await layer.queryFeatures(query as any);
+      
+      if (result.features.length > 0) {
+        const fullResFeature = result.features[0];
+        
+        // Update the selected graphic with full-resolution geometry for visual display
+        if (this.selectedGraphic) {
+          this.selectedGraphic.geometry = fullResFeature.geometry as any;
+        }
+        
+        // Notify about the new selection with FULL-RESOLUTION geometry
+        if (this.onSelectionChange && fullResFeature.geometry) {
+          // Handle different field names:
+          // - NAME (uppercase) for census layers
+          // - name (lowercase) for school districts
+          // - route_name for highways
+          const areaName = fullResFeature.attributes.route_name || 
+                           fullResFeature.attributes.NAME || 
+                           fullResFeature.attributes.name || 
+                           null;
+          
+          console.log(`✅ [Geometry Query] Using full-resolution geometry for spatial queries`);
+          
+          this.onSelectionChange({
+            geometry: fullResFeature.geometry as Polygon | Polyline,
+            areaName: areaName,
+            attributes: fullResFeature.attributes  // 🔥 Pass the attributes so we can access segment_group_id!
+          });
+        }
+      } else {
+        // Fallback to clicked geometry if query fails
+        console.warn(`⚠️ [Geometry Query] Failed to fetch full-resolution geometry, using rendered geometry as fallback`);
+        if (this.onSelectionChange && clickedGraphic.geometry) {
+          const areaName = clickedGraphic.attributes.route_name || 
+                           clickedGraphic.attributes.NAME || 
+                           clickedGraphic.attributes.name || 
+                           null;
+          this.onSelectionChange({
+            geometry: clickedGraphic.geometry as Polygon | Polyline,
+            areaName: areaName,
+            attributes: clickedGraphic.attributes
+          });
+        }
+      }
+    } catch (error) {
+      // Fallback to clicked geometry if query fails
+      console.error(`❌ [Geometry Query] Error fetching full-resolution geometry:`, error);
+      if (this.onSelectionChange && clickedGraphic.geometry) {
+        const areaName = clickedGraphic.attributes.route_name || 
+                         clickedGraphic.attributes.NAME || 
+                         clickedGraphic.attributes.name || 
+                         null;
+        this.onSelectionChange({
+          geometry: clickedGraphic.geometry as Polygon | Polyline,
+          areaName: areaName,
+          attributes: clickedGraphic.attributes
+        });
+      }
     }
   }
 
