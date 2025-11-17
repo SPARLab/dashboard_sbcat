@@ -133,7 +133,8 @@ export default function VolumeMap({
     }
   };
 
-  const [sketchViewModel, setSketchViewModel] = useState<SketchViewModel | null>(null);
+  // Sketch functionality - use ref to avoid infinite loops in useEffect
+  const sketchViewModelRef = useRef<SketchViewModel | null>(null);
   const [sketchLayer, setSketchLayer] = useState<GraphicsLayer | null>(null);
 
   // Load layers when map view is ready
@@ -233,65 +234,97 @@ export default function VolumeMap({
       }
       
       if (geographicLevel === 'custom' && sketchLayer) {
-        // Disable boundary service interactivity and hide its layers
-        boundaryService.cleanupInteractivity();
-        // Also hide the layers associated with the service
-        boundaryService.getBoundaryLayers().forEach(layer => {
-          if (layer.type === 'feature' || layer.type === 'graphics') {
-            layer.visible = false;
-          }
-        });
-
-        // Mark that layer recreation will be needed after SketchViewModel usage
-        boundaryService.markLayerRecreationNeeded();
-
-        const sketchVM = new SketchViewModel({
-          view: mapViewRef.current,
-          layer: sketchLayer,
-          polygonSymbol: new SimpleFillSymbol({
-            color: [138, 43, 226, 0.2], // BlueViolet
-            outline: {
-              color: [138, 43, 226, 1],
-              width: 2,
-            },
-          }),
-        });
-
-        setSketchViewModel(sketchVM);
-
-        sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
-          if (event.state === 'complete') {
-            if (onSelectionChange) {
-              // Provide both geometry and area name for custom selections
-              onSelectionChange({
-                geometry: event.graphic.geometry as Polygon,
-                areaName: 'Custom Selected Area'
-              });
+        // Only create if we don't already have a SketchViewModel
+        if (!sketchViewModelRef.current) {
+          console.log('🎨 [VOLUME] Creating new SketchViewModel for custom draw tool');
+          
+          // Disable boundary service interactivity and hide its layers
+          boundaryService.cleanupInteractivity();
+          // Also hide the layers associated with the service
+          boundaryService.getBoundaryLayers().forEach(layer => {
+            if (layer.type === 'feature' || layer.type === 'graphics') {
+              layer.visible = false;
             }
-          }
-        });
+          });
 
-        sketchVM.create('polygon');
-      } else {
-        if (sketchViewModel) {
-          sketchViewModel.destroy();
-          setSketchViewModel(null);
+          // Mark that layer recreation will be needed after SketchViewModel usage
+          boundaryService.markLayerRecreationNeeded();
+
+          const sketchVM = new SketchViewModel({
+            view: mapViewRef.current,
+            layer: sketchLayer,
+            polygonSymbol: new SimpleFillSymbol({
+              color: [138, 43, 226, 0.2], // BlueViolet
+              outline: {
+                color: [138, 43, 226, 1],
+                width: 2,
+              },
+            }),
+          });
+
+          sketchViewModelRef.current = sketchVM;
+
+          sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
+            if (event.state === 'complete') {
+              if (onSelectionChange) {
+                // Provide both geometry and area name for custom selections
+                onSelectionChange({
+                  geometry: event.graphic.geometry as Polygon,
+                  areaName: 'Custom Selected Area'
+                });
+              }
+            }
+          });
+
+          sketchVM.create('polygon');
         }
+      } else {
+        // Switching away from custom draw tool - clean up
+        console.log('🧹 [VOLUME] Cleaning up custom draw tool', { 
+          hasSketchViewModel: !!sketchViewModelRef.current, 
+          hasSketchLayer: !!sketchLayer,
+          graphicsCount: sketchLayer?.graphics.length 
+        });
+        
+        // CRITICAL: Clear the graphics layer FIRST
         if (sketchLayer) {
+          console.log('🧹 [VOLUME] Removing all graphics from sketch layer');
           sketchLayer.removeAll();
         }
+        
+        // THEN cancel and destroy the SketchViewModel
+        if (sketchViewModelRef.current) {
+          console.log('🧹 [VOLUME] Canceling and destroying SketchViewModel');
+          try {
+            sketchViewModelRef.current.cancel();
+            sketchViewModelRef.current.destroy();
+          } catch (error) {
+            console.error('Error destroying SketchViewModel:', error);
+          }
+          sketchViewModelRef.current = null;
+        }
+        
         // Re-enable boundary service interactivity with layer recreation
         boundaryService.switchGeographicLevel(geographicLevel as any, mapViewRef.current);
       }
     }
 
     return () => {
-      if (sketchViewModel) {
-        sketchViewModel.destroy();
-        setSketchViewModel(null);
+      // Cleanup on unmount
+      if (sketchLayer) {
+        sketchLayer.removeAll();
+      }
+      if (sketchViewModelRef.current) {
+        try {
+          sketchViewModelRef.current.cancel();
+          sketchViewModelRef.current.destroy();
+        } catch (error) {
+          console.error('Error in cleanup:', error);
+        }
+        sketchViewModelRef.current = null;
       }
     };
-  }, [geographicLevel, sketchLayer, onSelectionChange]);
+  }, [geographicLevel, sketchLayer, onSelectionChange]); // Removed sketchViewModel from dependencies
 
   // Apply school district filtering when filter changes
   useEffect(() => {

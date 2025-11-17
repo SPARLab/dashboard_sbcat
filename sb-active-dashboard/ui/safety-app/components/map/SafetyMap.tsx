@@ -60,8 +60,8 @@ export default function SafetyMap({
   // Layer references - keep both improved and original layers
   const [safetyGroupLayer, setSafetyGroupLayer] = useState<__esri.GroupLayer | null>(null);
   
-  // Sketch functionality state (same as volume page)
-  const [sketchViewModel, setSketchViewModel] = useState<SketchViewModel | null>(null);
+  // Sketch functionality - use ref to avoid infinite loops in useEffect
+  const sketchViewModelRef = useRef<SketchViewModel | null>(null);
   const [sketchLayer, setSketchLayer] = useState<GraphicsLayer | null>(null);
   
   // SIMPLIFIED: Only use cache for weighted visualization
@@ -449,91 +449,121 @@ export default function SafetyMap({
       }
       
       if (geographicLevel === 'custom' && sketchLayer) {
-
-        // Disable boundary service interactivity and hide its layers
-        boundaryService.current.cleanupInteractivity();
-        // Also hide the layers associated with the service
-        boundaryService.current.getBoundaryLayers().forEach(layer => {
-          if (layer.type === 'feature' || layer.type === 'graphics') {
-            layer.visible = false;
-          }
-        });
-
-        // Mark that layer recreation will be needed after SketchViewModel usage
-        boundaryService.current.markLayerRecreationNeeded();
-
-        const sketchVM = new SketchViewModel({
-          view: mapViewRef.current,
-          layer: sketchLayer,
-          polygonSymbol: new SimpleFillSymbol({
-            color: [138, 43, 226, 0.2], // BlueViolet
-            outline: {
-              color: [138, 43, 226, 1],
-              width: 2,
-            },
-          }),
-        });
-
-        setSketchViewModel(sketchVM);
-
-        sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
-          if (event.state === 'complete') {
-            const polygon = event.graphic.geometry as Polygon;
-            
-            // 🔍 DEBUG: Log detailed polygon coordinates
-            console.group('🔍 [SAFETY DEBUG] Custom Draw Tool - Polygon Created');
-            console.log('Raw polygon object:', polygon);
-            console.log('Polygon type:', polygon.type);
-            console.log('Spatial Reference WKID:', polygon.spatialReference?.wkid);
-            console.log('Number of rings:', polygon.rings?.length);
-            
-            if (polygon.rings && polygon.rings.length > 0) {
-              console.log('First ring coordinates (first 5 points):');
-              polygon.rings[0].slice(0, 5).forEach((point, index) => {
-                console.log(`  Point ${index}: [${point[0]}, ${point[1]}]`);
-              });
-              console.log('Polygon extent:', {
-                xmin: polygon.extent?.xmin,
-                ymin: polygon.extent?.ymin,
-                xmax: polygon.extent?.xmax,
-                ymax: polygon.extent?.ymax
-              });
+        // Only create if we don't already have a SketchViewModel
+        if (!sketchViewModelRef.current) {
+          console.log('🎨 [SAFETY] Creating new SketchViewModel for custom draw tool');
+          
+          // Disable boundary service interactivity and hide its layers
+          boundaryService.current.cleanupInteractivity();
+          // Also hide the layers associated with the service
+          boundaryService.current.getBoundaryLayers().forEach(layer => {
+            if (layer.type === 'feature' || layer.type === 'graphics') {
+              layer.visible = false;
             }
-            console.groupEnd();
-            
-            if (onSelectionChange) {
-              // Match the working VolumeMap.tsx implementation exactly
-              onSelectionChange({ 
-                geometry: polygon,
-                areaName: 'Custom Selected Area'
-              });
-            }
-          }
-        });
+          });
 
-        sketchVM.create('polygon');
+          // Mark that layer recreation will be needed after SketchViewModel usage
+          boundaryService.current.markLayerRecreationNeeded();
+
+          const sketchVM = new SketchViewModel({
+            view: mapViewRef.current,
+            layer: sketchLayer,
+            polygonSymbol: new SimpleFillSymbol({
+              color: [138, 43, 226, 0.2], // BlueViolet
+              outline: {
+                color: [138, 43, 226, 1],
+                width: 2,
+              },
+            }),
+          });
+
+          sketchViewModelRef.current = sketchVM;
+
+          sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
+            if (event.state === 'complete') {
+              const polygon = event.graphic.geometry as Polygon;
+              
+              // 🔍 DEBUG: Log detailed polygon coordinates
+              console.group('🔍 [SAFETY DEBUG] Custom Draw Tool - Polygon Created');
+              console.log('Raw polygon object:', polygon);
+              console.log('Polygon type:', polygon.type);
+              console.log('Spatial Reference WKID:', polygon.spatialReference?.wkid);
+              console.log('Number of rings:', polygon.rings?.length);
+              
+              if (polygon.rings && polygon.rings.length > 0) {
+                console.log('First ring coordinates (first 5 points):');
+                polygon.rings[0].slice(0, 5).forEach((point, index) => {
+                  console.log(`  Point ${index}: [${point[0]}, ${point[1]}]`);
+                });
+                console.log('Polygon extent:', {
+                  xmin: polygon.extent?.xmin,
+                  ymin: polygon.extent?.ymin,
+                  xmax: polygon.extent?.xmax,
+                  ymax: polygon.extent?.ymax
+                });
+              }
+              console.groupEnd();
+              
+              if (onSelectionChange) {
+                // Match the working VolumeMap.tsx implementation exactly
+                onSelectionChange({ 
+                  geometry: polygon,
+                  areaName: 'Custom Selected Area'
+                });
+              }
+            }
+          });
+
+          sketchVM.create('polygon');
+        }
 
       } else {
         // Switching away from custom draw tool - clean up
-        if (sketchViewModel) {
-          sketchViewModel.destroy();
-          setSketchViewModel(null);
-        }
+        console.log('🧹 [SAFETY] Cleaning up custom draw tool', { 
+          hasSketchViewModel: !!sketchViewModelRef.current, 
+          hasSketchLayer: !!sketchLayer,
+          graphicsCount: sketchLayer?.graphics.length 
+        });
+        
+        // CRITICAL: Clear the graphics layer FIRST
         if (sketchLayer) {
+          console.log('🧹 [SAFETY] Removing all graphics from sketch layer');
           sketchLayer.removeAll();
         }
+        
+        // THEN cancel and destroy the SketchViewModel
+        if (sketchViewModelRef.current) {
+          console.log('🧹 [SAFETY] Canceling and destroying SketchViewModel');
+          try {
+            sketchViewModelRef.current.cancel();
+            sketchViewModelRef.current.destroy();
+          } catch (error) {
+            console.error('Error destroying SketchViewModel:', error);
+          }
+          sketchViewModelRef.current = null;
+        }
+        
         // Re-enable boundary service interactivity with layer recreation
         boundaryService.current.switchGeographicLevel(geographicLevel as any, mapViewRef.current);
       }
     }
 
     return () => {
-      if (sketchViewModel) {
-        sketchViewModel.destroy();
-        setSketchViewModel(null);
+      // Cleanup on unmount
+      if (sketchLayer) {
+        sketchLayer.removeAll();
+      }
+      if (sketchViewModelRef.current) {
+        try {
+          sketchViewModelRef.current.cancel();
+          sketchViewModelRef.current.destroy();
+        } catch (error) {
+          console.error('Error in cleanup:', error);
+        }
+        sketchViewModelRef.current = null;
       }
     };
-  }, [geographicLevel, sketchLayer, viewReady]); // Removed sketchViewModel and onSelectionChange from dependencies
+  }, [geographicLevel, sketchLayer, viewReady]); // Removed sketchViewModel from dependencies
 
   // Apply school district filtering when filter changes
   useEffect(() => {
