@@ -247,7 +247,7 @@ export async function generateIncidentPopupContent(incidentData: IncidentPopupDa
     
     enrichedIncidentData.parties.forEach((party, index) => {
       popupContent += `<div style="margin-bottom: 6px; padding: 4px; background: white; border-radius: 3px;">`;
-      popupContent += `<strong>Party ${party.party_number || index + 1}:</strong> `;
+      popupContent += `<strong>Party ${index + 1}:</strong> `;
       
       if (party.party_type) {
         popupContent += `${party.party_type}`;
