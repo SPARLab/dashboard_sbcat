@@ -143,8 +143,8 @@ function SeverityOfIncidentSection({
 
   const currentSeverityTypes = filters.severityTypes || [];
 
-  const toggleSeverity = (severity: 'Fatality' | 'Severe Injury' | 'Injury' | 'No Injury' | 'Unknown') => {
-    let newSeverityTypes: ('Fatality' | 'Severe Injury' | 'Injury' | 'No Injury' | 'Unknown')[] = [...currentSeverityTypes];
+  const toggleSeverity = (severity: 'Fatality' | 'Severe Injury' | 'Injury' | 'No Injury' | 'Near Miss' | 'Unknown') => {
+    let newSeverityTypes: ('Fatality' | 'Severe Injury' | 'Injury' | 'No Injury' | 'Near Miss' | 'Unknown')[] = [...currentSeverityTypes];
 
     if (newSeverityTypes.includes(severity)) {
       newSeverityTypes = newSeverityTypes.filter(s => s !== severity);
