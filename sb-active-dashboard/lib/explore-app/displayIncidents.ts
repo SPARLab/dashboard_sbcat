@@ -264,7 +264,7 @@ export function changeIncidentRenderer(
 
 export async function createIncidentGroupLayer() {
   const incidentsLayer = new FeatureLayer({
-    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents/FeatureServer",
+    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents_2025/FeatureServer",
   });
 
   const combinedIncidentsLayer = await createIncidentGraphics(

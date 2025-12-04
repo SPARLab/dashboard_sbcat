@@ -286,10 +286,10 @@ export function changeIncidentRenderer(
 
 export async function createHeatmaps() {
   const safetyPoints = new FeatureLayer({
-    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents/FeatureServer/0",
+    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents_2025/FeatureServer/0",
   });
   const safetyWeights = new FeatureLayer({
-    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents/FeatureServer/1",
+    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents_2025/FeatureServer/1",
   });
 
   // paginate queries since over 2000 records

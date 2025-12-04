@@ -21,7 +21,7 @@ import {
 import { hasEbikeParty } from "../safety-app/utils/ebikeDetection";
 
 export class SafetyIncidentsDataService {
-  private static readonly BASE_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents/FeatureServer";
+  private static readonly BASE_URL = "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents_2025/FeatureServer";
   private static readonly INCIDENTS_URL = `${this.BASE_URL}/0`;
   private static readonly PARTIES_URL = `${this.BASE_URL}/1`;
 

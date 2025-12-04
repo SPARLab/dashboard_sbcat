@@ -43,7 +43,7 @@ async function initializePartiesCache(): Promise<void> {
       
       // Create parties layer
       const partiesLayer = new FeatureLayer({
-        url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents/FeatureServer/1",
+        url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents_2025/FeatureServer/1",
         outFields: ["*"]
       });
 

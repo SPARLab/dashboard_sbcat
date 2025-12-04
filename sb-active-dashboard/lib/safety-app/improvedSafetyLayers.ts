@@ -35,12 +35,12 @@ export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Da
   
   // Initialize the source layers
   const incidentsLayer = new FeatureLayer({
-    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents/FeatureServer/0",
+    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents_2025/FeatureServer/0",
     outFields: ["*"]
   });
   
   const partiesLayer = new FeatureLayer({
-    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents/FeatureServer/1",
+    url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents_2025/FeatureServer/1",
     outFields: ["*"]
   });
 
@@ -279,7 +279,7 @@ export async function createEnrichedSafetyIncidentsLayer(dateRange?: { start: Da
     // Fall back to regular layer without enrichment
     console.log("[FALLBACK] Creating regular safety incidents layer without maxSeverity field");
     return new FeatureLayer({
-      url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents/FeatureServer/0",
+      url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Safety_Incidents_2025/FeatureServer/0",
       title: "Safety Incidents",
       outFields: ["*"],
       renderer: new HeatmapRenderer({
