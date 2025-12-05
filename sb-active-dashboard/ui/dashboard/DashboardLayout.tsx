@@ -13,9 +13,6 @@ const apps = [
   { name: "Volume", link: "/dashboard/volume" },
 ];
 
-const HEADER_HEIGHT = 70;
-const FOOTER_HEIGHT = 52;
-
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <Box
@@ -34,9 +31,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         id="dashboard-main-content"
         sx={{
           flex: 1,
-          height: `calc(100vh - ${HEADER_HEIGHT}px - ${FOOTER_HEIGHT}px)`,
+          minHeight: 0, // Allow flex child to shrink below content size
           width: "100vw",
-          overflow: "auto",
+          overflow: "hidden",
         }}
       >
         {children}

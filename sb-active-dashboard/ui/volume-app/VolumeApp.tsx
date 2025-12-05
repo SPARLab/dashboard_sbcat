@@ -80,7 +80,7 @@ export default function VolumeApp() {
         <VolumeDataDisclaimer />
       </DisclaimerModal>
 
-      <div id="volumes-page" className="flex flex-col h-[calc(100vh-70px)] bg-white">
+      <div id="volumes-page" className="flex flex-col h-full bg-white">
         <VolumeSubHeader activeTab={activeTab} onTabChange={setActiveTab} />
         <div id="volume-main-content" className="flex flex-1 overflow-hidden">
         <VolumeLeftSidebar 
@@ -135,14 +135,6 @@ export default function VolumeApp() {
           highlightedBinSites={highlightedBinSites}
           selectedYear={selectedYear}
         />
-      </div>
-      {/* Footer */}
-      <div id="volume-footer" className="bg-gray-50 border-t border-gray-200 py-4">
-        <div className="max-w-none px-6">
-          <p id="footer-copyright" className="text-sm text-gray-600 text-center">
-            © 2025 Active SB Dashboard. Data completeness and modeling information.
-          </p>
-        </div>
       </div>
       </div>
     </>
