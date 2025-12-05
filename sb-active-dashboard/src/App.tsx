@@ -7,6 +7,8 @@ import HomePage from "./pages/home";
 import SafetyPage from "./pages/dashboard/safety";
 import VolumePage from "./pages/dashboard/volume";
 import Test from "./pages/dashboard/test";
+import AboutPage from "./pages/about";
+import ContactPage from "./pages/contact";
 // import TestBoundariesPage from "./pages/dashboard/test-boundaries";
 
 import { ThemeProvider, CssBaseline, StyledEngineProvider } from "@mui/material";
@@ -22,6 +24,10 @@ function App() {
           <Routes>
             {/* Redirect root to safety dashboard */}
             <Route path="/" element={<Navigate to="/dashboard/safety" replace />} />
+
+            {/* Static pages */}
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
 
             {/* everything that needs useMapContext */}
             <Route
