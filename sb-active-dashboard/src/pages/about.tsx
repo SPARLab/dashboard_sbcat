@@ -134,11 +134,19 @@ export default function AboutPage() {
           >
             Guide to the Geographic Approach
           </Link>
-          . Through our GIS and Earth Observing Services (GEOS) Center, we also provide
-          geospatial services and expertise to support academic and non-academic clients
-          across fields such as spatial analysis, GIScience, transportation systems,
-          remote sensing, urban and regional science, wildfire, and habitat restoration
-          monitoring.
+          . We also house the{" "}
+          <Link
+            href="https://geos.spatial.ucsb.edu/"
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ color: theme.palette.aqua.main }}
+          >
+            GIS and Earth Observing Services (GEOS) Center
+          </Link>
+          , which provides geospatial services and expertise to support academic and
+          non-academic clients across fields such as spatial analysis, GIScience,
+          transportation systems, remote sensing, urban and regional science, wildfire,
+          and habitat restoration monitoring.
         </Typography>
 
         {/* Back to Dashboard Link */}
