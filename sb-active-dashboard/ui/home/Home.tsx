@@ -4,8 +4,13 @@ import React from "react";
 import { Container, Typography, Toolbar, Box } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import AppCard from "./AppCard";
-import apps from "./appInfo.json";
+import allApps from "./appInfo.json";
 import { appTheme } from "../theme";
+import { featureFlags } from "@/src/config/featureFlags";
+
+const apps = featureFlags.showVolumePage
+  ? allApps
+  : allApps.filter((app) => app.title !== "Volume");
 
 export default function HomePage() {
   return (

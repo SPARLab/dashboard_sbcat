@@ -3,15 +3,20 @@ import React from "react";
 import Header from "./Header";
 import Footer from "./Footer";
 import { Box } from "@mui/material";
+import { featureFlags } from "@/src/config/featureFlags";
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
 };
 
-const apps = [
+const allApps = [
   { name: "Safety", link: "/dashboard/safety" },
   { name: "Volume", link: "/dashboard/volume" },
 ];
+
+const apps = featureFlags.showVolumePage
+  ? allApps
+  : allApps.filter((app) => app.name !== "Volume");
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (

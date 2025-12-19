@@ -13,6 +13,7 @@ import ContactPage from "./pages/contact";
 
 import { ThemeProvider, CssBaseline, StyledEngineProvider } from "@mui/material";
 import { appTheme } from "@/ui/theme";
+import { featureFlags } from "@/src/config/featureFlags";
 
 function App() {
   return (
@@ -37,7 +38,11 @@ function App() {
                   <DashboardLayout>
                     <Routes>
                       <Route path="safety" element={<SafetyPage />} />
-                      <Route path="volume" element={<VolumePage />} />
+                      {featureFlags.showVolumePage ? (
+                        <Route path="volume" element={<VolumePage />} />
+                      ) : (
+                        <Route path="volume" element={<Navigate to="/dashboard/safety" replace />} />
+                      )}
                       <Route path="test" element={<Test />} />
                       {/* <Route path="test-boundaries" element={<TestBoundariesPage />} /> */}
                     </Routes>
