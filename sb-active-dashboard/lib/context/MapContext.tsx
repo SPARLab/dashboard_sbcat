@@ -4,7 +4,6 @@ import React, { ReactNode, createContext, useContext, useState } from "react";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import GroupLayer from "@arcgis/core/layers/GroupLayer";
-import VectorTileLayer from "@arcgis/core/layers/VectorTileLayer";
 import LayerList from "@arcgis/core/widgets/LayerList";
 import TimeSlider from "@arcgis/core/widgets/TimeSlider";
 

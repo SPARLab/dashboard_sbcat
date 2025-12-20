@@ -294,10 +294,10 @@ export async function createHeatmaps() {
 
   // paginate queries since over 2000 records
   let weightResultLength = 10000;
-  let weightArr: Record<string, any>[] = [];
+  const weightArr: Record<string, any>[] = [];
   let weightObjectIds: string[] = [];
   while (weightResultLength === 10000) {
-    let queryWeights = safetyWeights.createQuery();
+    const queryWeights = safetyWeights.createQuery();
     queryWeights.where = "";
     queryWeights.outFields = ["*"];
     queryWeights.maxRecordCountFactor = 5;
@@ -318,10 +318,10 @@ export async function createHeatmaps() {
 
   let earliestIncidentDate = new Date();
   let pointResultLength = 10000;
-  let pointArr: Record<string, any>[] = [];
+  const pointArr: Record<string, any>[] = [];
   let pointObjectIds: string[] = [];
   while (pointResultLength === 10000) {
-    let pointQuery = safetyPoints.createQuery();
+    const pointQuery = safetyPoints.createQuery();
     pointQuery.where = "";
     pointQuery.outFields = ["*"];
     pointQuery.returnGeometry = true;
@@ -331,7 +331,7 @@ export async function createHeatmaps() {
     }
 
     const pointResults = await safetyPoints.queryFeatures(pointQuery);
-    let pointFeatures = pointResults.features;
+    const pointFeatures = pointResults.features;
 
     pointFeatures.forEach((feature) => {
       const attributes = feature.attributes;

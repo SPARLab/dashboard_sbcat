@@ -129,7 +129,7 @@ async function createIncidentGraphics(
   incidentsQuery.outFields = ["*"];
   incidentsQuery.maxRecordCountFactor = 5;
 
-  let incidentFeatures: Graphic[] = [];
+  const incidentFeatures: Graphic[] = [];
   const queryResults: FeatureSet =
     await incidentPoints.queryFeatures(incidentsQuery);
   incidentFeatures.push(...queryResults.features);

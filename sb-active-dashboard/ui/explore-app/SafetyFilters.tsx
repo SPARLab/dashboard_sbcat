@@ -312,7 +312,7 @@ export default function SafetyFilters() {
     let weekdayFilter = null;
     const checks = [weChecked[1], ...wdChecked, weChecked[0]];
     const weekdays = [0, 1, 2, 3, 4, 5, 6]; // ordered sunday (0) through saturday (6)
-    let includedDays = weekdays.filter((_, i) => checks[i]);
+    const includedDays = weekdays.filter((_, i) => checks[i]);
     if (includedDays.length !== 0) {
       weekdayFilter = `dow IN (${includedDays.join(", ")})`;
     }

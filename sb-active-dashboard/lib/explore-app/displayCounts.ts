@@ -195,45 +195,45 @@ async function createAADTGraphics(
   query: string,
   title: string
 ) {
-  let tableQuery = countTable.createQuery();
+  const tableQuery = countTable.createQuery();
   tableQuery.where = query; // query either only bikes or only peds
   tableQuery.outFields = ["*"];
 
-  let tableArr: Record<string, any>[] = [];
+  const tableArr: Record<string, any>[] = [];
   const tableResults: FeatureSet = await countTable.queryFeatures(tableQuery);
 
-  let tableFeatures = tableResults.features;
+  const tableFeatures = tableResults.features;
   tableFeatures.forEach((feature: any) => {
     tableArr.push({ ...feature.attributes });
   });
 
   // querying count location point geometry attributes
-  let geomQuery = countPoints.createQuery();
+  const geomQuery = countPoints.createQuery();
   geomQuery.where = "";
   geomQuery.outFields = ["*"];
   geomQuery.returnGeometry = true;
 
-  let geomArr: Record<string, any>[] = [];
+  const geomArr: Record<string, any>[] = [];
   const geomResults = await countPoints.queryFeatures(geomQuery);
 
-  let geomFeatures = geomResults.features;
+  const geomFeatures = geomResults.features;
 
   geomFeatures.forEach((feature) => {
-    let id = feature.attributes.id;
-    let name = feature.attributes.name;
-    let source = feature.attributes.source;
-    let locality = feature.attributes.locality;
-    let edges = feature.attributes.site_edges_arr;
+    const id = feature.attributes.id;
+    const name = feature.attributes.name;
+    const source = feature.attributes.source;
+    const locality = feature.attributes.locality;
+    const edges = feature.attributes.site_edges_arr;
     let numEdges;
 
     if (edges == null) {
       numEdges = 2;
     } else {
-      let edges_array = edges.split(",").map((edge: Str) => edge.trim());
+      const edges_array = edges.split(",").map((edge: Str) => edge.trim());
       numEdges = edges_array.length;
     }
 
-    let geometry = feature.geometry;
+    const geometry = feature.geometry;
 
     geomArr.push({
       id: id,
@@ -436,26 +436,26 @@ async function createSiteGraphics() {
     url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_Bicycle_and_Pedestrian_Counts/FeatureServer/2",
   });
 
-  let geomQuery = countPoints.createQuery();
+  const geomQuery = countPoints.createQuery();
   geomQuery.where = "";
   geomQuery.outFields = ["*"];
   geomQuery.returnGeometry = true;
 
-  let geomArr: Record<string, any>[] = [];
+  const geomArr: Record<string, any>[] = [];
   const geomResults = await countPoints.queryFeatures(geomQuery);
 
-  let geomFeatures = geomResults.features;
+  const geomFeatures = geomResults.features;
 
   const typeQuery = aadtTable.createQuery();
   typeQuery.where = "1=1";
   const aadtResults = await aadtTable.queryFeatures();
   const aadtFeatures = aadtResults.features;
   for (const feature of geomFeatures) {
-    let id = feature.attributes.id;
-    let name = feature.attributes.name;
-    let source = feature.attributes.source;
-    let locality = feature.attributes.locality;
-    let geometry = feature.geometry;
+    const id = feature.attributes.id;
+    const name = feature.attributes.name;
+    const source = feature.attributes.source;
+    const locality = feature.attributes.locality;
+    const geometry = feature.geometry;
 
     // query aadt table to determin if there are ped and bike counts
 
@@ -608,7 +608,7 @@ async function createSiteGraphics() {
         const query = aadtTable.createQuery();
         query.where = "site_id = " + siteId;
         return aadtTable.queryFeatures(query).then((results: FeatureSet) => {
-          let tableArr: Record<string, any>[] = [];
+          const tableArr: Record<string, any>[] = [];
           results.features.forEach((feature: any) => {
             tableArr.push({ ...feature.attributes });
           });

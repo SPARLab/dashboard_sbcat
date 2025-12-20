@@ -241,7 +241,7 @@ export class ModeledVolumeDataService {
       const modelType = config.modelCountsBy || 'cost-benefit';
       const year = config.year;
       
-      let volumeLevels: string[] = [];
+      const volumeLevels: string[] = [];
       
       // Collect volume levels for all requested count types
       config.countTypes.forEach(countType => {

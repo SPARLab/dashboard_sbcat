@@ -131,7 +131,7 @@ export class VolumeBreakdownDataService {
     query.outFields = ["site_id", "timestamp", "count_type", "counts"];
     query.returnGeometry = false;
     // Debug the where clause to verify date filtering
-    // eslint-disable-next-line no-console
+     
     console.debug('[VolumeBreakdownDataService] counts where:', query.where);
 
     const results = await countsLayer.queryFeatures(query);

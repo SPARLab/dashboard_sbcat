@@ -62,11 +62,11 @@ export default function ExploreMap() {
     setTimeSlider,
   } = useMapContext();
 
-  const [showWidgetPanel, setShowWidgetPanel] = useState<Boolean>(false);
-  const [showLegend, setShowLegend] = useState<Boolean>(false);
-  const [showLayerList, setShowLayerList] = useState<Boolean>(false);
-  const [showFilter, setShowFilter] = useState<Boolean>(false);
-  const [showPrint, setShowPrint] = useState<Boolean>(false);
+  const [showWidgetPanel, setShowWidgetPanel] = useState<boolean>(false);
+  const [showLegend, setShowLegend] = useState<boolean>(false);
+  const [showLayerList, setShowLayerList] = useState<boolean>(false);
+  const [showFilter, setShowFilter] = useState<boolean>(false);
+  const [showPrint, setShowPrint] = useState<boolean>(false);
   const [mapElRef, setMapElRef] = useState(null);
 
   const [hexagonTile, setHexagonTile] = useState<VectorTileLayer | null>(null);

@@ -170,8 +170,8 @@ export async function createAADTLayer() {
         const bikeData = yearData.bike;
         const pedData = yearData.ped;
         
-        let bikeAADT = bikeData ? `${Math.round(bikeData.allAadt)}` : '-';
-        let pedAADT = pedData ? `${Math.round(pedData.allAadt)}` : '-';
+        const bikeAADT = bikeData ? `${Math.round(bikeData.allAadt)}` : '-';
+        const pedAADT = pedData ? `${Math.round(pedData.allAadt)}` : '-';
         
         return `
           <tr style="border-bottom: 1px solid #eee;">
@@ -192,7 +192,7 @@ export async function createAADTLayer() {
       const surveyRange = firstSurvey === lastSurvey ? `${firstSurvey}` : `${firstSurvey} - ${lastSurvey}`;
 
       // Build observation period summary
-      let observationSummary = [];
+      const observationSummary = [];
       if (bikeObservations > 0) {
         observationSummary.push(`🚲 ${bikeObservations} biking period${bikeObservations !== 1 ? 's' : ''}`);
       }

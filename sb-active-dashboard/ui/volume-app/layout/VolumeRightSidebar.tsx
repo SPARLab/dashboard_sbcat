@@ -6,7 +6,7 @@ import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import React, { useCallback, useEffect, useState } from "react";
 import { VolumeChartDataService } from "../../../lib/data-services/VolumeChartDataService";
 import { aadtCache } from "../../../lib/data-services/AADTCacheService";
-import { useSpatialQuery, useVolumeSpatialQuery, useEnhancedAADVSummaryQuery } from "../../../lib/hooks/useSpatialQuery";
+import { useSpatialQuery, useEnhancedAADVSummaryQuery } from "../../../lib/hooks/useSpatialQuery";
 import { useVolumeAppStore } from "../../../lib/stores/volume-app-state";
 import { queryDeduplicator, QueryDeduplicator } from "../../../lib/utilities/shared/QueryDeduplicator";
 import { formatSparklineDateRange } from "../utils/sparklineUtils";
@@ -73,10 +73,6 @@ export default function VolumeRightSidebar({
   selectedGeometry,
   selectedAreaName,
   dateRange,
-  selectedCountSite: selectedCountSiteProp, // Rename to avoid conflict
-  onCountSiteSelect,
-  onBinSitesHighlight,
-  highlightedBinSites: highlightedBinSitesProp = [], // Rename to avoid conflict
   selectedYear
 }: VolumeRightSidebarProps) {
   // Use Zustand store for state management
@@ -101,7 +97,7 @@ export default function VolumeRightSidebar({
     title: "AADT Table"
   }));
   const [aadtLayer, setAadtLayer] = useState<FeatureLayer | null>(null);
-  const [aadtCacheStatus, setAadtCacheStatus] = useState<{ isLoaded: boolean; isLoading: boolean; cacheSize: number }>({ 
+  const [, setAadtCacheStatus] = useState<{ isLoaded: boolean; isLoading: boolean; cacheSize: number }>({ 
     isLoaded: false, 
     isLoading: false, 
     cacheSize: 0 
@@ -411,7 +407,7 @@ export default function VolumeRightSidebar({
   }, [selectedGeometry]);
 
   // Create volume chart data service instance
-  const [volumeChartDataService, setVolumeChartDataService] = useState<VolumeChartDataService | null>(null);
+  const [, setVolumeChartDataService] = useState<VolumeChartDataService | null>(null);
 
   // Initialize volume chart data service when layers are ready
   useEffect(() => {

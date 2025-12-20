@@ -19,14 +19,14 @@ async function createCensusGraphics(
   layerName: any
 ) {
   // create an array of graphics and array of table attribute fields
-  let tableQuery = tableLayer.createQuery();
+  const tableQuery = tableLayer.createQuery();
   tableQuery.where = ""; // No filter, query all records
   tableQuery.outFields = ["*"];
 
-  let tableArr: Record<string, any>[] = []; // Array of attribute objects
+  const tableArr: Record<string, any>[] = []; // Array of attribute objects
   const tableResults: FeatureSet = await tableLayer.queryFeatures(tableQuery);
 
-  let tableFeatures = tableResults.features;
+  const tableFeatures = tableResults.features;
   tableFeatures.forEach((feature: any) => {
     tableArr.push(feature.attributes);
   });
@@ -34,18 +34,18 @@ async function createCensusGraphics(
 
   // querying census for geometry attributes
   // querying census block and tract geometries
-  let geomQuery = geomLayer.createQuery();
+  const geomQuery = geomLayer.createQuery();
   geomQuery.where = "";
   geomQuery.outFields = ["id"];
   geomQuery.returnGeometry = true;
 
-  let geomArr: Record<string, any>[] = []; // Array of attribute objects
+  const geomArr: Record<string, any>[] = []; // Array of attribute objects
   const geomResults: FeatureSet = await geomLayer.queryFeatures(geomQuery);
 
-  let geomFeatures = geomResults.features;
+  const geomFeatures = geomResults.features;
   geomFeatures.forEach((feature: any) => {
-    let id = feature.attributes.id;
-    let geometry = feature.geometry;
+    const id = feature.attributes.id;
+    const geometry = feature.geometry;
 
     geomArr.push({ id: id, geometry: geometry });
   });
@@ -60,7 +60,7 @@ async function createCensusGraphics(
   });
 
   // creating a new graphics layer
-  let graphics = [];
+  const graphics = [];
   let graphic;
   for (let i = 0; i < mergedData.length; i++) {
     graphic = new Graphic({
@@ -90,7 +90,7 @@ async function createCensusGraphics(
   );
   let medianField = "";
   tableAttributes.forEach((attr) => {
-    let field = new Field({
+    const field = new Field({
       name: attr,
       type: "double",
     });
@@ -173,32 +173,32 @@ async function createGraphics(tableLayer: FeatureLayer) {
     url: "https://spatialcenter.grit.ucsb.edu/server/rest/services/Hosted/Hosted_ACS_Census_Data/FeatureServer",
   });
 
-  let tableQuery = tableLayer.createQuery();
+  const tableQuery = tableLayer.createQuery();
   tableQuery.where = ""; // No filter, query all records
   tableQuery.outFields = ["*"];
 
-  let tableArr: Record<string, any>[] = []; // Array of attribute objects
+  const tableArr: Record<string, any>[] = []; // Array of attribute objects
   const tableResults: FeatureSet = await tableLayer.queryFeatures(tableQuery);
 
-  let tableFeatures = tableResults.features;
+  const tableFeatures = tableResults.features;
   tableFeatures.forEach((feature: any) => {
     tableArr.push(feature.attributes);
   });
 
   // querying census for geometry attributes
   // querying census block and tract geometries
-  let geomQuery = geomLayer.createQuery();
+  const geomQuery = geomLayer.createQuery();
   geomQuery.where = "";
   geomQuery.outFields = ["id"];
   geomQuery.returnGeometry = true;
 
-  let geomArr: Record<string, any>[] = []; // Array of attribute objects
+  const geomArr: Record<string, any>[] = []; // Array of attribute objects
   const geomResults: FeatureSet = await geomLayer.queryFeatures(geomQuery);
 
-  let geomFeatures = geomResults.features;
+  const geomFeatures = geomResults.features;
   geomFeatures.forEach((feature: any) => {
-    let id = feature.attributes.id;
-    let geometry = feature.geometry;
+    const id = feature.attributes.id;
+    const geometry = feature.geometry;
 
     geomArr.push({ id: id, geometry: geometry });
   });
@@ -213,7 +213,7 @@ async function createGraphics(tableLayer: FeatureLayer) {
   });
 
   // creating a new graphics layer
-  let graphics = [];
+  const graphics = [];
   let graphic;
   for (let i = 0; i < mergedData.length; i++) {
     graphic = new Graphic({

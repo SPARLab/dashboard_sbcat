@@ -132,7 +132,7 @@ export class IncidentProcessingService {
       return [];
     }
     let weightResultLength = 10000;
-    let weightArr: Record<string, any>[] = [];
+    const weightArr: Record<string, any>[] = [];
     let weightObjectIds: string[] = [];
 
     while (weightResultLength === 10000) {

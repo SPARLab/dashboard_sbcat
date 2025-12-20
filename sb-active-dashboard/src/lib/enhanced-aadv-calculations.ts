@@ -333,7 +333,7 @@ export class EnhancedAADVCalculationService {
       });
 
       const warnings: string[] = [];
-      let factorsUsed = {
+      const factorsUsed = {
         santaCruz: false,
         nbpd: false,
         hourlyFactorsApplied: 0,

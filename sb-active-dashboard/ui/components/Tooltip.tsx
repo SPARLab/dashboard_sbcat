@@ -68,7 +68,7 @@ const TooltipContent = ({ text, align, triggerRef, width = 'max-w-sm' }: Tooltip
   };
 
   const positioning = getTooltipPositioning();
-  let style: React.CSSProperties = { top: `${position.top}px`, left: `${position.left}px`, transform: 'translateY(-100%)' };
+  const style: React.CSSProperties = { top: `${position.top}px`, left: `${position.left}px`, transform: 'translateY(-100%)' };
   if (align === 'center') {
     style.transform = 'translate(-50%, -100%)';
   }

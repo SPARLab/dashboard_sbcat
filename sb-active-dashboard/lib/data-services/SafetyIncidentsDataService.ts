@@ -718,7 +718,7 @@ export class SafetyIncidentsDataService {
     );
 
     // Join data and compute derived fields
-    let enrichedIncidents = incidents.map(incident => {
+    const enrichedIncidents = incidents.map(incident => {
       const incidentParties = partiesByIncident.get(incident.id) || [];
 
       // Calculate max severity from all parties or use incident severity
