@@ -29,7 +29,7 @@ export default function SafetyApp() {
   // Selection hook for polygon selection (same as volume page)
   const { selectedGeometry, selectedAreaName, selectedAttributes, onSelectionChange } = useSelection();
   
-  const [geographicLevel, setGeographicLevel] = useState('city-service-area');
+  const [geographicLevel, setGeographicLevel] = useState('county');
   const [schoolDistrictFilter, setSchoolDistrictFilter] = useState<SchoolDistrictFilter>({ gradeFilter: 'high-school' });
   const [filters, setFilters] = useState<Partial<SafetyFilters>>({
     showPedestrian: true,

@@ -504,7 +504,11 @@ export class GeographicBoundariesService {
         
         // Trigger the selection callback to notify components
         if (this.onSelectionChange) {
-          const areaName = countyFeature.attributes.NAME || countyFeature.attributes.name || null;
+          let areaName = countyFeature.attributes.NAME || countyFeature.attributes.name || null;
+          // Failsafe: Ensure county names end with " County" for proper display
+          if (areaName && !areaName.endsWith(' County')) {
+            areaName = `${areaName} County`;
+          }
           
           console.log('✅ [Auto-Select] Using full-resolution geometry for Santa Barbara County spatial queries');
           
