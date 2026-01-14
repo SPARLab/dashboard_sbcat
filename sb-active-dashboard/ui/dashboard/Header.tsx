@@ -1,9 +1,13 @@
-import React, { useState } from "react";
-import { useLocation, Link as RouterLink } from "react-router-dom";
-
-import { Toolbar, Box, Typography, Button, AppBar } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
+import React, { useState, useEffect } from "react";
+import { useLocation, Link } from "react-router-dom";
 import DisclaimerModal from "@/ui/components/DisclaimerModal";
+import HeaderThemeSelector from "./HeaderThemeSelector";
+import {
+  DEFAULT_THEME_ID,
+  HEADER_THEME_STORAGE_KEY,
+  getThemeById,
+  getGradientStyle,
+} from "@/ui/theme/headerThemes";
 
 interface AppInfo {
   name: string;
@@ -16,140 +20,98 @@ interface HeaderProps {
 }
 
 export default function Header({ apps }: HeaderProps) {
-  const theme = useTheme();
   const location = useLocation();
   const [comingSoonModalOpen, setComingSoonModalOpen] = useState(false);
+  const [themeId, setThemeId] = useState(() => {
+    const stored = localStorage.getItem(HEADER_THEME_STORAGE_KEY);
+    return stored ?? DEFAULT_THEME_ID;
+  });
 
-  const handleComingSoonClick = () => {
-    setComingSoonModalOpen(true);
-  };
+  const currentTheme = getThemeById(themeId);
+
+  useEffect(() => {
+    localStorage.setItem(HEADER_THEME_STORAGE_KEY, themeId);
+  }, [themeId]);
 
   return (
     <>
-      <AppBar
+      <header
         id="dashboard-header"
-        position="sticky"
-        elevation={0}
-        sx={{
-          backgroundColor: theme.palette.white.main,
-          borderBottom: `1px solid ${theme.palette.lightgray.main}`,
-          width: "100vw",
-        }}
+        className="sticky top-0 z-40 w-full"
+        style={{ background: getGradientStyle(currentTheme) }}
       >
-        <Toolbar sx={{ maxHeight: "70px" }}>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "row",
-              width: "100vw",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Typography variant="h6" noWrap component="div" sx={{ color: theme.palette.navy.main }}>
-              ACTIVE SB
-            </Typography>
+        <div className="flex items-center justify-between h-16 px-4">
+          <h1 id="dashboard-title" className="text-lg font-semibold text-white">
+            ACTIVE SB
+          </h1>
 
-            <Box
-              id="header-navigation"
-              sx={{
-                width: "50%",
-                flexShrink: 1,
-                textAlign: "end",
-                display: "flex",
-                gap: 2,
-                flexDirection: "row",
-                justifyContent: "end",
-                alignItems: "center",
-              }}
-            >
-              {apps?.map((appInfo, index) => {
-                const isActive = appInfo.link ? location.pathname.startsWith(appInfo.link) : false;
-                const isComingSoon = appInfo.comingSoon;
+          <nav id="header-navigation" className="flex items-center gap-2">
+            <HeaderThemeSelector
+              selectedThemeId={themeId}
+              onThemeChange={setThemeId}
+            />
 
-                if (isComingSoon) {
-                  return (
-                    <Button
-                      id={`header-${appInfo.name.toLowerCase()}-button`}
-                      key={index}
-                      variant="text"
-                      onClick={handleComingSoonClick}
-                      sx={{
-                        backgroundColor: "transparent",
-                        color: "#9ca3af", // gray-400 - muted color for coming soon
-                        fontWeight: "bold",
-                        fontSize: "1rem",
-                        textTransform: "none",
-                        borderRadius: 2,
-                        px: 2,
-                        py: 1,
-                        "&:hover": {
-                          backgroundColor: "#f3f4f6", // gray-100 - subtle hover
-                          color: "#6b7280", // gray-500
-                        },
-                        "&:focus": {
-                          outline: "none",
-                          boxShadow: "none",
-                        },
-                        "&:active": {
-                          outline: "none",
-                          boxShadow: "none",
-                        },
-                      }}
-                    >
-                      {appInfo.name}
-                    </Button>
-                  );
-                }
+            <div className="w-px h-5 bg-white/30 mx-2" />
 
+            {apps?.map((appInfo, index) => {
+              const isActive = appInfo.link
+                ? location.pathname.startsWith(appInfo.link)
+                : false;
+              const isComingSoon = appInfo.comingSoon;
+
+              if (isComingSoon) {
                 return (
-                  <Button
+                  <button
                     id={`header-${appInfo.name.toLowerCase()}-button`}
                     key={index}
-                    component={RouterLink}
-                    to={appInfo.link!}
-                    variant="text"
-                    sx={{
-                      backgroundColor: isActive
-                        ? "#d1d5db" // gray-300 equivalent
-                        : "transparent",
-                      color: isActive
-                        ? "#374151" // gray-700 equivalent
-                        : theme.palette.lightgray.contrastText,
-                      fontWeight: "bold",
-                      fontSize: "1rem",
-                      textTransform: "none",
-                      borderRadius: 2,
-                      px: 2,
-                      py: 1,
-                      "&:hover": {
-                        backgroundColor: isActive
-                          ? "#9ca3af" // gray-400 equivalent
-                          : "#d1d5db", // gray-300 equivalent
-                        color: isActive
-                          ? "#1f2937" // gray-800 equivalent
-                          : "#374151", // gray-700 equivalent
-                      },
-                      "&:focus": {
-                        outline: "none",
-                        boxShadow: "none",
-                      },
-                      "&:active": {
-                        outline: "none",
-                        boxShadow: "none",
-                      },
+                    type="button"
+                    onClick={() => setComingSoonModalOpen(true)}
+                    className="text-base font-bold rounded-lg transition-colors outline-none focus:outline-none"
+                    style={{
+                      backgroundColor: "#ffffff",
+                      color: "#9ca3af",
+                      padding: "8px 16px",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#f3f4f6";
+                      e.currentTarget.style.color = "#6b7280";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "#ffffff";
+                      e.currentTarget.style.color = "#9ca3af";
                     }}
                   >
                     {appInfo.name}
-                  </Button>
+                  </button>
                 );
-              })}
-            </Box>
-          </Box>
-        </Toolbar>
-      </AppBar>
+              }
 
-      {/* Coming Soon Modal */}
+              return (
+                <Link
+                  id={`header-${appInfo.name.toLowerCase()}-button`}
+                  key={index}
+                  to={appInfo.link!}
+                  className="text-base font-bold rounded-lg transition-colors outline-none focus:outline-none"
+                  style={{
+                    backgroundColor: "#ffffff",
+                    color: isActive ? "#374151" : "#4b5563",
+                    padding: "8px 16px",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#f3f4f6";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "#ffffff";
+                  }}
+                >
+                  {appInfo.name}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </header>
+
       <DisclaimerModal
         id="coming-soon-modal"
         isOpen={comingSoonModalOpen}

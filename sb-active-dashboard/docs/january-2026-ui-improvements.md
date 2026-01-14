@@ -8,7 +8,7 @@
 
 ## Quick Task Overview
 
-**Overall Progress:** 6/12 tasks complete (1 flagged for removal)
+**Overall Progress:** 7/12 tasks complete (1 flagged for removal)
 
 - [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `COMPLETED`
 - [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `COMPLETED`
@@ -16,7 +16,7 @@
 - [x] **Task 4 (Priority 1):** Add Chart Type Toggle (Line vs Bar) for Annual Incidents - `COMPLETED`
 - [x] **Task 5 (Priority 2):** Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off - `COMPLETED`
 - [x] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `COMPLETED`
-- [ ] **Task 7 (Priority 2):** Add Header Theme Color Selector with Navy Blue Gradient (5+ options) - `NOT STARTED`
+- [x] **Task 7 (Priority 2):** Add Header Theme Color Selector with Navy Blue Gradient (5+ options) - `COMPLETED`
 - [ ] **Task 8 (Priority 2):** Add Spatial Logo to About Page and Header - `NOT STARTED`
 - [ ] **Task 9 (Priority 3):** Fix Annual Incidents Chart Y-Axis Positioning - `NOT STARTED`
 - [ ] **Task 10 (Priority 3):** Fix Pedestrian Button in Conflict Type - `NOT STARTED` (verify if bug still exists)
@@ -171,9 +171,9 @@
 ---
 
 ### 7. Add Header Theme Color Selector with Navy Blue Gradient
-- [ ] **Task:** Implement navy blue gradient for header (default theme)
-- [ ] **Task:** Add dropdown theme color selector to the left of "Safety"/"Infrastructure"/"Equity" page buttons
-- [ ] **Task:** Create at least 5 different blue gradient options for selection
+- [x] **Task:** Implement navy blue gradient for header (default theme)
+- [x] **Task:** Add dropdown theme color selector to the left of "Safety"/"Infrastructure"/"Equity" page buttons
+- [x] **Task:** Create at least 5 different blue gradient options for selection
 - **Design Requirements:**
   - **Primary Theme:** Navy blue gradient (dark blue at top → slightly lighter blue at bottom)
   - Color should feel trustworthy and professional
@@ -187,14 +187,13 @@
   - Create at least 5 blue gradient variations to test
   - Make gradient customizable through theme system
   - Ensure accessibility (contrast ratios, readability)
-- **Files to Update:**
-  - Theme configuration (`ui/theme/` or similar)
-  - Header component styles
-  - Tailwind config (if using Tailwind gradients)
-  - Theme selector dropdown component (may need to create)
+- **Files Updated:**
+  - `ui/theme/headerThemes.ts` - Created theme definitions with 7 gradient options (Dodger Blue, Navy Classic, Ocean Depth, Slate Steel, Midnight Blue, Royal Blue, Pacific)
+  - `ui/dashboard/HeaderThemeSelector.tsx` - Created frosted-glass themed dropdown component with color swatch previews, checkmark indicators, and click-outside detection
+  - `ui/dashboard/Header.tsx` - Migrated from MUI to pure Tailwind/HTML, applied gradient backgrounds, updated nav buttons to white solid backgrounds with consistent 8px/16px padding
 - **Assignee:**
 - **Priority:** Low
-- **Notes:** Start with navy blue as primary, create at least 5 variations for dropdown selection. May still consult with Lizzy for final approval.
+- **Notes:** Default theme set to "Ocean Depth" (dark blue gradient). Header uses vertical gradient with white nav buttons. Theme selector has transparent frosted-glass styling that blends with header. Selection persisted to localStorage. All Chrome dark mode issues resolved with inline styles and forced light color scheme.
 
 ---
 
@@ -392,4 +391,5 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 | 2026-01-14 | Task 4 completed | Added chart type toggle (line/bar) to Annual Incidents Comparison - icon buttons positioned right of time scale buttons, smart defaults reset on time scale change |
 | 2026-01-14 | Task 5 completed | Fixed bottom margin when Time of Day and Weekdays vs. Weekends sections are toggled off - conditional mb-3 margin reduces unnecessary whitespace by ~24px |
 | 2026-01-14 | Task 6 completed | Added Infrastructure and Equity buttons to header with "Coming Soon" modal functionality - buttons have muted styling and trigger DisclaimerModal on click |
+| 2026-01-14 | Task 7 completed | Added header theme color selector with gradient backgrounds - created 7 blue gradient options (default: Ocean Depth), frosted-glass dropdown selector, migrated header from MUI to Tailwind with white nav buttons |
 
