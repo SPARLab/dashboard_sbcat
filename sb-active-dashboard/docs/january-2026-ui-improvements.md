@@ -8,11 +8,11 @@
 
 ## Quick Task Overview
 
-**Overall Progress:** 2/12 tasks complete (1 flagged for removal)
+**Overall Progress:** 3/12 tasks complete (1 flagged for removal)
 
 - [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `COMPLETED`
 - [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `COMPLETED`
-- [ ] **Task 3 (Priority 1):** Improve Year Toggle Clarity with Smart Defaults in Annual Incidents Comparison - `NOT STARTED`
+- [x] **Task 3 (Priority 1):** Improve Year Toggle Clarity with Smart Defaults in Annual Incidents Comparison - `COMPLETED`
 - [ ] **Task 4 (Priority 1):** Add Chart Type Toggle (Line vs Bar) for Annual Incidents - `NOT STARTED`
 - [ ] **Task 5 (Priority 2):** Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off - `NOT STARTED`
 - [ ] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `NOT STARTED`
@@ -76,8 +76,8 @@
 ---
 
 ### 3. Improve Year Toggle Clarity with Smart Defaults
-- [ ] **Task:** Implement smart default toggling for years to reduce visual noise
-- [ ] **Task:** Add instructional text to make toggle functionality obvious
+- [x] **Task:** Implement smart default toggling for years to reduce visual noise
+- [x] **Task:** Add instructional text to make toggle functionality obvious
 - **Current Issue:** 
   - Users may not realize years are toggleable
   - Too many lines (e.g., 10 years = 10 lines) creates noisy, hard-to-read charts
@@ -91,13 +91,17 @@
   - First and last years give users a sense of the full time range
   - Cleaner initial visualization is easier to interpret
   - Clear instruction empowers users to explore additional years
-- **Files to Update:**
-  - Annual Incidents Comparison component
-  - Year selection UI logic
-  - Default state initialization for year toggles
+- **Files Updated:**
+  - `ui/safety-app/components/right-sidebar/AnnualIncidentsComparison.tsx` - Added `selectedYears` state to track legend visibility, implemented smart defaults via useEffect that applies first/last year logic for Day/Month views with >2 years, added `legendselectchanged` event handler to sync state with ECharts, and added subtle hint text "Click year toggles to show additional years" that appears only when years are hidden
 - **Assignee:**
-- **Priority:** Medium
-- **Notes:**
+- **Priority:** High
+- **Notes:** Smart defaults apply differently based on time scale:
+  - **Year view:** All years visible by default (no smart filtering)
+  - **Day/Month views with ≤2 years:** All years visible
+  - **Day/Month views with >2 years:** Only first and last year visible, middle years hidden
+  - Smart defaults reset when filters or geography changes (via cacheKey dependency)
+  - Users can freely toggle any year on/off via ECharts legend interaction
+  - Hint text only appears when at least one year is hidden
 
 ---
 
@@ -391,4 +395,5 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 | 2026-01-13 | Initial plan created | Based on PDF feedback and sidebar screenshot |
 | 2026-01-13 | Task 1 completed | Auto-select Santa Barbara County on load - changed default geographicLevel to 'county' |
 | 2026-01-13 | Task 2 completed | Consolidated sidebar location indicator - removed "Analysis" header, increased icon/text size for better visibility |
+| 2026-01-13 | Task 3 completed | Implemented smart year toggle defaults for Annual Incidents Comparison - Day/Month views with >2 years now show only first and last year by default with hint text to guide users |
 

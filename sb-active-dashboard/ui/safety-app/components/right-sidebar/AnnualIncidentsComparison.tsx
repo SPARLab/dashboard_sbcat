@@ -252,6 +252,9 @@ export default function AnnualIncidentsComparison({
   const [cacheKey, setCacheKey] = useState<string>('');
   // Track the incident count to detect when spatial result actually changes
   const [lastIncidentCount, setLastIncidentCount] = useState<number>(0);
+  
+  // Track which years are selected (visible) in the legend
+  const [selectedYears, setSelectedYears] = useState<Record<string, boolean>>({});
 
   // Create data service instance
   const dataService = useMemo(() => new SafetyChartDataService(), []);
@@ -387,6 +390,32 @@ export default function AnnualIncidentsComparison({
     }
   }, [spatialResult, spatialError, selectedGeometry, filters, timeScale, dataService]);
 
+  // Compute smart defaults for year visibility when data/view changes
+  // Day/Month views: only first and last year visible if > 2 years
+  // Year view: all years visible
+  useEffect(() => {
+    if (!chartData?.series || chartData.series.length === 0) {
+      setSelectedYears({});
+      return;
+    }
+
+    const yearNames = chartData.series.map(s => s.name);
+    
+    if (timeScale === 'Year' || yearNames.length <= 2) {
+      // Year view or ≤2 years: show all
+      const allSelected: Record<string, boolean> = {};
+      yearNames.forEach(name => { allSelected[name] = true; });
+      setSelectedYears(allSelected);
+    } else {
+      // Day/Month view with >2 years: only first and last visible
+      const smartDefaults: Record<string, boolean> = {};
+      yearNames.forEach((name, index) => {
+        smartDefaults[name] = index === 0 || index === yearNames.length - 1;
+      });
+      setSelectedYears(smartDefaults);
+    }
+  }, [chartData, timeScale, cacheKey]); // cacheKey changes when filters/geometry change
+
   const onEvents = useMemo(
     () => ({
       mouseover: (params: any) => {
@@ -398,6 +427,10 @@ export default function AnnualIncidentsComparison({
       },
       mouseout: () => {
         setHoveredPoint(null);
+      },
+      legendselectchanged: (params: any) => {
+        // Sync our state with ECharts legend selection
+        setSelectedYears(params.selected);
       },
     }),
     [],
@@ -519,6 +552,7 @@ export default function AnnualIncidentsComparison({
         },
         itemWidth: 12,
         itemHeight: 12,
+        selected: selectedYears, // Control which years are visible
       },
       series: chartSeries.map((series, index) => {
         // Color-blind friendly palette - avoids red-green combinations
@@ -585,7 +619,7 @@ export default function AnnualIncidentsComparison({
         show: false,
       },
     };
-    }, [categories, chartSeries, timeScale, yAxisMin, yAxisMax]);
+    }, [categories, chartSeries, timeScale, yAxisMin, yAxisMax, selectedYears]);
 
   const getTimeScaleDescription = (scale: TimeScale): string => {
     switch(scale) {
@@ -593,6 +627,15 @@ export default function AnnualIncidentsComparison({
       case 'Month': return 'Total safety incidents per month comparison between years';
       case 'Year': return 'Total safety incidents per year for selected area';
       default: return 'Total incident trends for selected area';
+    }
+  };
+
+  // Get instruction text for year toggles based on time scale
+  const getToggleHintText = (scale: TimeScale): string => {
+    if (scale === 'Year') {
+      return 'Click year toggles to show or hide years';
+    } else {
+      return 'Click year toggles to show additional years';
     }
   };
 
@@ -674,6 +717,13 @@ export default function AnnualIncidentsComparison({
                   />
                 </span>
               </div>
+
+              {/* Instruction text for year toggles - always visible for consistent spacing */}
+              {chartSeries.length > 1 && (
+                <p id="safety-annual-incidents-toggle-hint" className="text-xs text-gray-400 mt-2 mb-1">
+                  {getToggleHintText(timeScale)}
+                </p>
+              )}
 
               <div id="safety-annual-incidents-chart-container" className="relative">
                 {hoveredPoint && (
