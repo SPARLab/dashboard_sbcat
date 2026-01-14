@@ -8,7 +8,7 @@
 
 ## Quick Task Overview
 
-**Overall Progress:** 7/12 tasks complete (1 flagged for removal)
+**Overall Progress:** 8/13 tasks complete (1 flagged for removal)
 
 - [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `COMPLETED`
 - [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `COMPLETED`
@@ -22,7 +22,8 @@
 - [ ] **Task 10 (Priority 3):** Fix Pedestrian Button in Conflict Type - `NOT STARTED` (verify if bug still exists)
 - [ ] **Task 11 (Priority 3):** Update "Geographic Level" Label to "Select Geographic Level" - `NOT STARTED`
 - [ ] **Task 12 (Priority 3):** Fix Incidents vs. Volumes Ratios Hover Alignment - `NOT STARTED`
-- [ ] **Task 13 (Priority 3):** Add Time Frame Zoom Capability - `FLAGGED FOR REMOVAL` (may negatively impact UI)
+- [x] **Task 13 (Priority 3):** Fix Initial Modal Top Positioning (White Gap Below Header) - `COMPLETED`
+- [ ] **Task 14 (Priority 3):** Add Time Frame Zoom Capability - `FLAGGED FOR REMOVAL` (may negatively impact UI)
 
 ---
 
@@ -290,7 +291,25 @@
 
 ---
 
-### 13. Add Time Frame Zoom Capability - **FLAGGED FOR POTENTIAL REMOVAL**
+### 13. Fix Initial Modal Top Positioning (White Gap Below Header)
+- [x] **Task:** Remove white gap between header and initial modal
+- **Current Issue:**
+  - Initial modal (disclaimer/welcome screen) doesn't extend high enough
+  - Visible white gap between bottom of header and top of modal
+  - Creates visual disconnect and looks unpolished
+- **Expected Behavior:**
+  - Modal should seamlessly align with bottom of header
+  - No visible gap or whitespace between header and modal
+  - Clean, professional appearance
+- **Files Updated:**
+  - `ui/components/DisclaimerModal.tsx` - Changed overlay positioning from `top-[68px]` to `top-16` (64px) to match header height exactly
+- **Assignee:**
+- **Priority:** Medium
+- **Notes:** The header has a fixed height of `h-16` (64px), so the modal overlay needed to start at exactly 64px from the top. The previous value of 68px created a 4-pixel white gap.
+
+---
+
+### 14. Add Time Frame Zoom Capability - **FLAGGED FOR POTENTIAL REMOVAL**
 - [ ] **Task:** Add ability to zoom in on a specific time frame in the Annual Incidents chart
 - **Functionality:**
   - Allow users to focus on subset of years (or days/months depending on view)
@@ -392,4 +411,6 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 | 2026-01-14 | Task 5 completed | Fixed bottom margin when Time of Day and Weekdays vs. Weekends sections are toggled off - conditional mb-3 margin reduces unnecessary whitespace by ~24px |
 | 2026-01-14 | Task 6 completed | Added Infrastructure and Equity buttons to header with "Coming Soon" modal functionality - buttons have muted styling and trigger DisclaimerModal on click |
 | 2026-01-14 | Task 7 completed | Added header theme color selector with gradient backgrounds - created 7 blue gradient options (default: Ocean Depth), frosted-glass dropdown selector, migrated header from MUI to Tailwind with white nav buttons |
+| 2026-01-14 | Task 13 completed | Fixed initial modal top positioning - changed overlay from top-[68px] to top-16 (64px) to eliminate 4px white gap below header |
+
 

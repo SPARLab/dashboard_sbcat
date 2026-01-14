@@ -20,7 +20,7 @@ export default function DisclaimerModal({
   return (
     <div 
       id={`${id}-overlay`}
-      className="fixed top-[68px] bottom-0 left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]"
+      className="fixed top-16 bottom-0 left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]"
       onClick={onClose}
     >
       <div 
