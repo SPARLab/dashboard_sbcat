@@ -8,14 +8,14 @@
 
 ## Quick Task Overview
 
-**Overall Progress:** 5/12 tasks complete (1 flagged for removal)
+**Overall Progress:** 6/12 tasks complete (1 flagged for removal)
 
 - [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `COMPLETED`
 - [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `COMPLETED`
 - [x] **Task 3 (Priority 1):** Improve Year Toggle Clarity with Smart Defaults in Annual Incidents Comparison - `COMPLETED`
 - [x] **Task 4 (Priority 1):** Add Chart Type Toggle (Line vs Bar) for Annual Incidents - `COMPLETED`
 - [x] **Task 5 (Priority 2):** Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off - `COMPLETED`
-- [ ] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `NOT STARTED`
+- [x] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `COMPLETED`
 - [ ] **Task 7 (Priority 2):** Add Header Theme Color Selector with Navy Blue Gradient (5+ options) - `NOT STARTED`
 - [ ] **Task 8 (Priority 2):** Add Spatial Logo to About Page and Header - `NOT STARTED`
 - [ ] **Task 9 (Priority 3):** Fix Annual Incidents Chart Y-Axis Positioning - `NOT STARTED`
@@ -153,24 +153,20 @@
 ---
 
 ### 6. Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality
-- [ ] **Task:** Add "Infrastructure" button to header
-- [ ] **Task:** Add "Equity" button to header
-- [ ] **Task:** Add tooltip on hover showing "coming soon" message
-- [ ] **Task:** Add modal popup on click with "coming soon" message
+- [x] **Task:** Add "Infrastructure" button to header
+- [x] **Task:** Add "Equity" button to header
+- [x] **Task:** Add modal popup on click with "coming soon" message
 - **Location:** Header, to the right side
 - **Implementation Details:**
-  - Position buttons in header to the right
-  - Hover: Display tooltip with "coming soon" or similar performant message
-  - Click: Open modal popup displaying "coming soon!" message
-  - Research best practices for tooltip/modal implementation when implementing
-- **Files to Update:**
-  - Header component
-  - Modal component (may need to create)
-  - Tooltip component or library
-  - Potentially `ui/home/` or `ui/components/` 
+  - Position buttons in header to the right (after Safety and Volume)
+  - Click: Open modal popup displaying "Coming Soon!" message
+  - Uses existing `DisclaimerModal` component for consistent styling
+- **Files Updated:**
+  - `ui/dashboard/Header.tsx` - Added TypeScript interfaces, coming soon button logic with muted styling (gray-400 text color), modal integration using `DisclaimerModal`
+  - `ui/dashboard/DashboardLayout.tsx` - Added Infrastructure and Equity to apps array with `comingSoon: true`, made Volume show "coming soon" by default (removed unless `showVolumePage` feature flag is enabled)
 - **Assignee:**
 - **Priority:** Medium
-- **Notes:** Research best tooltip library/approach before implementing
+- **Notes:** Modal-only approach (no tooltip). Coming soon buttons use subtle visual styling (muted gray text, light hover) to distinguish from active nav buttons. Button order: Safety | Volume | Infrastructure | Equity. Volume also shows "Coming Soon" unless feature flag enables it.
 
 ---
 
@@ -395,4 +391,5 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 | 2026-01-13 | Task 3 completed | Implemented smart year toggle defaults for Annual Incidents Comparison - Day/Month views with >2 years now show only first and last year by default with hint text to guide users |
 | 2026-01-14 | Task 4 completed | Added chart type toggle (line/bar) to Annual Incidents Comparison - icon buttons positioned right of time scale buttons, smart defaults reset on time scale change |
 | 2026-01-14 | Task 5 completed | Fixed bottom margin when Time of Day and Weekdays vs. Weekends sections are toggled off - conditional mb-3 margin reduces unnecessary whitespace by ~24px |
+| 2026-01-14 | Task 6 completed | Added Infrastructure and Equity buttons to header with "Coming Soon" modal functionality - buttons have muted styling and trigger DisclaimerModal on click |
 

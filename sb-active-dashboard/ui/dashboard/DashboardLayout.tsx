@@ -11,11 +11,13 @@ type DashboardLayoutProps = {
 
 const allApps = [
   { name: "Safety", link: "/dashboard/safety" },
-  { name: "Volume", link: "/dashboard/volume" },
+  { name: "Volume", link: "/dashboard/volume", comingSoon: true },
+  { name: "Infrastructure", comingSoon: true },
+  { name: "Equity", comingSoon: true },
 ];
 
 const apps = featureFlags.showVolumePage
-  ? allApps
+  ? allApps.map(app => app.name === "Volume" ? { ...app, comingSoon: false } : app)
   : allApps.filter((app) => app.name !== "Volume");
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
