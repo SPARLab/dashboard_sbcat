@@ -669,8 +669,8 @@ function TimeOfDaySection({
 
   return (
     <div id="safety-time-of-day-section" className="px-4 py-4">
-      <div id="safety-time-of-day-header" className="flex items-center justify-between mb-3">
-        <h3 id="safety-time-of-day-title" className="text-base font-medium text-gray-700">Time of Day</h3>
+      <div id="safety-time-of-day-header" className="flex items-center justify-between">
+        <h3 id="safety-time-of-day-title" className={`text-base font-medium text-gray-700 ${timeOfDayFilter.enabled ? 'mb-3' : ''}`}>Time of Day</h3>
         <div id="safety-time-of-day-toggle-container" className="relative">
           <input
             id="safety-time-of-day-toggle-input"
@@ -750,8 +750,8 @@ function WeekdaysWeekendsSection({
 
   return (
     <div id="safety-weekdays-weekends-section" className="px-4 py-4">
-      <div id="safety-weekdays-weekends-header" className="flex items-center justify-between mb-3">
-        <h3 id="safety-weekdays-weekends-title" className="text-base font-medium text-gray-700">Weekdays vs Weekends</h3>
+      <div id="safety-weekdays-weekends-header" className="flex items-center justify-between">
+        <h3 id="safety-weekdays-weekends-title" className={`text-base font-medium text-gray-700 ${weekdayFilter.enabled ? 'mb-3' : ''}`}>Weekdays vs Weekends</h3>
         <div id="safety-weekdays-weekends-toggle-container" className="relative">
           <input
             id="safety-weekdays-weekends-toggle-input"

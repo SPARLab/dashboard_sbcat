@@ -8,13 +8,13 @@
 
 ## Quick Task Overview
 
-**Overall Progress:** 4/12 tasks complete (1 flagged for removal)
+**Overall Progress:** 5/12 tasks complete (1 flagged for removal)
 
 - [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `COMPLETED`
 - [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `COMPLETED`
 - [x] **Task 3 (Priority 1):** Improve Year Toggle Clarity with Smart Defaults in Annual Incidents Comparison - `COMPLETED`
 - [x] **Task 4 (Priority 1):** Add Chart Type Toggle (Line vs Bar) for Annual Incidents - `COMPLETED`
-- [ ] **Task 5 (Priority 2):** Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off - `NOT STARTED`
+- [x] **Task 5 (Priority 2):** Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off - `COMPLETED`
 - [ ] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `NOT STARTED`
 - [ ] **Task 7 (Priority 2):** Add Header Theme Color Selector with Navy Blue Gradient (5+ options) - `NOT STARTED`
 - [ ] **Task 8 (Priority 2):** Add Spatial Logo to About Page and Header - `NOT STARTED`
@@ -134,7 +134,7 @@
 ## Priority 2: General Dashboard Enhancements
 
 ### 5. Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off
-- [ ] **Task:** Reduce excessive bottom margin when both toggle sections are collapsed
+- [x] **Task:** Reduce excessive bottom margin when both toggle sections are collapsed
 - **Current Issue:**
   - When "Time of Day" and "Weekdays vs. Weekends" are toggled off, bottom margin is too large
   - Creates unnecessary whitespace
@@ -142,13 +142,13 @@
 - **Expected Behavior:**
   - Appropriate spacing when sections are collapsed
   - Clean, balanced layout regardless of toggle state
-- **Files to Update:**
-  - Safety App sidebar component
-  - Toggle section styling/spacing
-  - Potentially conditional margin logic
+- **Files Updated:**
+  - `ui/safety-app/components/left-sidebar/SafetyFilterPanel.tsx` - Made `mb-3` margin conditional on toggle state for both `TimeOfDaySection` and `WeekdaysWeekendsSection` title elements
+  - When enabled: `mb-3` added to create space between header and options
+  - When disabled: `mb-3` removed to eliminate unnecessary whitespace
 - **Assignee:**
 - **Priority:** Medium
-- **Notes:** Should adjust dynamically based on which sections are visible
+- **Notes:** The `mb-3` margin is now conditionally applied to the `<h3>` title elements (`safety-time-of-day-title` and `safety-weekdays-weekends-title`) based on each section's enabled state, reducing approximately 24px of unnecessary whitespace when both sections are collapsed.
 
 ---
 
@@ -394,4 +394,5 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 | 2026-01-13 | Task 2 completed | Consolidated sidebar location indicator - removed "Analysis" header, increased icon/text size for better visibility |
 | 2026-01-13 | Task 3 completed | Implemented smart year toggle defaults for Annual Incidents Comparison - Day/Month views with >2 years now show only first and last year by default with hint text to guide users |
 | 2026-01-14 | Task 4 completed | Added chart type toggle (line/bar) to Annual Incidents Comparison - icon buttons positioned right of time scale buttons, smart defaults reset on time scale change |
+| 2026-01-14 | Task 5 completed | Fixed bottom margin when Time of Day and Weekdays vs. Weekends sections are toggled off - conditional mb-3 margin reduces unnecessary whitespace by ~24px |
 
