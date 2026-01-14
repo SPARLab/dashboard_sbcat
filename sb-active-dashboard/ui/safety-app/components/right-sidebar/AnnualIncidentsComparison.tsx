@@ -7,6 +7,7 @@ import CollapseExpandIcon from "../../../components/CollapseExpandIcon";
 import MoreInformationIcon from './MoreInformationIcon';
 
 type TimeScale = 'Day' | 'Month' | 'Year';
+type ChartType = 'line' | 'bar';
 const timeScales: TimeScale[] = ['Day', 'Month', 'Year'];
 
 // Helper function to process incidents for different time scales
@@ -242,6 +243,7 @@ export default function AnnualIncidentsComparison({
 }: AnnualIncidentsComparisonProps) {
   const [hoveredPoint, setHoveredPoint] = useState<HoveredPointData | null>(null);
   const [timeScale, setTimeScale] = useState<TimeScale>('Year');
+  const [chartType, setChartType] = useState<ChartType>('bar');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [chartData, setChartData] = useState<AnnualIncidentsComparisonData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -416,6 +418,12 @@ export default function AnnualIncidentsComparison({
     }
   }, [chartData, timeScale, cacheKey]); // cacheKey changes when filters/geometry change
 
+  // Set smart default chart type based on time scale
+  // Year view defaults to bar chart, Day/Month default to line chart
+  useEffect(() => {
+    setChartType(timeScale === 'Year' ? 'bar' : 'line');
+  }, [timeScale]);
+
   const onEvents = useMemo(
     () => ({
       mouseover: (params: any) => {
@@ -560,21 +568,21 @@ export default function AnnualIncidentsComparison({
         const colors = ['#3b82f6', '#f59e0b', '#8b5cf6', '#0891b2', '#92400e'];
         const color = colors[index % colors.length];
 
-        if (timeScale === 'Year') {
-          // Bar chart for year view - each series represents one year
+        if (chartType === 'bar') {
+          // Bar chart configuration
+          const isYearView = timeScale === 'Year';
           return {
             name: series.name,
             data: series.data,
             type: 'bar',
-            // By stacking the series, we ensure they render as distinct bars side-by-side.
-            // Since only one series has a value at each x-axis category, this creates
-            // the effect of a normal bar chart with an interactive legend.
-            stack: 'yearStack',
+            // For Year view, stack series so each bar renders at its year position.
+            // For Day/Month views, no stacking - bars render side-by-side (grouped).
+            ...(isYearView && { stack: 'yearStack' }),
             itemStyle: {
               color: color,
               borderRadius: [4, 4, 0, 0],
             },
-            barWidth: '60%',
+            barWidth: isYearView ? '60%' : undefined,
             emphasis: {
               itemStyle: {
                 borderWidth: 2,
@@ -584,7 +592,7 @@ export default function AnnualIncidentsComparison({
             },
           };
         } else {
-          // Line chart for Day/Month views
+          // Line chart configuration
           return {
             name: series.name,
             data: series.data,
@@ -619,7 +627,7 @@ export default function AnnualIncidentsComparison({
         show: false,
       },
     };
-    }, [categories, chartSeries, timeScale, yAxisMin, yAxisMax, selectedYears]);
+    }, [categories, chartSeries, timeScale, chartType, yAxisMin, yAxisMax, selectedYears]);
 
   const getTimeScaleDescription = (scale: TimeScale): string => {
     switch(scale) {
@@ -686,24 +694,67 @@ export default function AnnualIncidentsComparison({
               <div className={`transition-opacity duration-200 ${(isLoading || spatialLoading) && chartData ? 'opacity-60' : 'opacity-100'}`}>
                 {chartData && !error && chartData.categories && chartData.categories.length > 0 ? (
             <>
-              <div id="safety-annual-incidents-buttons-container" className="flex space-x-1 mt-2">
-                {timeScales.map(scale => (
+              <div id="safety-annual-incidents-buttons-container" className="flex items-center justify-between mt-2">
+                <div id="safety-annual-incidents-time-scale-buttons" className="flex space-x-1">
+                  {timeScales.map(scale => (
+                    <button
+                      id={`safety-annual-incidents-button-${scale.toLowerCase()}`}
+                      key={scale}
+                      onClick={() => setTimeScale(scale)}
+                      disabled={isLoading}
+                      className={`px-2 py-1 text-[.8rem] font-semibold rounded-md !outline-none !border-none focus:!outline-none focus:!ring-0 focus:!shadow-none hover:!outline-none hover:!border-none active:!outline-none active:!border-none transition-none ${
+                        timeScale === scale
+                          ? 'bg-blue-500 text-white'
+                          : isLoading 
+                            ? 'bg-transparent text-gray-400 cursor-not-allowed'
+                            : 'bg-transparent text-gray-800 hover:bg-gray-200'
+                      }`}
+                    >
+                      {scale}
+                    </button>
+                  ))}
+                </div>
+                <div id="safety-annual-incidents-chart-type-toggle" className="flex items-center space-x-1">
                   <button
-                    id={`safety-annual-incidents-button-${scale.toLowerCase()}`}
-                    key={scale}
-                    onClick={() => setTimeScale(scale)}
+                    id="safety-annual-incidents-chart-type-line"
+                    onClick={() => setChartType('line')}
                     disabled={isLoading}
-                    className={`px-2 py-1 text-[.8rem] font-semibold rounded-md !outline-none !border-none focus:!outline-none focus:!ring-0 focus:!shadow-none hover:!outline-none hover:!border-none active:!outline-none active:!border-none transition-none ${
-                      timeScale === scale
+                    title="Line chart"
+                    className={`p-1.5 rounded-md !outline-none !border-none focus:!outline-none focus:!ring-0 focus:!shadow-none transition-none ${
+                      chartType === 'line'
                         ? 'bg-blue-500 text-white'
                         : isLoading 
                           ? 'bg-transparent text-gray-400 cursor-not-allowed'
-                          : 'bg-transparent text-gray-800 hover:bg-gray-200'
+                          : 'bg-transparent text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    {scale}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 17l6-6 4 4 8-8" />
+                      <circle cx="9" cy="11" r="1.5" fill="currentColor" stroke="none" />
+                      <circle cx="13" cy="15" r="1.5" fill="currentColor" stroke="none" />
+                      <circle cx="21" cy="7" r="1.5" fill="currentColor" stroke="none" />
+                    </svg>
                   </button>
-                ))}
+                  <button
+                    id="safety-annual-incidents-chart-type-bar"
+                    onClick={() => setChartType('bar')}
+                    disabled={isLoading}
+                    title="Bar chart"
+                    className={`p-1.5 rounded-md !outline-none !border-none focus:!outline-none focus:!ring-0 focus:!shadow-none transition-none ${
+                      chartType === 'bar'
+                        ? 'bg-blue-500 text-white'
+                        : isLoading 
+                          ? 'bg-transparent text-gray-400 cursor-not-allowed'
+                          : 'bg-transparent text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <rect x="4" y="10" width="4" height="10" rx="1" />
+                      <rect x="10" y="6" width="4" height="14" rx="1" />
+                      <rect x="16" y="3" width="4" height="17" rx="1" />
+                    </svg>
+                  </button>
+                </div>
               </div>
               <div id="safety-annual-incidents-divider" className="w-full h-[1px] bg-gray-200 my-2"></div>
               <div id="safety-annual-incidents-description" className="w-full text-sm text-gray-600">

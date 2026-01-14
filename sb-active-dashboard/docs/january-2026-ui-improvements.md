@@ -8,12 +8,12 @@
 
 ## Quick Task Overview
 
-**Overall Progress:** 3/12 tasks complete (1 flagged for removal)
+**Overall Progress:** 4/12 tasks complete (1 flagged for removal)
 
 - [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `COMPLETED`
 - [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `COMPLETED`
 - [x] **Task 3 (Priority 1):** Improve Year Toggle Clarity with Smart Defaults in Annual Incidents Comparison - `COMPLETED`
-- [ ] **Task 4 (Priority 1):** Add Chart Type Toggle (Line vs Bar) for Annual Incidents - `NOT STARTED`
+- [x] **Task 4 (Priority 1):** Add Chart Type Toggle (Line vs Bar) for Annual Incidents - `COMPLETED`
 - [ ] **Task 5 (Priority 2):** Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off - `NOT STARTED`
 - [ ] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `NOT STARTED`
 - [ ] **Task 7 (Priority 2):** Add Header Theme Color Selector with Navy Blue Gradient (5+ options) - `NOT STARTED`
@@ -106,9 +106,9 @@
 ---
 
 ### 4. Add Chart Type Toggle (Line vs Bar) for Annual Incidents
-- [ ] **Task:** Add toggle switch to allow users to switch between line chart and bar chart views
-- [ ] **Task:** Implement for Day, Month, and Year time aggregation views
-- [ ] **Task:** Set appropriate default chart types for each view
+- [x] **Task:** Add toggle switch to allow users to switch between line chart and bar chart views
+- [x] **Task:** Implement for Day, Month, and Year time aggregation views
+- [x] **Task:** Set appropriate default chart types for each view
 - **Default Chart Types:**
   - **Year view:** Bar chart (default)
   - **Day view:** Line chart (default)
@@ -117,20 +117,17 @@
   - Easy-to-use toggle control (e.g., button group, switch, or icon buttons)
   - Toggle should be clearly visible near the chart
   - Chart should smoothly transition when user switches types
-  - Preserve user's selection when switching between time aggregations (optional enhancement)
+  - ~~Preserve user's selection when switching between time aggregations (optional enhancement)~~ Not implemented - always resets to smart defaults
 - **Rationale:**
   - Different time scales benefit from different visualizations
   - User preference varies - giving choice improves UX
   - Bar charts can be clearer for year-over-year comparisons
   - Line charts better show trends over shorter time periods
-- **Files to Update:**
-  - Annual Incidents Comparison chart component
-  - Chart configuration/rendering logic
-  - UI controls for chart type selection
-  - State management for selected chart type
+- **Files Updated:**
+  - `ui/safety-app/components/right-sidebar/AnnualIncidentsComparison.tsx` - Added `chartType` state with smart defaults, icon toggle buttons for line/bar chart selection, updated series generation to respect `chartType` instead of `timeScale`
 - **Assignee:**
 - **Priority:** Medium
-- **Notes:**
+- **Notes:** Toggle buttons positioned to the right of Day/Month/Year buttons. Chart type always resets to smart defaults when switching time scales (Year→bar, Day/Month→line). Line and bar icons provide clear visual indication of chart type.
 
 ---
 
@@ -396,4 +393,5 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 | 2026-01-13 | Task 1 completed | Auto-select Santa Barbara County on load - changed default geographicLevel to 'county' |
 | 2026-01-13 | Task 2 completed | Consolidated sidebar location indicator - removed "Analysis" header, increased icon/text size for better visibility |
 | 2026-01-13 | Task 3 completed | Implemented smart year toggle defaults for Annual Incidents Comparison - Day/Month views with >2 years now show only first and last year by default with hint text to guide users |
+| 2026-01-14 | Task 4 completed | Added chart type toggle (line/bar) to Annual Incidents Comparison - icon buttons positioned right of time scale buttons, smart defaults reset on time scale change |
 
