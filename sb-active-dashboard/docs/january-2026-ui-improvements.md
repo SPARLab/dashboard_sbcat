@@ -8,10 +8,10 @@
 
 ## Quick Task Overview
 
-**Overall Progress:** 1/12 tasks complete (1 flagged for removal)
+**Overall Progress:** 2/12 tasks complete (1 flagged for removal)
 
 - [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `COMPLETED`
-- [ ] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `NOT STARTED`
+- [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `COMPLETED`
 - [ ] **Task 3 (Priority 1):** Improve Year Toggle Clarity with Smart Defaults in Annual Incidents Comparison - `NOT STARTED`
 - [ ] **Task 4 (Priority 1):** Add Chart Type Toggle (Line vs Bar) for Annual Incidents - `NOT STARTED`
 - [ ] **Task 5 (Priority 2):** Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off - `NOT STARTED`
@@ -42,12 +42,12 @@
 ---
 
 ### 2. Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator
-- [ ] **Task:** Remove the old "safety-location-indicator" section from the sidebar
-- [ ] **Task:** Move its contents (location indicator) into the "safety-analysis-title" box
-- [ ] **Task:** Rename the ID from "safety-analysis-title" to "safety-location-indicator" (or similar semantic name)
-- [ ] **Task:** Remove the "Analysis" title text from that box
-- [ ] **Task:** Update location label from "Santa Barbara" to "Place: Santa Barbara County"
-- [ ] **Task:** Preserve the height of the current "safety-analysis-title" box
+- [x] **Task:** Remove the old "safety-location-indicator" section from the sidebar
+- [x] **Task:** Move its contents (location indicator) into the "safety-analysis-title" box
+- [x] **Task:** Rename the ID from "safety-analysis-title" to "safety-location-indicator" (or similar semantic name)
+- [x] **Task:** Remove the "Analysis" title text from that box
+- [x] **Task:** Update location label from "Santa Barbara" to "Place: Santa Barbara County"
+- [x] **Task:** Preserve the height of the current "safety-analysis-title" box
 - **Current Behavior:** 
   - Standalone "safety-location-indicator" section at top with "Analysis" label
   - Shows "Analysis Location: Santa Barbara" 
@@ -62,14 +62,16 @@
   - Remove the "Analysis" title text
   - Display "Place: Santa Barbara County" (full county name)
   - Cleaner sidebar hierarchy without redundant labels
-- **Files to Update:**
-  - Safety App sidebar component structure
-  - Potentially `ui/safety-app/SafetyApp.tsx` or related sidebar components
-  - Location label text/formatting
-  - Element ID attribute
+- **Files Updated:**
+  - `ui/safety-app/layout/SafetyRightSidebar.tsx` - Removed separate "Analysis" header and `LocationIndicator` import, consolidated into single location indicator header with id `safety-location-indicator`
+  - Icon size: `w-6 h-6` (24px)
+  - Font size: `text-lg` (18px)
+  - Padding: `py-[1.08rem]` for height alignment
+  - Bottom divider only (no top divider)
+  - No "Place:" prefix - just shows area name with location pin icon
 - **Assignee:**
 - **Priority:** High
-- **Notes:** The current "safety-analysis-title" box height is correctly aligned with the map subheader - we must preserve this height in our new "safety-location-indicator" box. See screenshot for visual reference.
+- **Notes:** The consolidated location indicator now serves as the primary header for the right sidebar. The LocationIndicator component remains unchanged for use in the volume app. Icon and text are larger and more prominent than before for better visibility.
 
 ---
 
@@ -388,4 +390,5 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 |------|--------|-------|
 | 2026-01-13 | Initial plan created | Based on PDF feedback and sidebar screenshot |
 | 2026-01-13 | Task 1 completed | Auto-select Santa Barbara County on load - changed default geographicLevel to 'county' |
+| 2026-01-13 | Task 2 completed | Consolidated sidebar location indicator - removed "Analysis" header, increased icon/text size for better visibility |
 

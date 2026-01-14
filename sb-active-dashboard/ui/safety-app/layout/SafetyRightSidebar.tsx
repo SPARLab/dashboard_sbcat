@@ -5,7 +5,6 @@ import IncidentsVsTrafficRatios from "../components/right-sidebar/IncidentsVsTra
 import MostDangerousAreas from "../components/right-sidebar/MostDangerousAreas";
 import SeverityBreakdown from "../components/right-sidebar/SeverityBreakdown";
 import SummaryStatistics from "../components/right-sidebar/SummaryStatistics";
-import LocationIndicator from "../../components/LocationIndicator";
 
 interface SafetyRightSidebarProps {
   mapView: __esri.MapView | null;
@@ -26,19 +25,42 @@ export default function SafetyRightSidebar({
 }: SafetyRightSidebarProps) {
   return (
     <div id="safety-analysis-sidebar" className="w-[412px] bg-white border-l border-gray-200 flex flex-col h-full">
-      {/* Fixed Analysis Header */}
-      <div id="safety-analysis-header" className="flex-shrink-0 px-4 py-4 bg-white">
-        <h2 id="safety-analysis-title" className="text-xl font-semibold text-gray-900">Analysis</h2>
+      {/* Location Indicator Header */}
+      <div id="safety-location-indicator" className="flex-shrink-0 px-4 py-[1.04rem] bg-white">
+        <div className="flex items-center space-x-2">
+          <svg 
+            className="w-6 h-6 text-gray-500 flex-shrink-0" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+          {selectedAreaName ? (
+            <p className="text-lg font-medium text-gray-900 truncate">
+              {selectedAreaName}
+            </p>
+          ) : (
+            <p className="text-lg text-gray-500 italic">
+              Please select a region on the map
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Location Indicator */}
-      <div className="flex-shrink-0">
-        <LocationIndicator 
-          selectedAreaName={selectedAreaName}
-          horizontalMargins="mx-4"
-          id="safety-location-indicator"
-        />
-      </div>
+      {/* Bottom divider */}
+      <div className="w-full h-[1px] bg-gray-200 flex-shrink-0"></div>
 
       {/* Scrollable Analysis Content */}
       <div id="safety-analysis-content" className="flex-1 overflow-y-auto no-scrollbar">
