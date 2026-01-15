@@ -41,9 +41,25 @@ export default function Header({ apps }: HeaderProps) {
         style={{ background: getGradientStyle(currentTheme) }}
       >
         <div className="flex items-center justify-between h-16 px-4">
-          <h1 id="dashboard-title" className="text-lg font-semibold text-white">
-            ACTIVE SB
-          </h1>
+          <div id="header-branding" className="flex items-center gap-3">
+            <a
+              href="https://spatial.ucsb.edu"
+              target="_blank"
+              rel="noopener noreferrer"
+              id="header-spatial-logo-link"
+            >
+              <img
+                src="/icons/spatial-logo.png"
+                alt="@Spatial UCSB - Center for Spatial Science"
+                id="header-spatial-logo"
+                className="h-10 w-auto"
+              />
+            </a>
+            <div className="w-px h-8 bg-white/40" />
+            <h1 id="dashboard-title" className="text-lg font-semibold text-white">
+              ACTIVE SB
+            </h1>
+          </div>
 
           <nav id="header-navigation" className="flex items-center gap-2">
             <HeaderThemeSelector

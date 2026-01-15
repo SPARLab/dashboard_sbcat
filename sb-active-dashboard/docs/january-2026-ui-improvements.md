@@ -8,7 +8,7 @@
 
 ## Quick Task Overview
 
-**Overall Progress:** 8/13 tasks complete (1 flagged for removal)
+**Overall Progress:** 9/13 tasks complete (1 flagged for removal)
 
 - [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `COMPLETED`
 - [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `COMPLETED`
@@ -17,7 +17,7 @@
 - [x] **Task 5 (Priority 2):** Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off - `COMPLETED`
 - [x] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `COMPLETED`
 - [x] **Task 7 (Priority 2):** Add Header Theme Color Selector with Navy Blue Gradient (5+ options) - `COMPLETED`
-- [ ] **Task 8 (Priority 2):** Add Spatial Logo to About Page and Header - `NOT STARTED`
+- [x] **Task 8 (Priority 2):** Add Spatial Logo to About Page and Header - `COMPLETED`
 - [ ] **Task 9 (Priority 3):** Fix Annual Incidents Chart Y-Axis Positioning - `NOT STARTED`
 - [ ] **Task 10 (Priority 3):** Fix Pedestrian Button in Conflict Type - `NOT STARTED` (verify if bug still exists)
 - [ ] **Task 11 (Priority 3):** Update "Geographic Level" Label to "Select Geographic Level" - `NOT STARTED`
@@ -199,19 +199,19 @@
 ---
 
 ### 8. Add Spatial Logo
-- [ ] **Task:** Add Spatial logo to About page
-- [ ] **Task:** Add Spatial logo to header
+- [x] **Task:** Add Spatial logo to About page
+- [x] **Task:** Add Spatial logo to header
 - **Requirements:**
   - Obtain logo file from @Spatial branding
   - Ensure proper sizing and placement
   - Maintain accessibility (alt text)
-- **Files to Update:**
-  - About page component
-  - Header component
-  - Add logo file to `public/icons/` or similar
+- **Files Updated:**
+  - `ui/dashboard/Header.tsx` - Added @Spatial logo (40px height) to the left of "ACTIVE SB" title with white vertical divider separator
+  - `src/pages/about.tsx` - Added @Spatial logo (220px width) above "The Spatial Center at UC Santa Barbara" section heading
+  - `public/icons/spatial-logo.png` - Added transparent PNG logo file
 - **Assignee:**
 - **Priority:** Low
-- **Notes:**
+- **Notes:** Logo is clickable in both locations and links to https://spatial.ucsb.edu in new tab. Includes proper alt text "@ Spatial UCSB - Center for Spatial Science" for accessibility. Header logo sized to fit within 64px header height; About page logo prominently displayed above Spatial Center section.
 
 ---
 
@@ -412,5 +412,6 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 | 2026-01-14 | Task 6 completed | Added Infrastructure and Equity buttons to header with "Coming Soon" modal functionality - buttons have muted styling and trigger DisclaimerModal on click |
 | 2026-01-14 | Task 7 completed | Added header theme color selector with gradient backgrounds - created 7 blue gradient options (default: Ocean Depth), frosted-glass dropdown selector, migrated header from MUI to Tailwind with white nav buttons |
 | 2026-01-14 | Task 13 completed | Fixed initial modal top positioning - changed overlay from top-[68px] to top-16 (64px) to eliminate 4px white gap below header |
+| 2026-01-15 | Task 8 completed | Added @Spatial logo to header (40px, left of "ACTIVE SB") and About page (220px, above Spatial Center section) - logo is clickable, links to spatial.ucsb.edu, includes accessibility alt text |
 
 

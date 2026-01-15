@@ -96,6 +96,24 @@ export default function AboutPage() {
         <Divider sx={{ my: 4 }} />
 
         {/* Spatial Center Section */}
+        <Box
+          id="spatial-logo-container"
+          sx={{ mb: 3 }}
+        >
+          <a
+            href="https://spatial.ucsb.edu"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              src="/icons/spatial-logo.png"
+              alt="@Spatial UCSB - Center for Spatial Science"
+              id="about-spatial-logo"
+              style={{ width: 220, height: "auto" }}
+            />
+          </a>
+        </Box>
+
         <Typography
           variant="h4"
           component="h2"
