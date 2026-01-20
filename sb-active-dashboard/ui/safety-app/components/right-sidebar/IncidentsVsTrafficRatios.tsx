@@ -618,7 +618,7 @@ export default function IncidentsVsTrafficRatios({
                 )}
 
                 {/* Data content */}
-                <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'} min-h-[320px]`}>
+                <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'}`}>
                   {hasData && !hasError ? (
                     <div id="safety-incidents-vs-traffic-chart" className="relative">
                       {/* CSS Gradient Overlay */}
