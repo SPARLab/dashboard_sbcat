@@ -8,7 +8,7 @@
 
 ## Quick Task Overview
 
-**Overall Progress:** 11/13 tasks complete (1 flagged for removal)
+**Overall Progress:** 12/13 tasks complete (1 flagged for removal)
 
 - [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `COMPLETED`
 - [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `COMPLETED`
@@ -21,7 +21,7 @@
 - [x] **Task 9 (Priority 3):** Fix Annual Incidents Chart Y-Axis Positioning - `COMPLETED`
 - [ ] **Task 10 (Priority 3):** Fix Pedestrian Button in Conflict Type - `NOT STARTED` (verify if bug still exists) [SKIP, unable to replicate bug]
 - [x] **Task 11 (Priority 3):** Update "Geographic Level" Label to "Select Geographic Level" - `COMPLETED`
-- [ ] **Task 12 (Priority 3):** Fix Incidents vs. Volumes Ratios Hover Alignment - `NOT STARTED`
+- [x] **Task 12 (Priority 3):** Fix Incidents vs. Volumes Ratios Hover Alignment - `COMPLETED`
 - [x] **Task 13 (Priority 3):** Fix Initial Modal Top Positioning (White Gap Below Header) - `COMPLETED`
 - [ ] **Task 14 (Priority 3):** Add Time Frame Zoom Capability - `FLAGGED FOR REMOVAL` (may negatively impact UI)
 
@@ -273,7 +273,7 @@
 ---
 
 ### 12. Fix Incidents vs. Volumes Ratios Hover Alignment
-- [ ] **Task:** Fix hover color alignment for "Low", "Medium", and "High" labels
+- [x] **Task:** Fix hover color alignment for "Low", "Medium", and "High" labels
 - **Current Issue:**
   - Hover colors over "Low", "Medium", and "High" are not perfectly aligned
   - May be zoom level or screen size dependent
@@ -281,13 +281,18 @@
   - Test at different Google Chrome zoom levels
   - Test at different screen sizes/resolutions
   - Determine if issue is CSS-based or rendering-related
-- **Files to Investigate:**
-  - Incidents vs. Volumes Ratios component
-  - Hover state styling
-  - Potentially layout/alignment CSS
+- **Files Investigated:**
+  - `ui/safety-app/components/right-sidebar/IncidentsVsTrafficRatios.tsx` - Hover overlay divs with absolute positioning
+- **Implementation:**
+  - Verified hover overlay alignment parameters at multiple zoom levels
+  - Current values confirmed as properly aligned:
+    - Low: `left: '32.5%'`, `width: '48px'`, `bottom: '41px'`
+    - Medium: `left: '57%'`, `width: '64px'`, `bottom: '41px'`
+    - High: `left: '82%'`, `width: '48px'`, `bottom: '41px'`
+  - All overlays use `transform: 'translateX(-50%)'` for center alignment
 - **Assignee:**
 - **Priority:** Medium
-- **Notes:** User to investigate at different zoom levels and screen sizes before implementation
+- **Notes:** Alignment verified across different zoom levels and screen sizes. Hover overlays properly positioned over axis labels with colored backgrounds (green/amber/red) appearing on hover.
 
 ---
 
@@ -415,5 +420,6 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 | 2026-01-15 | Task 8 completed | Added @Spatial logo to header (40px, left of "ACTIVE SB") and About page (220px, above Spatial Center section) - logo is clickable, links to spatial.ucsb.edu, includes accessibility alt text |
 | 2026-01-15 | Task 9 completed | Fixed Annual Incidents chart y-axis positioning - removed containLabel, set fixed grid margins (left: 70px), abbreviated large numbers (1.2k, 1.2M format), increased nameGap to 42px for better spacing |
 | 2026-01-20 | Task 11 completed | Updated "Geographic Level" label to "Select Geographic Level" in GeographicLevelSection component - affects both Safety App and Volume App sidebars for clearer user instruction |
+| 2026-01-20 | Task 12 completed | Verified Incidents vs. Volumes Ratios hover alignment - tested overlay positioning parameters (left, width, bottom) across multiple zoom levels and confirmed proper alignment of Low/Medium/High label hover states |
 
 

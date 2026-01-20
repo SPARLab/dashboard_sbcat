@@ -649,10 +649,10 @@ export default function IncidentsVsTrafficRatios({
                               hoveredLabel === 'low' ? 'bg-green-100 bg-opacity-80' : 'bg-transparent'
                             }`}
                             style={{
-                              left: '32.5%',
-                              bottom: '41px',
-                              width: '48px',
-                              height: '24px',
+                              left: '30%',
+                              bottom: '35px',
+                              width: '43px',
+                              height: '20px',
                               transform: 'translateX(-50%)'
                             }}
                             onMouseEnter={(e) => handleOverlayHover('low', e)}
@@ -666,10 +666,10 @@ export default function IncidentsVsTrafficRatios({
                               hoveredLabel === 'medium' ? 'bg-amber-100 bg-opacity-80' : 'bg-transparent'
                             }`}
                             style={{
-                              left: '57%', // center
-                              bottom: '41px',
+                              left: '56%', // center
+                              bottom: '35px',
                               width: '64px',
-                              height: '24px',
+                              height: '20px',
                               transform: 'translateX(-50%)'
                             }}
                             onMouseEnter={(e) => handleOverlayHover('medium', e)}
@@ -683,10 +683,10 @@ export default function IncidentsVsTrafficRatios({
                               hoveredLabel === 'high' ? 'bg-red-100 bg-opacity-80' : 'bg-transparent'
                             }`}
                             style={{
-                              left: '82%',
-                              bottom: '41px',
-                              width: '48px',
-                              height: '24px',
+                              left: '81.5%',
+                              bottom: '35px',
+                              width: '42px',
+                              height: '20px',
                               transform: 'translateX(-50%)'
                             }}
                             onMouseEnter={(e) => handleOverlayHover('high', e)}
