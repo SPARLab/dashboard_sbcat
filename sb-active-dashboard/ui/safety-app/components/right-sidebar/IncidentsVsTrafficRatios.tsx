@@ -455,7 +455,7 @@ export default function IncidentsVsTrafficRatios({
         type: 'value',
         name: 'Number of Incidents',
         nameLocation: 'middle',
-        nameGap: 35,
+        nameGap: 43,
         nameTextStyle: {
           color: '#6b7280',
           fontSize: 14,
@@ -479,6 +479,12 @@ export default function IncidentsVsTrafficRatios({
         axisLabel: {
           color: '#6b7280',
           fontSize: 14,
+          formatter: (value: number) => {
+            // Abbreviate large numbers to keep y-axis width consistent
+            if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+            if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
+            return value.toString();
+          },
         },
         splitLine: {
           show: true,
@@ -490,11 +496,10 @@ export default function IncidentsVsTrafficRatios({
         },
       },
       grid: {
-        left: '70px',
+        left: '60px',
         right: '20px',
         top: '20px',
-        bottom: '70px',
-        containLabel: false,
+        bottom: '60px', // Extra space for x-axis labels (Low/Medium/High)
       },
       series: [
         {
@@ -620,16 +625,16 @@ export default function IncidentsVsTrafficRatios({
                       <div 
                         className="absolute pointer-events-none z-0"
                         style={{
-                          left: '70px',
+                          left: '60px',
                           top: '20px',
                           right: '20px',
-                          bottom: '70px',
+                          bottom: '60px',
                           background: 'linear-gradient(140deg, rgba(251, 146, 60, 0.8) 0%, rgba(251, 146, 60, 0) 51%)'
                         }}
                       />
                       <ReactECharts
                         option={option}
-                        style={{ height: '320px', width: '100%', position: 'relative', zIndex: 1 }}
+                        style={{ height: '300px', width: '100%', position: 'relative', zIndex: 1 }}
                         opts={{ renderer: 'canvas' }}
                         onEvents={onEvents}
                         ref={chartRef}

@@ -49,7 +49,7 @@ export default function GeographicLevelSection({
   return (
     <div className="p-4">
       <div id="geographic-level-section">
-        <h3 className="text-base font-medium text-gray-700 mb-3">Geographic Level</h3>
+        <h3 className="text-base font-medium text-gray-700 mb-3">Select Geographic Level</h3>
         <div className="space-y-1">
           {geographicOptions.map((option) => (
             <div key={option.id}>

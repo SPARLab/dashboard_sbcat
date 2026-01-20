@@ -8,7 +8,7 @@
 
 ## Quick Task Overview
 
-**Overall Progress:** 9/13 tasks complete (1 flagged for removal)
+**Overall Progress:** 11/13 tasks complete (1 flagged for removal)
 
 - [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `COMPLETED`
 - [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `COMPLETED`
@@ -18,9 +18,9 @@
 - [x] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `COMPLETED`
 - [x] **Task 7 (Priority 2):** Add Header Theme Color Selector with Navy Blue Gradient (5+ options) - `COMPLETED`
 - [x] **Task 8 (Priority 2):** Add Spatial Logo to About Page and Header - `COMPLETED`
-- [ ] **Task 9 (Priority 3):** Fix Annual Incidents Chart Y-Axis Positioning - `NOT STARTED`
-- [ ] **Task 10 (Priority 3):** Fix Pedestrian Button in Conflict Type - `NOT STARTED` (verify if bug still exists)
-- [ ] **Task 11 (Priority 3):** Update "Geographic Level" Label to "Select Geographic Level" - `NOT STARTED`
+- [x] **Task 9 (Priority 3):** Fix Annual Incidents Chart Y-Axis Positioning - `COMPLETED`
+- [ ] **Task 10 (Priority 3):** Fix Pedestrian Button in Conflict Type - `NOT STARTED` (verify if bug still exists) [SKIP, unable to replicate bug]
+- [x] **Task 11 (Priority 3):** Update "Geographic Level" Label to "Select Geographic Level" - `COMPLETED`
 - [ ] **Task 12 (Priority 3):** Fix Incidents vs. Volumes Ratios Hover Alignment - `NOT STARTED`
 - [x] **Task 13 (Priority 3):** Fix Initial Modal Top Positioning (White Gap Below Header) - `COMPLETED`
 - [ ] **Task 14 (Priority 3):** Add Time Frame Zoom Capability - `FLAGGED FOR REMOVAL` (may negatively impact UI)
@@ -218,8 +218,8 @@
 ## Priority 3: Bug Fixes & Minor Improvements
 
 ### 9. Fix Annual Incidents Chart Y-Axis Positioning
-- [ ] **Task:** Fix y-axis label and line positioning to prevent chart width changes
-- [ ] **Task:** Ensure consistent chart rendering regardless of number of years displayed
+- [x] **Task:** Fix y-axis label and line positioning to prevent chart width changes
+- [x] **Task:** Ensure consistent chart rendering regardless of number of years displayed
 - **Current Issue:**
   - When there are many years on the chart, the y-axis label gets pushed to the right
   - Y-axis label sometimes gets cut off
@@ -233,13 +233,14 @@
   - Set fixed width/padding for y-axis area
   - Ensure label text doesn't overflow allocated space
   - May need to adjust chart container sizing logic
-- **Files to Update:**
-  - Annual Incidents Comparison chart component
-  - Chart configuration (axis settings, padding)
-  - Chart container styling
+- **Files Updated:**
+  - `ui/safety-app/components/right-sidebar/AnnualIncidentsComparison.tsx` - Fixed grid margins and y-axis formatter
+    - Grid: `left: '70px'`, `right: '10px'`, `bottom: '25px'`, removed `containLabel: true`
+    - Y-axis `nameGap`: 35 → 42 (more space between axis name and tick labels)
+    - Formatter: Abbreviates large numbers (`1234` → `"1.2k"`, `1234567` → `"1.2M"`)
 - **Assignee:**
 - **Priority:** High
-- **Notes:** This affects chart readability and professional appearance
+- **Notes:** Fixed margins ensure chart width stays constant regardless of data values. Abbreviated number formatting keeps tick labels compact and consistent. The solution prevents layout shifts when toggling years on/off or switching time scales.
 
 ---
 
@@ -261,14 +262,13 @@
 ---
 
 ### 11. Update "Geographic Level" Label to "Select Geographic Level"
-- [ ] **Task:** Change left sidebar label from "Geographic Level" to "Select Geographic Level"
+- [x] **Task:** Change left sidebar label from "Geographic Level" to "Select Geographic Level"
 - **Rationale:** More actionable, clearer instruction to users
-- **Files to Update:**
-  - Safety App left sidebar component
-  - Potentially `ui/safety-app/` components or geographic level selection UI
+- **Files Updated:**
+  - `ui/components/filters/GeographicLevelSection.tsx` - Changed heading text from "Geographic Level" to "Select Geographic Level" (line 52)
 - **Assignee:**
 - **Priority:** Low
-- **Notes:** Minor copy improvement for better UX
+- **Notes:** This change affects both Safety App and Volume App since they share the same `GeographicLevelSection` component. The more actionable label provides clearer instruction to users about the interactive nature of this section.
 
 ---
 
@@ -413,5 +413,7 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 | 2026-01-14 | Task 7 completed | Added header theme color selector with gradient backgrounds - created 7 blue gradient options (default: Ocean Depth), frosted-glass dropdown selector, migrated header from MUI to Tailwind with white nav buttons |
 | 2026-01-14 | Task 13 completed | Fixed initial modal top positioning - changed overlay from top-[68px] to top-16 (64px) to eliminate 4px white gap below header |
 | 2026-01-15 | Task 8 completed | Added @Spatial logo to header (40px, left of "ACTIVE SB") and About page (220px, above Spatial Center section) - logo is clickable, links to spatial.ucsb.edu, includes accessibility alt text |
+| 2026-01-15 | Task 9 completed | Fixed Annual Incidents chart y-axis positioning - removed containLabel, set fixed grid margins (left: 70px), abbreviated large numbers (1.2k, 1.2M format), increased nameGap to 42px for better spacing |
+| 2026-01-20 | Task 11 completed | Updated "Geographic Level" label to "Select Geographic Level" in GeographicLevelSection component - affects both Safety App and Volume App sidebars for clearer user instruction |
 
 

@@ -482,17 +482,21 @@ export default function AnnualIncidentsComparison({
         extraMarginForManyYears = 30;
       }
       const dynamicTopMargin = baseTopMargin + extraMarginForManyYears;
+      
+      // Calculate dynamic bottom margin to maintain consistent y-axis height of 220px
+      // Total height: 300px, Target y-axis height: 220px
+      // bottom = 300 - dynamicTopMargin - 220
+      const dynamicBottomMargin = Math.max(20, 300 - dynamicTopMargin - 220);
 
       return {
         animation: true,
         animationDuration: 1000,
         animationEasing: 'cubicOut',
         grid: {
-          left: '25px',
-          right: '0px',
+          left: '60px',
+          right: '10px',
           top: `${dynamicTopMargin}px`,
-          bottom: '0px',
-          containLabel: true,
+          bottom: `${dynamicBottomMargin}px`,
         },
       xAxis: {
         type: 'category',
@@ -531,11 +535,16 @@ export default function AnnualIncidentsComparison({
         axisLabel: {
           color: '#6b7280',
           fontSize: 14,
-          formatter: (value: number) => value.toLocaleString(),
+          formatter: (value: number) => {
+            // Abbreviate large numbers to keep y-axis width consistent
+            if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+            if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
+            return value.toString();
+          },
         },
         name: 'Number of Incidents',
         nameLocation: 'middle',
-        nameGap: 35,
+        nameGap: 43,
         nameTextStyle: {
           color: '#6b7280',
           fontSize: 14,
@@ -631,8 +640,8 @@ export default function AnnualIncidentsComparison({
 
   const getTimeScaleDescription = (scale: TimeScale): string => {
     switch(scale) {
-      case 'Day': return 'Total safety incidents by day of week comparison between years';
-      case 'Month': return 'Total safety incidents per month comparison between years';
+      case 'Day': return 'Total safety incidents by day of week between years';
+      case 'Month': return 'Total safety incidents per month between years';
       case 'Year': return 'Total safety incidents per year for selected area';
       default: return 'Total incident trends for selected area';
     }

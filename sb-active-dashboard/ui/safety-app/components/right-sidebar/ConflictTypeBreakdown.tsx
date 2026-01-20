@@ -222,11 +222,10 @@ export default function ConflictTypeBreakdown({
   const option = useMemo(
     () => ({
         grid: {
-          left: '3px',
+          left: '60px',
           right: '15px',
-          top: '15px',
-          bottom: '15px',
-          containLabel: true,
+          top: '20px',
+          bottom: '60px', // Extra space for abbreviated x-axis labels
         },
         xAxis: {
           type: 'category',
@@ -252,6 +251,14 @@ export default function ConflictTypeBreakdown({
       yAxis: {
         type: 'value',
         min: 0,
+        name: 'Number of Incidents',
+        nameLocation: 'middle',
+        nameGap: 43,
+        nameTextStyle: {
+          color: '#6b7280',
+          fontSize: 14,
+          fontWeight: 500,
+        },
         axisLine: {
           show: true,
           lineStyle: {
@@ -265,7 +272,12 @@ export default function ConflictTypeBreakdown({
         axisLabel: {
           color: '#6b7280',
           fontSize: 12,
-          formatter: (value: number) => value.toLocaleString(),
+          formatter: (value: number) => {
+            // Abbreviate large numbers to keep y-axis width consistent
+            if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+            if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
+            return value.toString();
+          },
         },
         splitLine: {
           show: true,
@@ -374,7 +386,7 @@ export default function ConflictTypeBreakdown({
                     <div id="safety-conflict-type-chart" className="bg-white">
                       <ReactECharts
                         option={option}
-                        style={{ width: '100%', height: '250px' }}
+                        style={{ width: '100%', height: '300px' }}
                         opts={{ renderer: 'canvas' }}
                         onEvents={onEvents}
                       />
