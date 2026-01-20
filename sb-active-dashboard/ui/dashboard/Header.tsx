@@ -82,19 +82,19 @@ export default function Header({ apps }: HeaderProps) {
                     key={index}
                     type="button"
                     onClick={() => setComingSoonModalOpen(true)}
-                    className="text-base font-bold rounded-lg transition-colors outline-none focus:outline-none"
+                    className="text-base font-semibold transition-colors outline-none focus:outline-none"
                     style={{
-                      backgroundColor: "#ffffff",
-                      color: "#9ca3af",
+                      backgroundColor: "rgba(255, 255, 255, 0.1)",
+                      color: "rgba(255, 255, 255, 0.5)",
                       padding: "8px 16px",
+                      borderRadius: "0.5rem",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#f3f4f6";
-                      e.currentTarget.style.color = "#6b7280";
+                      e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "#ffffff";
-                      e.currentTarget.style.color = "#9ca3af";
+                      e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
                     }}
                   >
                     {appInfo.name}
@@ -107,17 +107,25 @@ export default function Header({ apps }: HeaderProps) {
                   id={`header-${appInfo.name.toLowerCase()}-button`}
                   key={index}
                   to={appInfo.link!}
-                  className="text-base font-bold rounded-lg transition-colors outline-none focus:outline-none"
+                  className="text-base font-semibold transition-colors outline-none focus:outline-none"
                   style={{
-                    backgroundColor: "#ffffff",
-                    color: isActive ? "#374151" : "#4b5563",
+                    backgroundColor: isActive
+                      ? "rgba(255, 255, 255, 0.25)"
+                      : "rgba(255, 255, 255, 0.15)",
+                    color: "#ffffff",
                     padding: "8px 16px",
+                    borderRadius: "0.5rem",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f3f4f6";
+                    e.currentTarget.style.backgroundColor = isActive
+                      ? "rgba(255, 255, 255, 0.35)"
+                      : "rgba(255, 255, 255, 0.25)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#ffffff";
+                    e.currentTarget.style.backgroundColor = isActive
+                      ? "rgba(255, 255, 255, 0.25)"
+                      : "rgba(255, 255, 255, 0.15)";
                   }}
                 >
                   {appInfo.name}
