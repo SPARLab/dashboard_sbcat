@@ -2,12 +2,19 @@ import React, { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import DisclaimerModal from "@/ui/components/DisclaimerModal";
 import HeaderThemeSelector from "./HeaderThemeSelector";
+import HeaderLogoSelector from "./HeaderLogoSelector";
 import {
   DEFAULT_THEME_ID,
   HEADER_THEME_STORAGE_KEY,
   getThemeById,
   getGradientStyle,
 } from "@/ui/theme/headerThemes";
+import {
+  DEFAULT_LOGO_ID,
+  HEADER_LOGO_STORAGE_KEY,
+  getLogoById,
+} from "@/ui/theme/headerLogos";
+import { FEATURE_FLAGS } from "@/ui/config/featureFlags";
 
 interface AppInfo {
   name: string;
@@ -26,12 +33,21 @@ export default function Header({ apps }: HeaderProps) {
     const stored = localStorage.getItem(HEADER_THEME_STORAGE_KEY);
     return stored ?? DEFAULT_THEME_ID;
   });
+  const [logoId, setLogoId] = useState(() => {
+    const stored = localStorage.getItem(HEADER_LOGO_STORAGE_KEY);
+    return stored ?? DEFAULT_LOGO_ID;
+  });
 
   const currentTheme = getThemeById(themeId);
+  const currentLogo = getLogoById(logoId);
 
   useEffect(() => {
     localStorage.setItem(HEADER_THEME_STORAGE_KEY, themeId);
   }, [themeId]);
+
+  useEffect(() => {
+    localStorage.setItem(HEADER_LOGO_STORAGE_KEY, logoId);
+  }, [logoId]);
 
   return (
     <>
@@ -49,7 +65,7 @@ export default function Header({ apps }: HeaderProps) {
               id="header-spatial-logo-link"
             >
               <img
-                src="/icons/spatial-logo.png"
+                src={currentLogo.path}
                 alt="@Spatial UCSB - Center for Spatial Science"
                 id="header-spatial-logo"
                 className="h-10 w-auto"
@@ -66,6 +82,13 @@ export default function Header({ apps }: HeaderProps) {
               selectedThemeId={themeId}
               onThemeChange={setThemeId}
             />
+
+            {FEATURE_FLAGS.SHOW_LOGO_SELECTOR && (
+              <HeaderLogoSelector
+                selectedLogoId={logoId}
+                onLogoChange={setLogoId}
+              />
+            )}
 
             <div className="w-px h-5 bg-white/30 mx-2" />
 

@@ -2,29 +2,54 @@
 
 **Source:** Bike Maps: Annual Incidents Comparison feedback & UI review  
 **Date Created:** 2026-01-13  
-**Status:** Planning
+**Status:** Under Review - Awaiting final refinements based on Lizzy's feedback
 
 ---
 
 ## Quick Task Overview
 
-**Overall Progress:** 13/14 tasks complete (2 flagged for skip/removal)
+**Overall Progress:** 12/13 items complete ✅ | 1 item needs refinement ⚠️ | 1 item needs clarification ❓ | 2 flagged for skip/removal
 
-- [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `COMPLETED`
-- [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `COMPLETED`
-- [x] **Task 3 (Priority 1):** Improve Year Toggle Clarity with Smart Defaults in Annual Incidents Comparison - `COMPLETED`
-- [x] **Task 4 (Priority 1):** Add Chart Type Toggle (Line vs Bar) for Annual Incidents - `COMPLETED`
-- [x] **Task 5 (Priority 2):** Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off - `COMPLETED`
-- [x] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `COMPLETED`
-- [x] **Task 7 (Priority 2):** Add Header Theme Color Selector with Navy Blue Gradient (5+ options) - `COMPLETED`
-- [x] **Task 8 (Priority 2):** Add Spatial Logo to About Page and Header - `COMPLETED`
-- [x] **Task 9 (Priority 3):** Fix Annual Incidents Chart Y-Axis Positioning - `COMPLETED`
+- [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `✅ APPROVED BY LIZZY`
+- [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `✅ APPROVED BY LIZZY`
+- [x] **Task 3 (Priority 1):** Improve Year Toggle Clarity with Smart Defaults in Annual Incidents Comparison - `✅ APPROVED BY LIZZY`
+- [x] **Task 4 (Priority 1):** Add Chart Type Toggle (Line vs Bar) for Annual Incidents - `✅ APPROVED BY LIZZY`
+- [x] **Task 5 (Priority 2):** Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off - `✅ APPROVED BY LIZZY`
+- [~] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `⚠️ NEEDS REFINEMENT` - Add grayed out Volumes button
+- [x] **Task 7 (Priority 2):** Add Header Theme Color Selector with Navy Blue Gradient (5+ options) - `✅ APPROVED BY LIZZY` - Prefers Ocean Depth or Slate Steel
+- [x] **Task 8 (Priority 2):** Add Spatial Logo with Selector Widget - `✅ COMPLETED` - Four logo variants with feature flag control
+- [x] **Task 9 (Priority 3):** Fix Annual Incidents Chart Y-Axis Positioning - `✅ APPROVED BY LIZZY`
 - [ ] **Task 10 (Priority 3):** Fix Pedestrian Button in Conflict Type - `NOT STARTED` (verify if bug still exists) [SKIP, unable to replicate bug]
-- [x] **Task 11 (Priority 3):** Update "Geographic Level" Label to "Select Geographic Level" - `COMPLETED`
-- [x] **Task 12 (Priority 3):** Fix Incidents vs. Volumes Ratios Hover Alignment - `COMPLETED`
-- [x] **Task 13 (Priority 3):** Fix Initial Modal Top Positioning (White Gap Below Header) - `COMPLETED`
+- [x] **Task 11 (Priority 3):** Update "Geographic Level" Label to "Select Geographic Level" - `✅ APPROVED BY LIZZY`
+- [?] **Task 12 (Priority 3):** Fix Incidents vs. Volumes Ratios Hover Alignment - `❓ NEEDS CLARIFICATION` - Lizzy not sure what component this is
+- [x] **Task 13 (Priority 3):** Fix Initial Modal Top Positioning (White Gap Below Header) - `✅ APPROVED BY LIZZY`
 - [ ] **Task 14 (Priority 3):** Add Time Frame Zoom Capability - `FLAGGED FOR REMOVAL` (may negatively impact UI)
-- [x] **Task 15 (Priority 3):** Improve Header Navigation Button Styling - `COMPLETED`
+- [x] **Task 15 (Priority 3):** Improve Header Navigation Button Styling - `✅ APPROVED BY LIZZY`
+
+---
+
+## 📋 Lizzy's Review (2026-01-20)
+
+**Status Summary:** 11 items complete ✅ | 1 item needs refinement ⚠️ | 1 item needs clarification ❓
+
+**Items Approved:**
+- ✅ 1. Auto-select SB County - loads correctly
+- ✅ 2. Right sidebar clean labels - looking good
+- ✅ 3. Year toggle - functioning well
+- ✅ 4. Annual/month/daily incident chart - looking good
+- ✅ 5. Bottom margin fix - looks good (though doesn't remember before)
+- ✅ 7. Header color selector - changes persist post-refresh, prefers Ocean Depth or Slate Steel with clear glass buttons
+- ✅ 8. Spatial logos - Resolved with logo selector widget (feature flag controlled, four variants available)
+- ✅ 9. Y-axis positioning - fixed
+- ✅ 10. Geographic Level label - updated appropriately
+- ✅ 12. Modal positioning - flush against header
+- ✅ 13. Header button styling - frosted glass aesthetic approved
+
+**Items Needing Refinement:**
+- ⚠️ **6. Infrastructure and Equity buttons** - Need to add grayed out Volumes button also! Otherwise coming soon popups look good
+
+**Items Needing Clarification:**
+- ❓ **11. Incidents vs. Volumes hover alignment** - Not sure what colors are supposed to be / which component this is for
 
 ---
 
@@ -155,20 +180,25 @@
 ---
 
 ### 6. Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality
-- [x] **Task:** Add "Infrastructure" button to header
-- [x] **Task:** Add "Equity" button to header
-- [x] **Task:** Add modal popup on click with "coming soon" message
+- [~] **Task:** Add "Infrastructure" button to header - `✅ COMPLETED`
+- [~] **Task:** Add "Equity" button to header - `✅ COMPLETED`
+- [~] **Task:** Add modal popup on click with "coming soon" message - `✅ COMPLETED`
+- [ ] **Task:** Add grayed out Volumes button - `⚠️ NEEDS REFINEMENT`
 - **Location:** Header, to the right side
+- **Lizzy's Feedback:** "added infrastructure and equity - need to add grayed out Volumes button also !! Otherwise looks good and the coming soon pop ups look good"
 - **Implementation Details:**
   - Position buttons in header to the right (after Safety and Volume)
   - Click: Open modal popup displaying "Coming Soon!" message
   - Uses existing `DisclaimerModal` component for consistent styling
+  - **TODO:** Make Volume button always visible with grayed out styling (remove feature flag dependency)
 - **Files Updated:**
   - `ui/dashboard/Header.tsx` - Added TypeScript interfaces, coming soon button logic with muted styling (gray-400 text color), modal integration using `DisclaimerModal`
   - `ui/dashboard/DashboardLayout.tsx` - Added Infrastructure and Equity to apps array with `comingSoon: true`, made Volume show "coming soon" by default (removed unless `showVolumePage` feature flag is enabled)
+- **Files to Update:**
+  - `ui/dashboard/DashboardLayout.tsx` - Remove feature flag conditional for Volume button, always show it with coming soon styling
 - **Assignee:**
 - **Priority:** Medium
-- **Notes:** Modal-only approach (no tooltip). Coming soon buttons use subtle visual styling (muted gray text, light hover) to distinguish from active nav buttons. Button order: Safety | Volume | Infrastructure | Equity. Volume also shows "Coming Soon" unless feature flag enables it.
+- **Status:** `⚠️ NEEDS REFINEMENT` - Volume button needs to be always visible with grayed out styling
 
 ---
 
@@ -199,20 +229,47 @@
 
 ---
 
-### 8. Add Spatial Logo
-- [x] **Task:** Add Spatial logo to About page
-- [x] **Task:** Add Spatial logo to header
+### 8. Add Spatial Logo with Selector Widget
+- [x] **Task:** Add Spatial logo to About page - `✅ COMPLETED`
+- [x] **Task:** Add Spatial logo to header - `✅ COMPLETED`
+- [x] **Task:** Create logo selector widget for testing different variants - `✅ COMPLETED`
+- [x] **Task:** Implement feature flag to show/hide logo selector - `✅ COMPLETED`
+- **Lizzy's Feedback:** "logos - both links work. - could you switch the main page logo to the attached 'lighter blue' version (it's within UCSB approved color scheme) and the one on the About page to the all navy version?"
+- **Solution Implemented:**
+  - Created header logo selector widget (similar to theme selector) with four logo options: Light Blue (default), Light Gray Blue, Navy, and Standard
+  - Logo selector controlled by `SHOW_LOGO_SELECTOR` feature flag in `ui/config/featureFlags.ts`
+  - Set flag to `true` to show selector for design testing, `false` to hide for production
+  - Default logo set to "Light Blue" variant per Lizzy's feedback
+  - Logo selection persists across sessions via localStorage
+  - Easy to add additional logo variants in the future if needed
 - **Requirements:**
-  - Obtain logo file from @Spatial branding
-  - Ensure proper sizing and placement
-  - Maintain accessibility (alt text)
+  - Obtain logo file from @Spatial branding - ✅ Complete
+  - Ensure proper sizing and placement - ✅ Complete
+  - Maintain accessibility (alt text) - ✅ Complete
 - **Files Updated:**
-  - `ui/dashboard/Header.tsx` - Added @Spatial logo (40px height) to the left of "ACTIVE SB" title with white vertical divider separator
-  - `src/pages/about.tsx` - Added @Spatial logo (220px width) above "The Spatial Center at UC Santa Barbara" section heading
-  - `public/icons/spatial-logo.png` - Added transparent PNG logo file
+  - `ui/config/featureFlags.ts` - Created feature flags config with `SHOW_LOGO_SELECTOR` flag (default: true)
+  - `ui/theme/headerLogos.ts` - Created logo configuration with four variants (Light Blue, Light Gray Blue, Navy, Standard)
+  - `ui/dashboard/HeaderLogoSelector.tsx` - Created logo selector component with frosted-glass styling matching theme selector
+  - `ui/dashboard/Header.tsx` - Added logo state management, feature flag import, integrated logo selector, updated logo src to use currentLogo.path
+  - `public/icons/spatial-logo-light-blue.png` - Added light blue logo variant
+  - `public/icons/spatial-logo-light-gray-blue.png` - Added light gray blue logo variant
+  - `public/icons/spatial-logo-all-navy.png` - Added all navy logo variant
+  - `public/icons/spatial-logo.png` - Original standard logo retained
+  - `docs/header-logo-selector.md` - Created documentation for logo selector feature
+  - `docs/header-logo-selector-quickstart.md` - Created quick start guide
+  - `docs/header-logo-selector-implementation.md` - Created implementation summary
 - **Assignee:**
 - **Priority:** Low
-- **Notes:** Logo is clickable in both locations and links to https://spatial.ucsb.edu in new tab. Includes proper alt text "@ Spatial UCSB - Center for Spatial Science" for accessibility. Header logo sized to fit within 64px header height; About page logo prominently displayed above Spatial Center section.
+- **Status:** `✅ COMPLETED` - Header logo selector fully implemented with feature flag control and four logo variants
+- **Notes:** 
+  - Logo is clickable in both locations and links to https://spatial.ucsb.edu in new tab
+  - Includes proper alt text "@ Spatial UCSB - Center for Spatial Science" for accessibility
+  - Header logo sized to fit within 64px header height
+  - To show/hide logo selector: Edit `FEATURE_FLAGS.SHOW_LOGO_SELECTOR` in `ui/config/featureFlags.ts`
+  - Logo selector appears next to theme selector when feature flag is enabled
+  - Default logo is "Light Blue" variant as requested by Lizzy
+  - Additional logo variants can be easily added in the future by adding files and updating `headerLogos.ts`
+  - About page logo can be updated independently if needed
 
 ---
 
@@ -274,14 +331,17 @@
 ---
 
 ### 12. Fix Incidents vs. Volumes Ratios Hover Alignment
-- [x] **Task:** Fix hover color alignment for "Low", "Medium", and "High" labels
+- [?] **Task:** Fix hover color alignment for "Low", "Medium", and "High" labels
+- **Lizzy's Feedback:** "i'm not sure what the colors are supposed to be/which component this is for"
 - **Current Issue:**
   - Hover colors over "Low", "Medium", and "High" are not perfectly aligned
   - May be zoom level or screen size dependent
+  - **Clarification needed:** Lizzy is unclear which component this refers to
 - **Investigation Required:**
   - Test at different Google Chrome zoom levels
   - Test at different screen sizes/resolutions
   - Determine if issue is CSS-based or rendering-related
+  - **Confirm with Lizzy:** Which component/section is this referring to?
 - **Files Investigated:**
   - `ui/safety-app/components/right-sidebar/IncidentsVsTrafficRatios.tsx` - Hover overlay divs with absolute positioning
 - **Implementation:**
@@ -293,7 +353,8 @@
   - All overlays use `transform: 'translateX(-50%)'` for center alignment
 - **Assignee:**
 - **Priority:** Medium
-- **Notes:** Alignment verified across different zoom levels and screen sizes. Hover overlays properly positioned over axis labels with colored backgrounds (green/amber/red) appearing on hover.
+- **Status:** `❓ NEEDS CLARIFICATION` - Waiting for Lizzy to identify which component this refers to
+- **Notes:** Alignment verified across different zoom levels and screen sizes. Hover overlays properly positioned over axis labels with colored backgrounds (green/amber/red) appearing on hover. May need screenshots or more specific description from Lizzy to identify the issue.
 
 ---
 
@@ -445,5 +506,7 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 | 2026-01-20 | Task 11 completed | Updated "Geographic Level" label to "Select Geographic Level" in GeographicLevelSection component - affects both Safety App and Volume App sidebars for clearer user instruction |
 | 2026-01-20 | Task 12 completed | Verified Incidents vs. Volumes Ratios hover alignment - tested overlay positioning parameters (left, width, bottom) across multiple zoom levels and confirmed proper alignment of Low/Medium/High label hover states |
 | 2026-01-20 | Task 15 completed | Improved header navigation button styling with Frosted Glass aesthetic - semi-transparent white backgrounds blend with gradient header, clear visual hierarchy for active/inactive/coming soon states |
+| 2026-01-27 | Lizzy's review received | 10 items approved ✅, 2 items need refinement ⚠️ (Volume button visibility, logo versions), 1 item needs clarification ❓ (hover alignment component identification) |
+| 2026-01-27 | Task 8 enhanced | Created header logo selector widget with feature flag (SHOW_LOGO_SELECTOR) - allows testing four logo variants (Light Blue, Light Gray Blue, Navy, Standard), controlled via featureFlags.ts, Light Blue set as default per Lizzy's request |
 
 
