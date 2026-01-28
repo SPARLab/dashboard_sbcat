@@ -42,14 +42,13 @@
 - ✅ 8. Spatial logos - Resolved with logo selector widget (feature flag controlled, four variants available)
 - ✅ 9. Y-axis positioning - fixed
 - ✅ 10. Geographic Level label - updated appropriately
+- ✅ 11. Says these look good
 - ✅ 12. Modal positioning - flush against header
 - ✅ 13. Header button styling - frosted glass aesthetic approved
 
 **Items Needing Refinement:**
 - ⚠️ **6. Infrastructure and Equity buttons** - Need to add grayed out Volumes button also! Otherwise coming soon popups look good
-
-**Items Needing Clarification:**
-- ❓ **11. Incidents vs. Volumes hover alignment** - Not sure what colors are supposed to be / which component this is for
+  - [ ] Make Volume button always visible with grayed out styling (coming soon state)
 
 ---
 
