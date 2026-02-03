@@ -16,9 +16,12 @@ const allApps = [
   { name: "Equity", comingSoon: true },
 ];
 
-const apps = featureFlags.showVolumePage
-  ? allApps.map(app => app.name === "Volume" ? { ...app, comingSoon: false } : app)
-  : allApps.filter((app) => app.name !== "Volume");
+// Always show Volume button - grayed out (coming soon) unless feature flag is enabled
+const apps = allApps.map(app => 
+  app.name === "Volume" && featureFlags.showVolumePage 
+    ? { ...app, comingSoon: false } 
+    : app
+);
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (

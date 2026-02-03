@@ -8,14 +8,14 @@
 
 ## Quick Task Overview
 
-**Overall Progress:** 12/13 items complete ✅ | 1 item needs refinement ⚠️ | 1 item needs clarification ❓ | 2 flagged for skip/removal
+**Overall Progress:** 13/13 items complete ✅ | 0 items need refinement ⚠️ | 1 item needs clarification ❓ | 2 flagged for skip/removal
 
 - [x] **Task 1 (Priority 1):** Auto-select Santa Barbara County on Load - `✅ APPROVED BY LIZZY`
 - [x] **Task 2 (Priority 1):** Restructure Sidebar: Remove "Analysis" Section & Consolidate Location Indicator - `✅ APPROVED BY LIZZY`
 - [x] **Task 3 (Priority 1):** Improve Year Toggle Clarity with Smart Defaults in Annual Incidents Comparison - `✅ APPROVED BY LIZZY`
 - [x] **Task 4 (Priority 1):** Add Chart Type Toggle (Line vs Bar) for Annual Incidents - `✅ APPROVED BY LIZZY`
 - [x] **Task 5 (Priority 2):** Fix Bottom Margin When "Time of Day" and "Weekdays vs. Weekends" Toggled Off - `✅ APPROVED BY LIZZY`
-- [~] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `⚠️ NEEDS REFINEMENT` - Add grayed out Volumes button
+- [x] **Task 6 (Priority 2):** Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality - `✅ COMPLETED` - Volume button now always visible with grayed out styling
 - [x] **Task 7 (Priority 2):** Add Header Theme Color Selector with Navy Blue Gradient (5+ options) - `✅ APPROVED BY LIZZY` - Prefers Ocean Depth or Slate Steel
 - [x] **Task 8 (Priority 2):** Add Spatial Logo with Selector Widget - `✅ COMPLETED` - Four logo variants with feature flag control
 - [x] **Task 9 (Priority 3):** Fix Annual Incidents Chart Y-Axis Positioning - `✅ APPROVED BY LIZZY`
@@ -30,7 +30,7 @@
 
 ## 📋 Lizzy's Review (2026-01-20)
 
-**Status Summary:** 11 items complete ✅ | 1 item needs refinement ⚠️ | 1 item needs clarification ❓
+**Status Summary:** 12 items complete ✅ | 0 items need refinement ⚠️ | 1 item needs clarification ❓
 
 **Items Approved:**
 - ✅ 1. Auto-select SB County - loads correctly
@@ -47,8 +47,7 @@
 - ✅ 13. Header button styling - frosted glass aesthetic approved
 
 **Items Needing Refinement:**
-- ⚠️ **6. Infrastructure and Equity buttons** - Need to add grayed out Volumes button also! Otherwise coming soon popups look good
-  - [ ] Make Volume button always visible with grayed out styling (coming soon state)
+- ✅ **6. Infrastructure and Equity buttons** - Volume button now always visible with grayed out styling - `✅ COMPLETED`
 
 ---
 
@@ -179,25 +178,23 @@
 ---
 
 ### 6. Add "Infrastructure" and "Equity" Buttons with "Coming Soon" Functionality
-- [~] **Task:** Add "Infrastructure" button to header - `✅ COMPLETED`
-- [~] **Task:** Add "Equity" button to header - `✅ COMPLETED`
-- [~] **Task:** Add modal popup on click with "coming soon" message - `✅ COMPLETED`
-- [ ] **Task:** Add grayed out Volumes button - `⚠️ NEEDS REFINEMENT`
+- [x] **Task:** Add "Infrastructure" button to header - `✅ COMPLETED`
+- [x] **Task:** Add "Equity" button to header - `✅ COMPLETED`
+- [x] **Task:** Add modal popup on click with "coming soon" message - `✅ COMPLETED`
+- [x] **Task:** Add grayed out Volumes button - `✅ COMPLETED`
 - **Location:** Header, to the right side
 - **Lizzy's Feedback:** "added infrastructure and equity - need to add grayed out Volumes button also !! Otherwise looks good and the coming soon pop ups look good"
 - **Implementation Details:**
   - Position buttons in header to the right (after Safety and Volume)
   - Click: Open modal popup displaying "Coming Soon!" message
   - Uses existing `DisclaimerModal` component for consistent styling
-  - **TODO:** Make Volume button always visible with grayed out styling (remove feature flag dependency)
+  - Volume button always visible with grayed out styling (coming soon state) regardless of feature flag
 - **Files Updated:**
   - `ui/dashboard/Header.tsx` - Added TypeScript interfaces, coming soon button logic with muted styling (gray-400 text color), modal integration using `DisclaimerModal`
-  - `ui/dashboard/DashboardLayout.tsx` - Added Infrastructure and Equity to apps array with `comingSoon: true`, made Volume show "coming soon" by default (removed unless `showVolumePage` feature flag is enabled)
-- **Files to Update:**
-  - `ui/dashboard/DashboardLayout.tsx` - Remove feature flag conditional for Volume button, always show it with coming soon styling
+  - `ui/dashboard/DashboardLayout.tsx` - Updated apps array logic to always include Volume button with `comingSoon: true` by default; only removes coming soon state when `showVolumePage` feature flag is enabled
 - **Assignee:**
 - **Priority:** Medium
-- **Status:** `⚠️ NEEDS REFINEMENT` - Volume button needs to be always visible with grayed out styling
+- **Status:** `✅ COMPLETED` - Volume button now always visible with grayed out styling matching Infrastructure and Equity buttons
 
 ---
 
@@ -507,5 +504,6 @@ witholding necessary context to allow the future AI agent to perform its tasks e
 | 2026-01-20 | Task 15 completed | Improved header navigation button styling with Frosted Glass aesthetic - semi-transparent white backgrounds blend with gradient header, clear visual hierarchy for active/inactive/coming soon states |
 | 2026-01-27 | Lizzy's review received | 10 items approved ✅, 2 items need refinement ⚠️ (Volume button visibility, logo versions), 1 item needs clarification ❓ (hover alignment component identification) |
 | 2026-01-27 | Task 8 enhanced | Created header logo selector widget with feature flag (SHOW_LOGO_SELECTOR) - allows testing four logo variants (Light Blue, Light Gray Blue, Navy, Standard), controlled via featureFlags.ts, Light Blue set as default per Lizzy's request |
+| 2026-01-28 | Task 6 refinement completed | Made Volume button always visible with grayed out styling (coming soon state) - updated DashboardLayout.tsx to always include Volume in apps array regardless of feature flag, matches Infrastructure and Equity button appearance |
 
 
