@@ -68,7 +68,7 @@ export default function Header({ apps }: HeaderProps) {
                 src={currentLogo.path}
                 alt="@Spatial UCSB - Center for Spatial Science"
                 id="header-spatial-logo"
-                className="h-10 w-auto"
+                className="h-10 w-auto mt-[0.25rem]"
               />
             </a>
             <div className="w-px h-8 bg-white/40" />
