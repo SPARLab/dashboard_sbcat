@@ -15,17 +15,22 @@ export default function DisclaimerModal({
   title, 
   children 
 }: DisclaimerModalProps) {
-  if (!isOpen) return null;
-
   return (
     <div 
       id={`${id}-overlay`}
-      className="fixed top-16 bottom-0 left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]"
+      className={`fixed top-16 bottom-0 left-0 right-0 flex items-center justify-center z-[60] transition-opacity duration-300 ease-out ${
+        isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}
+      style={{
+        backgroundColor: isOpen ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0)',
+      }}
       onClick={onClose}
     >
       <div 
         id={`${id}-content`}
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+        className={`bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto transition-all duration-300 ease-out ${
+          isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
