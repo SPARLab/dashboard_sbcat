@@ -37,7 +37,7 @@ export const HEADER_LOGOS: HeaderLogo[] = [
   },
 ];
 
-export const DEFAULT_LOGO_ID = "light-blue";
+export const DEFAULT_LOGO_ID = "white";
 export const HEADER_LOGO_STORAGE_KEY = "activesb-header-logo";
 
 export function getLogoById(id: string): HeaderLogo {

@@ -78,19 +78,24 @@ export default function Header({ apps }: HeaderProps) {
           </div>
 
           <nav id="header-navigation" className="flex items-center gap-2">
-            <HeaderThemeSelector
-              selectedThemeId={themeId}
-              onThemeChange={setThemeId}
-            />
+            {/* Theme and logo selector widgets hidden but code preserved for future use */}
+            {false && (
+              <>
+                <HeaderThemeSelector
+                  selectedThemeId={themeId}
+                  onThemeChange={setThemeId}
+                />
 
-            {FEATURE_FLAGS.SHOW_LOGO_SELECTOR && (
-              <HeaderLogoSelector
-                selectedLogoId={logoId}
-                onLogoChange={setLogoId}
-              />
+                {FEATURE_FLAGS.SHOW_LOGO_SELECTOR && (
+                  <HeaderLogoSelector
+                    selectedLogoId={logoId}
+                    onLogoChange={setLogoId}
+                  />
+                )}
+
+                <div className="w-px h-5 bg-white/30 mx-2" />
+              </>
             )}
-
-            <div className="w-px h-5 bg-white/30 mx-2" />
 
             {apps?.map((appInfo, index) => {
               const isActive = appInfo.link
