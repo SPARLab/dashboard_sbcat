@@ -16,6 +16,11 @@ export const HEADER_LOGOS: HeaderLogo[] = [
     path: "/icons/spatial-logo-light-gray-blue.png",
   },
   {
+    id: "medium-blue-2",
+    name: "Medium Blue",
+    path: "/icons/spatial-logo-medium-blue-2.png",
+  },
+  {
     id: "navy",
     name: "Navy",
     path: "/icons/spatial-logo-all-navy.png",
@@ -24,6 +29,11 @@ export const HEADER_LOGOS: HeaderLogo[] = [
     id: "standard",
     name: "Standard",
     path: "/icons/spatial-logo.png",
+  },
+  {
+    id: "white",
+    name: "White",
+    path: "/icons/spatial-logo-white.png",
   },
 ];
 
