@@ -7,6 +7,7 @@ import "./index.css"; // Tailwind CSS should be imported last for proper specifi
 import "./city-boundary-styles.css"; // City boundary interactive styles
 import { defineCustomElements } from "@esri/calcite-components/dist/loader";
 import { defineCustomElements as defineMapComponents } from "@arcgis/map-components/dist/loader";
+import { Analytics } from "@vercel/analytics/react";
 
 defineCustomElements(window);
 // Load ArcGIS Map Web Components
@@ -16,5 +17,6 @@ defineMapComponents(window);
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
+    <Analytics />
   </React.StrictMode>
 );
