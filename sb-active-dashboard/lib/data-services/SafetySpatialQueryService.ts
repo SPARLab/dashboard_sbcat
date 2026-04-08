@@ -37,6 +37,46 @@ export class SafetySpatialQueryService {
         whereClause += ` AND timestamp >= TIMESTAMP '${startStr}' AND timestamp <= TIMESTAMP '${endStr}'`;
       }
       
+      // Apply time-of-day filter if provided
+      if (filters?.timeOfDay?.enabled && filters.timeOfDay.periods.length > 0) {
+        // Only add time filter when not all time buckets are selected
+        if (filters.timeOfDay.periods.length < 3) {
+          const timeConditions: string[] = [];
+          for (const period of filters.timeOfDay.periods) {
+            switch (period) {
+              case 'morning':
+                // 00:00-11:59
+                timeConditions.push("(EXTRACT(HOUR FROM timestamp) >= 0 AND EXTRACT(HOUR FROM timestamp) < 12)");
+                break;
+              case 'afternoon':
+                // 12:00-16:59
+                timeConditions.push("(EXTRACT(HOUR FROM timestamp) >= 12 AND EXTRACT(HOUR FROM timestamp) < 17)");
+                break;
+              case 'evening':
+                // 17:00-23:59
+                timeConditions.push("(EXTRACT(HOUR FROM timestamp) >= 17 AND EXTRACT(HOUR FROM timestamp) <= 23)");
+                break;
+            }
+          }
+
+          if (timeConditions.length > 0) {
+            whereClause += ` AND (${timeConditions.join(' OR ')})`;
+          }
+        }
+      }
+
+      // Apply weekday/weekend filter if provided
+      if (filters?.weekdayFilter?.enabled) {
+        // ArcGIS SQL does not provide consistent weekday extraction across all backends.
+        // Use a deterministic date arithmetic approach:
+        // 1=Sunday, 2=Monday, ... 7=Saturday
+        const weekdayClause = filters.weekdayFilter.type === 'weekdays'
+          ? "MOD(CAST((timestamp - DATE '2000-01-01') AS INT) + 6, 7) + 1 BETWEEN 2 AND 6"
+          : "MOD(CAST((timestamp - DATE '2000-01-01') AS INT) + 6, 7) + 1 IN (1, 7)";
+
+        whereClause += ` AND (${weekdayClause})`;
+      }
+
       // Apply data source filter if provided
       if (filters?.dataSource && filters.dataSource.length > 0 && filters.dataSource.length < 2) {
         const source = filters.dataSource[0];
