@@ -9,6 +9,12 @@ import MoreInformationIcon from './MoreInformationIcon';
 type TimeScale = 'Day' | 'Month' | 'Year';
 type ChartType = 'line' | 'bar';
 const timeScales: TimeScale[] = ['Day', 'Month', 'Year'];
+const sortYearNamesAscending = (yearNames: string[]): string[] =>
+  [...yearNames].sort((a, b) => Number(a) - Number(b));
+const getMostRecentYearNames = (yearNames: string[], count: number): string[] =>
+  [...yearNames].sort((a, b) => Number(b) - Number(a));
+const sortYearSeriesAscending = (series: AnnualIncidentsComparisonData['series']) =>
+  [...series].sort((a, b) => Number(a.name) - Number(b.name));
 
 // Helper function to process incidents for different time scales
 const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale, dateRange?: { start: Date; end: Date }): AnnualIncidentsComparisonData => {
@@ -159,7 +165,9 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale, da
 
     // Always show all 12 months in categories
     const categories = monthNames;
-    const series = Array.from(yearMonthMap.entries()).map(([year, monthMap]) => {
+    const sortedYears = sortYearNamesAscending(Array.from(yearMonthMap.keys()));
+    const series = sortedYears.map((year) => {
+      const monthMap = yearMonthMap.get(year)!;
       const yearNum = parseInt(year);
       const validMonths = getValidMonthsForYear(yearNum);
       
@@ -213,10 +221,15 @@ const processIncidentsForTimeScale = (incidents: any[], timeScale: TimeScale, da
     });
 
     const categories = dayNames;
-    const series = Array.from(yearDayMap.entries()).map(([year, dayMap]) => ({
-      name: year,
-      data: dayNames.map((_, dayIndex) => dayMap.get(dayIndex) || 0)
-    }));
+    const sortedYears = sortYearNamesAscending(Array.from(yearDayMap.keys()));
+    const series = sortedYears.map((year) => {
+      const dayMap = yearDayMap.get(year)!;
+
+      return {
+        name: year,
+        data: dayNames.map((_, dayIndex) => dayMap.get(dayIndex) || 0)
+      };
+    });
 
     return { categories, series };
   }
@@ -393,7 +406,7 @@ export default function AnnualIncidentsComparison({
   }, [spatialResult, spatialError, selectedGeometry, filters, timeScale, dataService]);
 
   // Compute smart defaults for year visibility when data/view changes
-  // Day/Month views: only first and last year visible if > 2 years
+  // Day/Month views: only the two most recent years visible if > 2 years
   // Year view: all years visible
   useEffect(() => {
     if (!chartData?.series || chartData.series.length === 0) {
@@ -409,10 +422,11 @@ export default function AnnualIncidentsComparison({
       yearNames.forEach(name => { allSelected[name] = true; });
       setSelectedYears(allSelected);
     } else {
-      // Day/Month view with >2 years: only first and last visible
+      // Day/Month view with >2 years: compare the two most recent years by default
+      const defaultVisibleYears = new Set(getMostRecentYearNames(yearNames, 2));
       const smartDefaults: Record<string, boolean> = {};
-      yearNames.forEach((name, index) => {
-        smartDefaults[name] = index === 0 || index === yearNames.length - 1;
+      yearNames.forEach((name) => {
+        smartDefaults[name] = defaultVisibleYears.has(name);
       });
       setSelectedYears(smartDefaults);
     }
@@ -451,7 +465,9 @@ export default function AnnualIncidentsComparison({
     }
 
     const categories = chartData.categories;
-    const chartSeries = chartData.series;
+    const chartSeries = timeScale === 'Year'
+      ? chartData.series
+      : sortYearSeriesAscending(chartData.series);
     
     // Calculate dynamic y-axis range
     const allValues = chartSeries.flatMap(series => series.data).filter(v => v !== null && v !== undefined);
@@ -468,7 +484,7 @@ export default function AnnualIncidentsComparison({
     const yAxisMax = maxValue + padding;
 
     return { categories, chartSeries, yAxisMin, yAxisMax };
-  }, [chartData]);
+  }, [chartData, timeScale]);
 
   const option = useMemo(
     () => {
@@ -561,6 +577,7 @@ export default function AnnualIncidentsComparison({
       },
       legend: {
         show: chartSeries.length > 1, // Show legend when there are multiple series (years)
+        data: chartSeries.map(series => series.name),
         top: 0,
         right: 0,
         textStyle: {
