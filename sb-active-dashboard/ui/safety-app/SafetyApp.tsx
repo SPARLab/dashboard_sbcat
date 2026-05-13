@@ -9,6 +9,8 @@ import SafetyDataDisclaimer from "../components/SafetyDataDisclaimer";
 import { SchoolDistrictFilter } from "../components/filters/GeographicLevelSection";
 import { preloadPartiesCache } from "./utils/popupContentGenerator";
 
+const getToday = () => new Date();
+
 function useDebouncedValue<T>(value: T, delayMs: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
@@ -41,7 +43,7 @@ export default function SafetyApp() {
     ebikeMode: false, // Default to regular bike mode
     dateRange: {
       start: new Date(2020, 0, 1), // January 1, 2020
-      end: new Date(2024, 11, 31) // December 31, 2024 (local time)
+      end: getToday()
     },
     timeOfDay: {
       enabled: true,

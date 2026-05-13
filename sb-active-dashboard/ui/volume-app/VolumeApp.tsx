@@ -9,6 +9,8 @@ import DisclaimerModal from "../components/DisclaimerModal";
 import VolumeDataDisclaimer from "../components/VolumeDataDisclaimer";
 import { SchoolDistrictFilter } from "../components/filters/GeographicLevelSection";
 
+const getToday = () => new Date();
+
 export default function VolumeApp() {
   const [activeTab, setActiveTab] = useState('raw-data');
   const [showDisclaimer, setShowDisclaimer] = useState(true);
@@ -41,7 +43,7 @@ export default function VolumeApp() {
   // Date range state for timeline and filtering
   const [dateRange, setDateRange] = useState({
     startDate: new Date(2020, 0, 1), // 1/1/2020 (local time)
-    endDate: new Date(2024, 11, 31),   // 12/31/2024 (local time)
+    endDate: getToday(),
   });
 
   // Year selection state for modeled data

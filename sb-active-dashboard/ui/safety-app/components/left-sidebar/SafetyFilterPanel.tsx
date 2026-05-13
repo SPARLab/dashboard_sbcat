@@ -19,6 +19,8 @@ interface SafetyFilterPanelProps {
   selectedAreaName?: string | null;
 }
 
+const getToday = () => new Date();
+
 export default function SafetyFilterPanel({
   filters,
   onFiltersChange,
@@ -31,7 +33,7 @@ export default function SafetyFilterPanel({
   // Convert SafetyFilters dateRange format to DateRangeValue format for the component
   const dateRangeFromFilters: DateRangeValue = {
     startDate: filters.dateRange?.start || new Date(2020, 0, 1), // January 1, 2020
-    endDate: filters.dateRange?.end || new Date(2025, 11, 31) // December 31, 2025 (local time)
+    endDate: filters.dateRange?.end || getToday()
   };
 
   const handleDateRangeChange = (newDateRange: DateRangeValue) => {

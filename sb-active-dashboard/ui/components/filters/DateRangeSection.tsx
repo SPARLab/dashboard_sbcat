@@ -16,6 +16,7 @@ interface CalendarPortalProps {
   setFocusedRange: React.Dispatch<React.SetStateAction<[number, 0 | 1]>>;
   focusedRange: [number, 0 | 1];
   datePickerRef: React.RefObject<HTMLDivElement | null>;
+  maxDate: Date;
 }
 
 const CalendarPortal = React.memo(
@@ -27,6 +28,7 @@ const CalendarPortal = React.memo(
     setFocusedRange,
     focusedRange,
     datePickerRef,
+    maxDate,
   }: CalendarPortalProps) => {
     const calendarRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -179,6 +181,7 @@ const CalendarPortal = React.memo(
           months={1}
           direction="horizontal"
           showDateDisplay={false}
+          maxDate={maxDate}
         />
         <div className="p-2 border-t">
           <button
@@ -210,11 +213,13 @@ interface DateRangeSectionProps {
   datasetBounds?: DatasetBounds;
 }
 
+const getToday = () => new Date();
+
 function DateRangeSection({ dateRange, onDateRangeChange, datasetBounds }: DateRangeSectionProps) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selection, setSelection] = useState({
     startDate: dateRange.startDate || new Date(2020, 0, 1),
-    endDate: dateRange.endDate || new Date(2024, 11, 31),
+    endDate: dateRange.endDate || getToday(),
     key: 'selection'
   });
   const [focusedRange, setFocusedRange] = useState<[number, 0 | 1]>([0, 0]);
@@ -281,9 +286,9 @@ function DateRangeSection({ dateRange, onDateRangeChange, datasetBounds }: DateR
 
   // Dataset time interval - use provided bounds or default to volume app bounds
   const { startOfPeriod, endOfPeriod, totalDays, startPercent, endPercent } = useMemo(() => {
-    // Default to volume app bounds if no datasetBounds provided
+    // The picker should always end at today's local date rather than a stale dataset snapshot.
     const startOfPeriod = datasetBounds?.startOfPeriod || new Date('2018-08-15T23:30:00');
-    const endOfPeriod = datasetBounds?.endOfPeriod || new Date('2025-07-16T21:00:00');
+    const endOfPeriod = getToday();
     const totalDays = (endOfPeriod.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24);
     
     const startPercent = Math.max(0, Math.min(100, ((selection.startDate.getTime() - startOfPeriod.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100));
@@ -390,6 +395,7 @@ function DateRangeSection({ dateRange, onDateRangeChange, datasetBounds }: DateR
             setFocusedRange={setFocusedRange}
             focusedRange={focusedRange}
             datePickerRef={datePickerRef}
+            maxDate={endOfPeriod}
           />
         </div>
       </div>
